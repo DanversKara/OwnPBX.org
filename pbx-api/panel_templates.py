@@ -200,18 +200,19 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     radial-gradient(720px 460px at 92% 8%,rgba(255,140,0,.22),transparent 60%),
     radial-gradient(820px 560px at 50% 112%,rgba(40,86,199,.22),transparent 60%);}
 .nav{position:sticky;top:0;z-index:50;background:var(--nav-bg);
-  /* glass over the BRANDED header color (orange on OwnPBX.org), not navy:
-     older browsers keep the solid line above, modern ones get the tint */
-  background:color-mix(in srgb,var(--nav-bg) 55%,transparent);
-  -webkit-backdrop-filter:blur(28px) saturate(200%);backdrop-filter:blur(28px) saturate(200%);
-  border-bottom:1px solid rgba(255,255,255,.18);flex-wrap:wrap;gap:10px 20px;
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.25)}
+  /* water glass over the BRANDED header color (orange on OwnPBX.org), not
+     navy: thinner tint + lighter blur so content shows through clearly,
+     plus a glossy top band. Older browsers keep the solid line above. */
+  background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%),color-mix(in srgb,var(--nav-bg) 40%,transparent);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid rgba(255,255,255,.25);flex-wrap:wrap;gap:10px 20px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(255,255,255,.15),0 8px 24px rgba(0,0,0,.25)}
 /* animated brand gradient, also glassed: same slide, translucent stops.
    NOTE: the background shorthand above resets background-size to auto, so
    it must be re-declared here — the navslide animation moves a 250% sized
    gradient, and at 100% there is nowhere for it to move (that killed the
    animation in a268449). */
-.nav.animated{background:linear-gradient(120deg,color-mix(in srgb,var(--nav-bg) 55%,transparent),color-mix(in srgb,var(--accent) 55%,transparent),color-mix(in srgb,var(--nav-bg) 55%,transparent));background-size:250% 250%}
+.nav.animated{background:linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0) 55%),linear-gradient(120deg,color-mix(in srgb,var(--nav-bg) 40%,transparent),color-mix(in srgb,var(--accent) 40%,transparent),color-mix(in srgb,var(--nav-bg) 40%,transparent));background-size:auto,250% 250%}
 /* window-glass sheen: a diagonal light streak across the whole bar */
 .nav::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.10) 45%,rgba(255,255,255,.02) 55%,transparent 70%)}
@@ -231,13 +232,20 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
 .tabs a:hover{background:var(--glass-hover);text-decoration:none}
 .tabs a.on{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.22)}
 .btn{min-height:44px;padding:10px 20px;border-radius:12px;font-weight:600;font-size:15px;
-  border:1px solid rgba(255,255,255,.25);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 6px 16px rgba(0,0,0,.16);
+  /* border-box or the 44px min-height PLUS padding/border stacks to 66px
+     (that ballooned the SSO login buttons) */
+  box-sizing:border-box;
+  /* water glass: the old solid accent hid the blur entirely, so the tint
+     is translucent now with a glossy top band over it */
+  background:var(--accent);
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 50%),color-mix(in srgb,var(--accent) 70%,transparent);
+  border:1px solid rgba(255,255,255,.35);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.08),0 6px 16px rgba(0,0,0,.16);
   -webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%)}
 .btn:hover{filter:brightness(1.12)}
 .btn:active{transform:translateY(1px) scale(.99)}
-.btn.ghost{background:var(--glass-btn);color:var(--accent-fg);border-color:var(--accent-fg)}
-.btn.danger{background:var(--glass-btn)}
+.btn.ghost{background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0) 55%),var(--glass-btn);color:var(--accent-fg);border-color:var(--accent-fg)}
+.btn.danger{background:linear-gradient(180deg,rgba(255,255,255,.25),rgba(255,255,255,0) 55%),var(--glass-btn)}
 .subtabs a.on{color:var(--accent-fg);border-color:var(--accent-fg)}
 input,select,textarea{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:10px;
   min-height:44px;padding:10px 12px;font-size:16px;box-sizing:border-box}
