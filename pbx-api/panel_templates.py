@@ -199,9 +199,18 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
     radial-gradient(640px 420px at 12% -5%,rgba(65,65,122,.34),transparent 60%),
     radial-gradient(720px 460px at 92% 8%,rgba(255,140,0,.22),transparent 60%),
     radial-gradient(820px 560px at 50% 112%,rgba(40,86,199,.22),transparent 60%);}
-.nav{position:sticky;top:0;z-index:50;background:rgba(26,26,46,.72);
-  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
-  border-bottom:1px solid var(--glass-border);flex-wrap:wrap;gap:10px 20px}
+.nav{position:sticky;top:0;z-index:50;background:var(--nav-bg);
+  /* glass over the BRANDED header color (orange on OwnPBX.org), not navy:
+     older browsers keep the solid line above, modern ones get the tint */
+  background:color-mix(in srgb,var(--nav-bg) 55%,transparent);
+  -webkit-backdrop-filter:blur(28px) saturate(200%);backdrop-filter:blur(28px) saturate(200%);
+  border-bottom:1px solid rgba(255,255,255,.18);flex-wrap:wrap;gap:10px 20px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.25)}
+/* animated brand gradient, also glassed: same slide, translucent stops */
+.nav.animated{background:linear-gradient(120deg,color-mix(in srgb,var(--nav-bg) 55%,transparent),color-mix(in srgb,var(--accent) 55%,transparent),color-mix(in srgb,var(--nav-bg) 55%,transparent))}
+/* window-glass sheen: a diagonal light streak across the whole bar */
+.nav::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.10) 45%,rgba(255,255,255,.02) 55%,transparent 70%)}
 .nav a{min-height:44px;display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;font-weight:600;font-size:15px}
 .nav a:hover{background:rgba(255,255,255,.12);text-decoration:none;color:#fff}
 .card{background:var(--glass-bg);
