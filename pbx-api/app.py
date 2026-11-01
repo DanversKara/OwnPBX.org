@@ -124,6 +124,22 @@ def _migrate(c):
         c.execute("ALTER TABLE ivr_menus ADD COLUMN invalid_fallback TEXT NOT NULL DEFAULT ''")
     if "header" not in cols("fax_outbox"):
         c.execute("ALTER TABLE fax_outbox ADD COLUMN header TEXT NOT NULL DEFAULT ''")
+    # Fax branding templates: one saved branding per client (see pbx-api/fax_brand.py).
+    c.execute("""CREATE TABLE IF NOT EXISTS fax_templates (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      login_id INTEGER NOT NULL,
+      name TEXT NOT NULL DEFAULT '',
+      company TEXT NOT NULL DEFAULT '',
+      address TEXT NOT NULL DEFAULT '',
+      phone TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
+      website TEXT NOT NULL DEFAULT '',
+      footer TEXT NOT NULL DEFAULT '',
+      header TEXT NOT NULL DEFAULT '',
+      logo TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')))""")
+    c.execute("CREATE INDEX IF NOT EXISTS idx_fax_templates_login ON fax_templates(login_id)")
     if "recording_consent_at" not in cols("user_prefs"):
         c.execute("ALTER TABLE user_prefs ADD COLUMN recording_consent_at TEXT DEFAULT NULL")
         c.execute("ALTER TABLE user_prefs ADD COLUMN recording_consent_version INTEGER NOT NULL DEFAULT 0")
@@ -1363,6 +1379,15 @@ def wipe_login(lid_i: int):
             ucp._safe_unlink(b["greeting_path"], ucp.VMGREET_DIR)
             c.execute("DELETE FROM voicemail_messages WHERE mailbox=?", (b["mailbox"],))
         c.execute("DELETE FROM voicemail_boxes WHERE login_id=?", (lid_i,))
+        # Fax templates: their logo files go with them (rows are deleted below).
+        for r in c.execute("SELECT logo FROM fax_templates WHERE login_id=?", (lid_i,)):
+            if r["logo"]:
+                p = os.path.realpath(os.path.join(fax_brand.BRAND_DIR, os.path.basename(r["logo"])))
+                if p.startswith(os.path.realpath(fax_brand.BRAND_DIR) + os.sep) and os.path.isfile(p):
+                    try:
+                        os.remove(p)
+                    except OSError:
+                        pass
         # Login-scoped rows (FK cascades are not enforced in sqlite here).
         for tbl, col in [("login_feature_access", "login_id"), ("message_hidden", "login_id"),
                          ("user_prefs", "login_id"), ("ivr_menus", "owner_login_id"),
@@ -1371,7 +1396,7 @@ def wipe_login(lid_i: int):
                          ("blocked_numbers", "login_id"),
                          ("contacts", "login_id"), ("contact_notes", "login_id"),
                          ("app_devices", "login_id"), ("ptt_trusted", "login_id"),
-                         ("fax_branding", "login_id")]:
+                         ("fax_branding", "login_id"), ("fax_templates", "login_id")]:
             c.execute(f"DELETE FROM {tbl} WHERE {col}=?", (lid_i,))
         # Faxes: their copy goes; the fax itself once nobody else has it.
         for r in c.execute("SELECT fax_id FROM fax_recipients WHERE login_id=?", (lid_i,)).fetchall():

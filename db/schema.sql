@@ -575,6 +575,24 @@ CREATE TABLE IF NOT EXISTS fax_branding (
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+-- Fax branding templates: one saved branding per client, picked on the send form.
+CREATE TABLE IF NOT EXISTS fax_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  login_id INTEGER NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  company TEXT NOT NULL DEFAULT '',
+  address TEXT NOT NULL DEFAULT '',
+  phone TEXT NOT NULL DEFAULT '',
+  email TEXT NOT NULL DEFAULT '',
+  website TEXT NOT NULL DEFAULT '',
+  footer TEXT NOT NULL DEFAULT '',
+  header TEXT NOT NULL DEFAULT '',
+  logo TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_fax_templates_login ON fax_templates(login_id);
+
 -- Time conditions (Call flow -> Time conditions): business hours, holidays
 -- and a manual Open/Closed switch, each state with its own destination
 -- (JSON like {"type":"rgroup","target":"3"}). Phone numbers, IVR keys and

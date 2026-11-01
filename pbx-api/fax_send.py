@@ -214,8 +214,12 @@ def build(job, data, filename, cover, brand=None):
     return pages
 
 
-def queue(me, data, filename, to_number, from_did, to_name="", subject="", note="", cover=True):
-    """(fax_outbox id, error). Checks everything, builds the pages, queues it."""
+def queue(me, data, filename, to_number, from_did, to_name="", subject="", note="", cover=True, brand=None,
+          temp_logo=None):
+    """(fax_outbox id, error). Checks everything, builds the pages, queues it.
+    brand: a brand dict to use instead of the login's default branding (a
+    saved template, or a one-time brand). temp_logo: uploaded logo bytes for
+    a one-time brand; converted, rendered, then deleted — never stored."""
     ok, why = send_status(me)
     if not ok:
         return None, why
@@ -237,11 +241,23 @@ def queue(me, data, filename, to_number, from_did, to_name="", subject="", note=
     if today >= DAILY_LIMIT and me["role"] != "admin":
         return None, f"That's {DAILY_LIMIT} faxes in a day; try again tomorrow."
     with M.db() as c:
-        brand = M.fax_brand.for_login(c, me)
+        if brand is None:
+            brand = M.fax_brand.for_login(c, me)
     header = M.fax_brand.header_text(brand, me)
     os.makedirs(out_dir(), exist_ok=True)
     job = tempfile.mkdtemp(prefix="job-", dir=out_dir())
     os.chmod(job, 0o755)      # Asterisk (root) reads it; nothing secret beyond the fax itself
+    temp_logo_path = ""
+    if temp_logo:
+        try:
+            png = M.fax_brand.bw_png(temp_logo)
+        except ValueError as e:
+            shutil.rmtree(job, ignore_errors=True)
+            return None, str(e)
+        temp_logo_path = os.path.join(job, "templogo.png")
+        with open(temp_logo_path, "wb") as f:
+            f.write(png)
+        brand = dict(brand, logo_file=temp_logo_path)
     try:
         pages = build(job, data, filename, {
             "to_name": to_name.strip()[:60], "to_number": to, "subject": subject.strip()[:80],
@@ -253,6 +269,15 @@ def queue(me, data, filename, to_number, from_did, to_name="", subject="", note=
     except subprocess.TimeoutExpired:
         shutil.rmtree(job, ignore_errors=True)
         return None, "That document took too long to convert. Try a smaller one."
+    finally:
+        # A one-time logo is deleted the moment the cover is rendered; the
+        # sent fax itself (cover + pages) is the only place it remains, as
+        # with any fax. Nothing reusable is kept.
+        if temp_logo_path:
+            try:
+                os.remove(temp_logo_path)
+            except OSError:
+                pass
     pdf = os.path.join(job, "fax.pdf")
     with M.db() as c:
         fid = c.execute(

@@ -326,8 +326,84 @@ def user_page(request: Request):
         flash = f'<div class="flash bad">{esc(request.query_params["err"])}</div>'
     if request.query_params.get("brand_saved"):
         flash = '<div class="flash ok">Fax branding saved. Use Preview to see your cover page.</div>'
+    if request.query_params.get("tpl_saved"):
+        flash = '<div class="flash ok">Template saved.</div>'
+    if request.query_params.get("tpl_deleted"):
+        flash = '<div class="flash ok">Template deleted.</div>'
+    if request.query_params.get("tpl_imported"):
+        flash = '<div class="flash ok">Template imported.</div>'
     if can:
         opts = "".join(f'<option value="{esc(n)}">{esc(n)}</option>' for n in nums)
+        with M.db() as c:
+            tpl_opts = "".join(f'<option value="{t["id"]}">{esc(t["name"])}</option>'
+                               for t in M.fax_brand.list_templates(c, me["id"]))
+        tpl_row = (f'<label><input type="radio" name="brand_mode" value="template"> Saved template<br>'
+                   f'<select name="template_id" id="brand-tpl-sel">{tpl_opts}</select></label>' if tpl_opts else
+                   '<p class="muted">Saved template: none yet — make one under My fax branding below.</p>')
+        brand_picker = f"""<fieldset style="margin:10px 0"><legend>Branding for this fax</legend>
+<label><input type="radio" name="brand_mode" value="default" checked> My default branding</label>
+{tpl_row}
+<label><input type="radio" name="brand_mode" value="once"> One-time branding (not saved on the server)</label>
+<div id="brand-once" style="display:none">
+<p class="muted">Used for this fax only. Nothing here is stored — not even a template file you load below; it only fills in these boxes in your browser.</p>
+<label>Load a template file from your computer (fills these boxes)<br><input type="file" id="once-tplfile" accept=".json,application/json"></label>
+<span id="once-name-note" class="muted"></span>
+<img id="once-logo-preview" style="display:none;max-width:280px;max-height:90px;background:#fff;padding:6px;border-radius:6px">
+<label>Logo (PNG or JPG)<br><input type="file" name="once_logo" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+<input type="hidden" name="once_logo_b64">
+<label>Logo text / company name<br><input name="once_company" maxlength="60"></label>
+<label>Address<br><textarea name="once_address" rows="3" maxlength="200"></textarea></label>
+<label>Phone<br><input name="once_phone" maxlength="30"></label>
+<label>Email<br><input name="once_email" maxlength="80"></label>
+<label>Website<br><input name="once_website" maxlength="80"></label>
+<label>Footer notice (bottom of the cover page)<br><textarea name="once_footer" rows="3" maxlength="600"></textarea></label>
+<label>Header line on every page<br><input name="once_header" maxlength="40"></label>
+<button class="btn ghost" type="submit" formaction="/ucp/faxes/cover-preview-once" formmethod="post" formtarget="_blank">Preview this one-time cover</button>
+</div></fieldset>"""
+        brand_js = """<script>
+(function(){
+  function show(){
+    var m = document.querySelector('input[name="brand_mode"]:checked');
+    var o = document.getElementById('brand-once');
+    if (m && o) { o.style.display = (m.value === 'once') ? '' : 'none'; }
+  }
+  document.querySelectorAll('input[name="brand_mode"]').forEach(function(r){
+    r.addEventListener('change', show);
+  });
+  var sel = document.getElementById('brand-tpl-sel');
+  if (sel) { sel.addEventListener('change', function(){
+    var r = document.querySelector('input[name="brand_mode"][value="template"]');
+    if (r) { r.checked = true; }
+    show();
+  }); }
+  show();
+  var lf = document.getElementById('once-tplfile');
+  if (lf) { lf.addEventListener('change', function(){
+    var f = lf.files[0];
+    if (!f) { return; }
+    var rd = new FileReader();
+    rd.onload = function(){
+      try {
+        var d = JSON.parse(rd.result);
+        if (d.format !== 'ownpbx-fax-template') { alert('That file is not a fax template.'); return; }
+        ['company', 'address', 'phone', 'email', 'website', 'footer', 'header'].forEach(function(k){
+          var el = document.querySelector('[name="once_' + k + '"]');
+          if (el) { el.value = d[k] || ''; }
+        });
+        var nm = document.getElementById('once-name-note');
+        if (nm) { nm.textContent = d.name ? ('Loaded template: ' + d.name) : ''; }
+        var b64 = document.querySelector('[name="once_logo_b64"]');
+        var img = document.getElementById('once-logo-preview');
+        if (d.logo && b64) {
+          b64.value = d.logo;
+          if (img) { img.src = d.logo; img.style.display = 'block'; }
+        }
+      } catch (e) { alert('That file could not be read as a fax template.'); }
+    };
+    rd.readAsText(f);
+  }); }
+})();
+</script>"""
         send = f"""<details class="panel" {'open' if request.query_params.get("err") else ''}><summary><b>Send a fax</b></summary>
 <form method="post" action="/ucp/faxes/send" enctype="multipart/form-data">{csrf}
 <label>File (PDF or picture)<br><input type="file" name="file" accept=".pdf,image/*" required></label>
@@ -337,9 +413,10 @@ def user_page(request: Request):
 <label>To (name)<br><input name="to_name" maxlength="60"></label>
 <label>Subject<br><input name="subject" maxlength="80"></label>
 <label>Message on the cover<br><textarea name="note" rows="3" maxlength="2000"></textarea></label>
+{brand_picker}
 <button class="btn">Send fax</button>
 <p class="muted">{_left_txt(me)}Uses outside-call minutes from your plan. Busy or unanswered lines are tried again (3 tries).</p>
-</form></details>"""
+</form>{brand_js}</details>"""
     else:
         send = f'<p class="muted">Sending: {esc(why)}</p>'
     sent = M.fax_send.sent_for(me)
@@ -360,7 +437,7 @@ def user_page(request: Request):
 <div class="bulkbar"><button class="btn ghost" form="ufax">Delete selected</button></div>
 <div class="scrollbox"><table><tr><th><input type="checkbox" id="ufax-all" aria-label="Select all"></th><th>Received</th><th>Number</th><th>From</th><th>Pages</th><th></th></tr>
 {_rows(faxes, False, "ufax") or '<tr><td colspan="6" class="muted">No faxes yet.</td></tr>'}</table></div>
-{M.ucp._bulk_js("ufax")}{sent_html}{M.fax_brand.user_section(s, me) if M.fax_send.entitled(me) else ""}"""
+{M.ucp._bulk_js("ufax")}{sent_html}{M.fax_brand.user_section(s, me, request.query_params.get("edit_template")) if M.fax_send.entitled(me) else ""}"""
     return M.ucp._render(request, s, me, "ucp-fax", "Faxes", body)
 
 
@@ -393,13 +470,42 @@ async def user_send(request: Request):
     f = await request.form()
     up = f.get("file")
     data = await up.read(M.fax_send.MAX_UPLOAD + 1) if hasattr(up, "read") else b""
+    brand = None
+    temp_logo = None
+    brand_note = ""
+    if f.get("cover"):
+        mode = f.get("brand_mode") or "default"
+        if mode == "template":
+            with M.db() as c:
+                brand = M.fax_brand.template_brand(c, me["id"], f.get("template_id") or "")
+            if brand is None:
+                return RedirectResponse("/ucp/faxes?err=" + urllib.parse.quote("That template doesn't exist."),
+                                        status_code=303)
+            brand_note = " (template)"
+        elif mode == "once":
+            import base64
+            brand = dict(M.fax_brand.EMPTY)
+            brand.update({k: M.fax_brand._clean(k, f.get("once_" + k) or "") for k in M.fax_brand.FIELDS})
+            up2 = f.get("once_logo")
+            if hasattr(up2, "read"):
+                temp_logo = await up2.read(M.fax_brand.MAX_LOGO + 1)
+            if not temp_logo:
+                raw = f.get("once_logo_b64") or ""
+                if raw.startswith("data:"):
+                    raw = raw.split(",", 1)[1] if "," in raw else ""
+                if raw:
+                    try:
+                        temp_logo = base64.b64decode(raw, validate=True)
+                    except Exception:
+                        temp_logo = None
+            brand_note = " (one-time branding, not stored)"
     fid, err = M.fax_send.queue(me, data, getattr(up, "filename", "") or "", f.get("to_number") or "",
                                 f.get("from_did") or "", to_name=f.get("to_name") or "",
                                 subject=f.get("subject") or "", note=f.get("note") or "",
-                                cover=bool(f.get("cover")))
+                                cover=bool(f.get("cover")), brand=brand, temp_logo=temp_logo)
     if err:
         return RedirectResponse("/ucp/faxes?err=" + urllib.parse.quote(err), status_code=303)
-    M.ucp._audit(me, "fax.send", f"id={fid} to={f.get('to_number')}")
+    M.ucp._audit(me, "fax.send", f"id={fid} to={f.get('to_number')}{brand_note}")
     return RedirectResponse("/ucp/faxes?sent=1", status_code=303)
 
 

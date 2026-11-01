@@ -110,16 +110,25 @@ def header_text(brand, me):
 
 # ------------------------------------------------------------------ logo
 
-def logo_path(b):
-    p = b.get("logo") or ""
-    if not p:
+def _brand_file(name):
+    """A file inside BRAND_DIR, or '' (names are confined to that directory)."""
+    if not name:
         return ""
-    full = os.path.realpath(os.path.join(BRAND_DIR, os.path.basename(p)))
+    full = os.path.realpath(os.path.join(BRAND_DIR, os.path.basename(name)))
     return full if full.startswith(os.path.realpath(BRAND_DIR) + os.sep) and os.path.isfile(full) else ""
 
 
-def store_logo(c, login_id, data):
-    """Fax-ready black & white PNG from an uploaded picture. Raises ValueError."""
+def logo_path(b):
+    # A one-time brand carries logo_file (a temp file the sender made for
+    # this fax only); it is used for rendering and never stored anywhere.
+    if b.get("logo_file"):
+        p = b["logo_file"]
+        return p if os.path.isfile(p) else ""
+    return _brand_file(b.get("logo") or "")
+
+
+def bw_png(data):
+    """Fax-ready black & white PNG bytes from an uploaded picture. Raises ValueError."""
     if not data:
         raise ValueError("Choose a picture for the logo.")
     if len(data) > MAX_LOGO:
@@ -152,9 +161,18 @@ def store_logo(c, login_id, data):
     # mostly solid (light tints stay as fine dots, near-white drops out).
     g = g.point(lambda v: 0 if v < 70 else 255 if v > 215 else int((v - 70) * 255 / 145))
     bw = g.convert("1")          # Floyd-Steinberg dithering for what's left in between
+    out = io.BytesIO()
+    bw.save(out, "PNG")
+    return out.getvalue()
+
+
+def store_logo(c, login_id, data):
+    """Fax-ready logo for the single branding row. Raises ValueError."""
+    png = bw_png(data)
     os.makedirs(BRAND_DIR, exist_ok=True)
     name = f"logo-{login_id}-{int(time.time())}.png"
-    bw.save(os.path.join(BRAND_DIR, name), "PNG")
+    with open(os.path.join(BRAND_DIR, name), "wb") as f:
+        f.write(png)
     old = load(c, login_id)
     if not c.execute("SELECT 1 FROM fax_branding WHERE login_id=?", (login_id,)).fetchone():
         save(c, login_id, {})
@@ -177,6 +195,196 @@ def _rm(b):
             os.remove(p)
         except OSError:
             pass
+
+
+# ------------------------------------------------------------------ templates
+# A user can keep one branding per client (fax_templates, one row each) and
+# pick one on the send form. A branding too sensitive to store here at all
+# never becomes a template: it is loaded from the user's own computer onto
+# the send form and used for that one fax only (see the one-time branding
+# in fax_ui), so no row and no logo file is ever written for it.
+
+TEMPLATE_FMT = "ownpbx-fax-template"
+
+
+def _tpl_row(r):
+    d = dict({k: r[k] or "" for k in FIELDS})
+    d.update({"id": r["id"], "name": r["name"] or "", "logo": r["logo"] or "",
+              "has_logo": bool(r["logo"]), "updated_at": r["updated_at"] or ""})
+    return d
+
+
+def list_templates(c, login_id):
+    try:
+        rows = c.execute("SELECT * FROM fax_templates WHERE login_id=? ORDER BY name COLLATE NOCASE, id",
+                         (login_id,)).fetchall()
+    except Exception:
+        return []
+    return [_tpl_row(r) for r in rows]
+
+
+def get_template(c, login_id, tid):
+    try:
+        tid = int(tid)
+    except (TypeError, ValueError):
+        return None
+    try:
+        r = c.execute("SELECT * FROM fax_templates WHERE id=? AND login_id=?", (tid, login_id)).fetchone()
+    except Exception:
+        return None
+    return _tpl_row(r) if r else None
+
+
+def template_brand(c, login_id, tid):
+    """A template as a brand dict for cover_ps/header_text (logo via BRAND_DIR)."""
+    t = get_template(c, login_id, tid)
+    if not t:
+        return None
+    b = dict(EMPTY)
+    b.update({k: t[k] for k in FIELDS})
+    b["logo"] = t["logo"]
+    return b
+
+
+def save_template(c, login_id, tid, name, vals):
+    name = " ".join(str(name or "").split())[:60] or "Untitled"
+    b = {k: _clean(k, vals.get(k, "")) for k in FIELDS}
+    if tid:
+        cur = get_template(c, login_id, tid)
+        if cur:
+            c.execute("UPDATE fax_templates SET name=?, company=?, address=?, phone=?, email=?, website=?,"
+                      " footer=?, header=?, updated_at=datetime('now') WHERE id=? AND login_id=?",
+                      (name, b["company"], b["address"], b["phone"], b["email"], b["website"], b["footer"],
+                       b["header"], tid, login_id))
+            c.commit()
+            return tid
+    cur = c.execute("INSERT INTO fax_templates (login_id, name, company, address, phone, email, website, footer,"
+                    " header, logo, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,'',datetime('now'),datetime('now'))",
+                    (login_id, name, b["company"], b["address"], b["phone"], b["email"], b["website"],
+                     b["footer"], b["header"]))
+    c.commit()
+    return cur.lastrowid
+
+
+def _rm_tpl_logo(name):
+    p = _brand_file(name)
+    if p:
+        try:
+            os.remove(p)
+        except OSError:
+            pass
+
+
+def store_template_logo(c, login_id, tid, data):
+    """Fax-ready logo for a template, from an uploaded picture. Raises ValueError."""
+    png = bw_png(data)
+    t = get_template(c, login_id, tid)
+    if not t:
+        raise ValueError("That template doesn't exist.")
+    os.makedirs(BRAND_DIR, exist_ok=True)
+    name = f"tpl-{tid}-{int(time.time())}.png"
+    with open(os.path.join(BRAND_DIR, name), "wb") as f:
+        f.write(png)
+    old = t["logo"]
+    c.execute("UPDATE fax_templates SET logo=?, updated_at=datetime('now') WHERE id=? AND login_id=?",
+              (name, tid, login_id))
+    c.commit()
+    _rm_tpl_logo(old)
+
+
+def store_template_logo_bytes(c, login_id, tid, png):
+    """A template logo from bytes already in fax-ready form (import path).
+    Validates that it is a real PNG and stores it. Raises ValueError."""
+    try:
+        from PIL import Image
+        with Image.open(io.BytesIO(png)) as im:
+            im.load()
+            if im.width * im.height > 40_000_000:
+                raise ValueError("That template's logo is too large.")
+    except ValueError:
+        raise
+    except Exception:
+        raise ValueError("That template's logo couldn't be read.")
+    t = get_template(c, login_id, tid)
+    if not t:
+        raise ValueError("That template doesn't exist.")
+    os.makedirs(BRAND_DIR, exist_ok=True)
+    name = f"tpl-{tid}-{int(time.time())}.png"
+    with open(os.path.join(BRAND_DIR, name), "wb") as f:
+        f.write(png)
+    old = t["logo"]
+    c.execute("UPDATE fax_templates SET logo=?, updated_at=datetime('now') WHERE id=? AND login_id=?",
+              (name, tid, login_id))
+    c.commit()
+    _rm_tpl_logo(old)
+
+
+def remove_template_logo(c, login_id, tid):
+    t = get_template(c, login_id, tid)
+    if not t:
+        return
+    c.execute("UPDATE fax_templates SET logo='' WHERE id=? AND login_id=?", (tid, login_id))
+    c.commit()
+    _rm_tpl_logo(t["logo"])
+
+
+def delete_template(c, login_id, tid):
+    t = get_template(c, login_id, tid)
+    if not t:
+        return False
+    c.execute("DELETE FROM fax_templates WHERE id=? AND login_id=?", (tid, login_id))
+    c.commit()
+    _rm_tpl_logo(t["logo"])
+    return True
+
+
+def export_template(c, login_id, tid):
+    """The template as a portable dict: fields + logo as a data URI (or '')."""
+    import base64
+    t = get_template(c, login_id, tid)
+    if not t:
+        return None
+    d = {"format": TEMPLATE_FMT, "version": 1, "name": t["name"]}
+    d.update({k: t[k] for k in FIELDS})
+    logo = ""
+    p = _brand_file(t["logo"])
+    if p:
+        try:
+            with open(p, "rb") as f:
+                logo = "data:image/png;base64," + base64.b64encode(f.read()).decode()
+        except OSError:
+            logo = ""
+    d["logo"] = logo
+    return d
+
+
+def import_template(c, login_id, data):
+    """A template dict (from an exported file) -> a new saved template id. Raises ValueError."""
+    import base64
+    if not isinstance(data, dict) or data.get("format") != TEMPLATE_FMT or data.get("version") != 1:
+        raise ValueError("That file is not a fax template (it should be a template downloaded from this PBX).")
+    name = " ".join(str(data.get("name") or "").split())[:60] or "Imported template"
+    taken = {t["name"] for t in list_templates(c, login_id)}
+    base, n = name, 2
+    while name in taken:            # an import never silently replaces a template
+        name = f"{base} ({n})"
+        n += 1
+    tid = save_template(c, login_id, None, name, {k: data.get(k, "") for k in FIELDS})
+    raw = data.get("logo") or ""
+    if raw:
+        try:
+            if raw.startswith("data:"):
+                raw = raw.split(",", 1)[1]
+            png = base64.b64decode(raw, validate=True)
+        except Exception:
+            delete_template(c, login_id, tid)
+            raise ValueError("That template's logo couldn't be read.")
+        try:
+            store_template_logo_bytes(c, login_id, tid, png)
+        except ValueError as e:
+            delete_template(c, login_id, tid)
+            raise
+    return tid
 
 
 # ------------------------------------------------------------------ cover page
@@ -369,6 +577,71 @@ def form_html(b, action, csrf, logo_url, preview_url, user=False, allowed=True, 
 </form>"""
 
 
+def template_form_html(t, action, csrf, logo_url):
+    """New/edit template form. t: a template dict, or None for a new one."""
+    t = t or dict({k: "" for k in FIELDS}, id="", name="", logo="")
+    def inp(k, ph=""):
+        return (f'<label>{FIELDS[k][0]}<br><input name="{k}" value="{esc(t[k])}" maxlength="{FIELDS[k][1]}" '
+                f'placeholder="{esc(ph)}"></label>')
+    logo = (f'<div class="brand-logo"><img src="{logo_url}?v={esc(t["logo"])}" alt="Current logo" '
+            f'style="max-width:280px;max-height:90px;background:#fff;padding:6px;border-radius:6px;display:block">'
+            f'<label class="inline-chk"><input type="checkbox" name="remove_logo" value="1"> Remove logo</label></div>'
+            if t.get("logo") else '<p class="muted">No logo yet.</p>')
+    hid = f'<input type="hidden" name="id" value="{t["id"]}"> ' if t.get("id") else ""
+    title = "Edit template" if t.get("id") else "New template"
+    return f"""<form method="post" action="{action}" enctype="multipart/form-data" class="panel fax-brand" style="max-width:640px">{csrf}{hid}
+<h4 style="margin:6px 0">{title}</h4>
+<label>Template name (e.g. the client)<br><input name="name" value="{esc(t["name"])}" maxlength="60" required></label>
+<h4 style="margin:6px 0">Logo</h4>
+{logo}
+<label>Upload a logo (PNG or JPG; turned into fax black &amp; white)<br><input type="file" name="logo" accept="image/png,image/jpeg,image/gif,image/webp"></label>
+{inp("company", "e.g. Acme Dental")}
+<p class="muted">Shown big at the top when there's no logo, or under the logo.</p>
+<label>Address<br><textarea name="address" rows="3" maxlength="200" placeholder="123 Main St&#10;Fresno, CA 93721">{esc(t["address"])}</textarea></label>
+{inp("phone", "(559) 555-0100")}
+{inp("email", "office@example.com")}
+{inp("website", "example.com")}
+<label>Footer notice (bottom of the cover page)<br><textarea name="footer" rows="3" maxlength="600" placeholder="CONFIDENTIAL: This fax is intended only for the named recipient. If you received it in error, please notify us and destroy it.">{esc(t["footer"])}</textarea></label>
+{inp("header", "Acme Dental")}
+<p class="muted">Printed at the top of every page next to the date, your fax number and the page number. Empty: the company name (or your name).</p>
+<button class="btn">Save template</button>
+</form>"""
+
+
+def templates_section(s, me, edit_id=None):
+    """Saved templates panel for the user's branding section."""
+    with M.db() as c:
+        tpl = list_templates(c, me["id"])
+        edit = get_template(c, me["id"], edit_id) if edit_id else None
+    csrf = M._csrf_field(s)
+    rows = ""
+    for t in tpl:
+        rows += (f"<tr><td>{esc(t['name'])}</td><td class=\"muted\">{esc(t['company'])}</td><td>"
+                 f"<a class=\"btn ghost\" href=\"/ucp/faxes/template/preview?id={t['id']}\" target=\"_blank\" rel=\"noopener\">Preview</a> "
+                 f"<a class=\"btn ghost\" href=\"/ucp/faxes/template/export?id={t['id']}\">Download</a> "
+                 f"<a class=\"btn ghost\" href=\"/ucp/faxes?edit_template={t['id']}#branding\">Edit</a> "
+                 f"<button class=\"btn ghost\" form=\"tpl-del\" name=\"id\" value=\"{t['id']}\" "
+                 f"onclick=\"return confirm('Delete this template?')\">Delete</button></td></tr>")
+    table = (f"<form id=\"tpl-del\" method=\"post\" action=\"/ucp/faxes/template/delete\">{csrf}</form>"
+             f"<div class=\"scrollbox\"><table><tr><th>Name</th><th>Company</th><th></th></tr>"
+             f"{rows or '<tr><td colspan=\"3\" class=\"muted\">No saved templates yet.</td></tr>'}</table></div>"
+             if tpl else "<p class=\"muted\">No saved templates yet.</p>")
+    edit_form = template_form_html(edit, "/ucp/faxes/template", csrf,
+                                   f"/ucp/faxes/template/logo?id={edit['id']}" if edit else "")
+    return f"""<h3 style="margin-top:22px">Saved templates</h3>
+<p class="muted">One branding per client. Pick one on the send form instead of re-filling this out every time.
+A client too sensitive to store here at all stays out of this list: keep its file on your own computer and
+load it as one-time branding on the send form — that is never stored on the server.</p>
+{table}
+{edit_form}
+<form method="post" action="/ucp/faxes/template/import" enctype="multipart/form-data" class="panel" style="max-width:640px">{csrf}
+<h4 style="margin:6px 0">Import a template file</h4>
+<p class="muted">A template downloaded from here (Download above) can be loaded back as a saved template.</p>
+<label>Template file (JSON)<br><input type="file" name="file" accept=".json,application/json" required></label>
+<button class="btn">Import template</button>
+</form>"""
+
+
 async def _save_from_form(request, login_id, user):
     f = await request.form()
     vals = {k: f.get(k) or "" for k in FIELDS}
@@ -447,7 +720,7 @@ def admin_preview(request: Request):
 
 # user (My Phone -> Faxes, and the app)
 
-def user_section(s, me):
+def user_section(s, me, edit_id=None):
     with M.db() as c:
         if not users_allowed(c):
             return ""
@@ -456,10 +729,12 @@ def user_section(s, me):
     csrf = M._csrf_field(s)
     form = form_html(b, "/ucp/faxes/branding", csrf, "/ucp/faxes/branding/logo", "/ucp/faxes/branding/preview",
                      user=True, pbx_name=pbx.get("company") or "")
+    tpl = templates_section(s, me, edit_id)
     return f"""<details class="panel" id="branding" style="margin-top:16px"><summary><b>My fax branding</b>
 <span class="muted">{'Your own' if b['use_own'] else 'Using ' + (esc(pbx.get('company')) or "the PBX's")} cover page</span></summary>
 <p class="muted">Put your own logo, company details and a footer notice on your cover page, and your name on the top line of every page.</p>
-{form}</details>"""
+{form}
+{tpl}</details>"""
 
 
 async def user_save(request: Request):
@@ -508,6 +783,170 @@ def user_preview(request: Request):
         raise HTTPException(500, "Couldn't draw the preview.")
 
 
+async def _tpl_gates(request):
+    """(s, me, None) or (None, None, redirect) for template POST routes."""
+    s, me = M.ucp._me(request)
+    if not s:
+        raise HTTPException(401)
+    await M._check_csrf(request, s)
+    if M.ucp._locked():
+        return None, None, RedirectResponse("/ucp/faxes?err=" + urllib.parse.quote("Changes are disabled right now."),
+                                            status_code=303)
+    if not M.fax_send.entitled(me):
+        return None, None, RedirectResponse("/ucp/faxes?err=" + urllib.parse.quote("Faxing isn't included in your plan."),
+                                            status_code=303)
+    with M.db() as c:
+        if not users_allowed(c):
+            return None, None, RedirectResponse("/ucp/faxes?err=" + urllib.parse.quote("Own branding is turned off by the admin."),
+                                                status_code=303)
+    return s, me, None
+
+
+async def template_save(request: Request):
+    s, me, err_resp = await _tpl_gates(request)
+    if err_resp is not None:
+        return err_resp
+    f = await request.form()
+    vals = {k: f.get(k) or "" for k in FIELDS}
+    err = ""
+    with M.db() as c:
+        tid = save_template(c, me["id"], f.get("id") or None, f.get("name") or "", vals)
+        up = f.get("logo")
+        data = await up.read(MAX_LOGO + 1) if hasattr(up, "read") else b""
+        if data:
+            try:
+                store_template_logo(c, me["id"], tid, data)
+            except ValueError as e:
+                err = str(e)
+        elif f.get("remove_logo"):
+            remove_template_logo(c, me["id"], tid)
+    M.ucp._audit(me, "fax.template", "saved" + (f" ({err})" if err else ""))
+    if err:
+        return RedirectResponse("/ucp/faxes?err=" + urllib.parse.quote(err) + "#branding", status_code=303)
+    return RedirectResponse("/ucp/faxes?tpl_saved=1#branding", status_code=303)
+
+
+async def template_delete(request: Request):
+    s, me, err_resp = await _tpl_gates(request)
+    if err_resp is not None:
+        return err_resp
+    f = await request.form()
+    with M.db() as c:
+        ok = delete_template(c, me["id"], f.get("id") or "")
+    M.ucp._audit(me, "fax.template", "deleted" if ok else "delete-missing")
+    return RedirectResponse("/ucp/faxes?tpl_deleted=1#branding", status_code=303)
+
+
+async def template_import(request: Request):
+    s, me, err_resp = await _tpl_gates(request)
+    if err_resp is not None:
+        return err_resp
+    f = await request.form()
+    up = f.get("file")
+    raw = await up.read(2 * 1024 * 1024 + 1) if hasattr(up, "read") else b""
+    err = ""
+    try:
+        import json
+        data = json.loads(raw.decode("utf-8"))
+    except Exception:
+        err = "That file couldn't be read as a template (it should be a JSON file downloaded from here)."
+    if not err:
+        try:
+            with M.db() as c:
+                import_template(c, me["id"], data)
+        except ValueError as e:
+            err = str(e)
+    M.ucp._audit(me, "fax.template", "imported" + (f" ({err})" if err else ""))
+    if err:
+        return RedirectResponse("/ucp/faxes?err=" + urllib.parse.quote(err) + "#branding", status_code=303)
+    return RedirectResponse("/ucp/faxes?tpl_imported=1#branding", status_code=303)
+
+
+def template_export(request: Request):
+    s, me = M.ucp._me(request)
+    if not s:
+        raise HTTPException(401)
+    with M.db() as c:
+        d = export_template(c, me["id"], request.query_params.get("id") or "")
+    if not d:
+        raise HTTPException(404)
+    import json
+    import re
+    safe = re.sub(r"[^A-Za-z0-9_.-]+", "_", d["name"]).strip("._") or "template"
+    return Response(json.dumps(d, indent=2), media_type="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="fax-template-{safe}.json"',
+                             "Cache-Control": "no-store"})
+
+
+def template_logo(request: Request):
+    s, me = M.ucp._me(request)
+    if not s:
+        raise HTTPException(401)
+    with M.db() as c:
+        t = get_template(c, me["id"], request.query_params.get("id") or "")
+        p = _brand_file(t["logo"]) if t else ""
+    if not p:
+        raise HTTPException(404)
+    return FileResponse(p, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
+def template_preview(request: Request):
+    s, me = M.ucp._me(request)
+    if not s:
+        raise HTTPException(401)
+    with M.db() as c:
+        b = template_brand(c, me["id"], request.query_params.get("id") or "")
+    if not b:
+        raise HTTPException(404)
+    try:
+        return _pdf_response(preview_pdf(b, _sample(request, me, b)))
+    except Exception:
+        raise HTTPException(500, "Couldn't draw the preview.")
+
+
+async def once_preview(request: Request):
+    """Cover preview for one-time branding: renders from the posted form and
+    saves nothing (the logo lives in a temp dir deleted right after)."""
+    import base64
+    import shutil
+    import tempfile
+    s, me = M.ucp._me(request)
+    if not s:
+        raise HTTPException(401)
+    await M._check_csrf(request, s)
+    if not M.fax_send.entitled(me):
+        raise HTTPException(403, "Faxing isn't included in your plan.")
+    f = await request.form()
+    b = dict(EMPTY)
+    b.update({k: _clean(k, f.get("once_" + k) or "") for k in FIELDS})
+    data = b""
+    up = f.get("once_logo")
+    if hasattr(up, "read"):
+        data = await up.read(MAX_LOGO + 1)
+    if not data:
+        raw = f.get("once_logo_b64") or ""
+        if raw.startswith("data:"):
+            raw = raw.split(",", 1)[1] if "," in raw else ""
+        if raw:
+            try:
+                data = base64.b64decode(raw, validate=True)
+            except Exception:
+                data = b""
+    d = tempfile.mkdtemp(prefix="once-brand-")
+    try:
+        if data:
+            b["logo_file"] = os.path.join(d, "logo.png")
+            with open(b["logo_file"], "wb") as fh:
+                fh.write(bw_png(data))
+        return _pdf_response(preview_pdf(b, _sample(request, me, b)))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception:
+        raise HTTPException(500, "Couldn't draw the preview.")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def summary(me):
     """For the app: which branding the user's faxes use."""
     try:
@@ -530,3 +969,10 @@ def install(app_module):
     app.get("/ucp/faxes/branding/logo")(user_logo)
     app.get("/ucp/faxes/branding/preview")(user_preview)
     app.get("/api/v1/me/faxes/cover-preview")(user_preview)
+    app.post("/ucp/faxes/template")(template_save)
+    app.post("/ucp/faxes/template/delete")(template_delete)
+    app.post("/ucp/faxes/template/import")(template_import)
+    app.get("/ucp/faxes/template/export")(template_export)
+    app.get("/ucp/faxes/template/logo")(template_logo)
+    app.get("/ucp/faxes/template/preview")(template_preview)
+    app.post("/ucp/faxes/cover-preview-once")(once_preview)
