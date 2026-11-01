@@ -166,6 +166,94 @@ ul.checklist code{display:block;margin:4px 0 6px;word-break:break-all}
 pre.token{background:var(--pill-bg);padding:12px;word-break:break-all;border-radius:6px}
 @media (max-width:640px){.msgs{grid-template-columns:1fr}.convs{border:0}
   table{display:block;overflow-x:auto}.wrap{padding:0 10px}.card{padding:14px}}
+
+/* ---- liquid glass + mobile ---- */
+/* Pure CSS: translucent fills + backdrop blur over a gradient mesh, so the
+   glass has something to bend. No JS framework, no new dependencies. */
+:root{
+  --glass-bg:rgba(255,255,255,.55);--glass-border:rgba(255,255,255,.75);
+  --glass-shadow:0 12px 32px rgba(26,26,46,.12);--glass-hi:rgba(255,255,255,.85);
+  --glass-btn:rgba(255,255,255,.5);--glass-hover:rgba(26,26,46,.08);
+  --glass-focus:rgba(40,86,199,.18);
+  /* accent as TEXT: the accent itself in dark mode is too dark to read on
+     glass, so dark mode gets a light tint of it instead (resolves lazily,
+     so a branded accent color still flows through in light mode) */
+  --accent-fg:var(--accent);
+}
+[data-theme="dark"]{
+  --glass-bg:rgba(27,27,39,.55);--glass-border:rgba(255,255,255,.14);
+  --glass-shadow:0 12px 32px rgba(0,0,0,.45);--glass-hi:rgba(255,255,255,.12);
+  --glass-btn:rgba(255,255,255,.08);--glass-hover:rgba(255,255,255,.12);
+  --glass-focus:rgba(138,180,255,.25);
+  --accent-fg:#b9c4ff;
+}
+/* gradient mesh fixed behind everything (the nav stays dark glass in both
+   themes, so its light-blue links stay readable) */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(640px 420px at 12% -5%,rgba(65,65,122,.20),transparent 60%),
+    radial-gradient(720px 460px at 92% 8%,rgba(255,140,0,.16),transparent 60%),
+    radial-gradient(820px 560px at 50% 112%,rgba(40,86,199,.14),transparent 60%);}
+[data-theme="dark"] body::before{
+  background:
+    radial-gradient(640px 420px at 12% -5%,rgba(65,65,122,.34),transparent 60%),
+    radial-gradient(720px 460px at 92% 8%,rgba(255,140,0,.22),transparent 60%),
+    radial-gradient(820px 560px at 50% 112%,rgba(40,86,199,.22),transparent 60%);}
+.nav{position:sticky;top:0;z-index:50;background:rgba(26,26,46,.72);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  border-bottom:1px solid var(--glass-border);flex-wrap:wrap;gap:10px 20px}
+.nav a{min-height:44px;display:inline-flex;align-items:center;padding:8px 12px;border-radius:999px;font-weight:600;font-size:15px}
+.nav a:hover{background:rgba(255,255,255,.12);text-decoration:none;color:#fff}
+.card{background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid var(--glass-border);border-radius:20px;
+  box-shadow:inset 0 1px 0 var(--glass-hi),var(--glass-shadow)}
+.panel{background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-border);border-radius:16px}
+.tabs{display:flex;gap:4px;padding:6px;background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-border);border-radius:16px}
+.tabs a{background:transparent;border-radius:10px;padding:10px 16px;font-weight:600;font-size:15px;white-space:nowrap}
+.tabs a:hover{background:var(--glass-hover);text-decoration:none}
+.tabs a.on{background:var(--accent);color:#fff;box-shadow:0 4px 14px rgba(0,0,0,.22)}
+.btn{min-height:44px;padding:10px 20px;border-radius:12px;font-weight:600;font-size:15px;
+  border:1px solid rgba(255,255,255,.25);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 6px 16px rgba(0,0,0,.16);
+  -webkit-backdrop-filter:blur(12px) saturate(160%);backdrop-filter:blur(12px) saturate(160%)}
+.btn:hover{filter:brightness(1.12)}
+.btn:active{transform:translateY(1px) scale(.99)}
+.btn.ghost{background:var(--glass-btn);color:var(--accent-fg);border-color:var(--accent-fg)}
+.btn.danger{background:var(--glass-btn)}
+.subtabs a.on{color:var(--accent-fg);border-color:var(--accent-fg)}
+input,select,textarea{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:10px;
+  min-height:44px;padding:10px 12px;font-size:16px;box-sizing:border-box}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--glass-focus)}
+.theme-toggle{min-width:44px;min-height:44px;border-radius:12px;font-size:20px}
+.switch input{width:24px;height:24px;accent-color:var(--accent);cursor:pointer}
+input[type=range]{-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:var(--pill-bg);padding:0;min-height:0}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:28px;height:28px;border-radius:50%;background:#fff;border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;background:#fff;border:1px solid var(--glass-border);box-shadow:0 2px 8px rgba(0,0,0,.3);cursor:pointer}
+.tile,.stat{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px}
+.tile.link:hover{background:var(--glass-hover)}
+.plan{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:16px}
+.flash{background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:12px}
+.scrollbox{-webkit-overflow-scrolling:touch}
+@media (max-width:640px){
+  .nav{padding:10px 14px}
+  .tabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+    -webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}
+  .tabs::-webkit-scrollbar{display:none}
+  .tabs a{flex:none;padding:10px 14px}
+  .subtabs{flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+    -webkit-mask-image:linear-gradient(90deg,#000 85%,transparent);mask-image:linear-gradient(90deg,#000 85%,transparent)}
+  .subtabs::-webkit-scrollbar{display:none}
+  .subtabs a{flex:none;padding:10px 12px}
+  .wrap{padding:0 14px}
+  .card{padding:16px;border-radius:16px}
+  .btn{padding:12px 20px;font-size:16px}
+  .ucp-head{flex-direction:column;align-items:flex-start;gap:4px}
+}
 """
 
 import contextvars
