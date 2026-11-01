@@ -206,8 +206,12 @@ body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
   -webkit-backdrop-filter:blur(28px) saturate(200%);backdrop-filter:blur(28px) saturate(200%);
   border-bottom:1px solid rgba(255,255,255,.18);flex-wrap:wrap;gap:10px 20px;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.28),inset 0 -1px 0 rgba(255,255,255,.06),0 8px 24px rgba(0,0,0,.25)}
-/* animated brand gradient, also glassed: same slide, translucent stops */
-.nav.animated{background:linear-gradient(120deg,color-mix(in srgb,var(--nav-bg) 55%,transparent),color-mix(in srgb,var(--accent) 55%,transparent),color-mix(in srgb,var(--nav-bg) 55%,transparent))}
+/* animated brand gradient, also glassed: same slide, translucent stops.
+   NOTE: the background shorthand above resets background-size to auto, so
+   it must be re-declared here — the navslide animation moves a 250% sized
+   gradient, and at 100% there is nowhere for it to move (that killed the
+   animation in a268449). */
+.nav.animated{background:linear-gradient(120deg,color-mix(in srgb,var(--nav-bg) 55%,transparent),color-mix(in srgb,var(--accent) 55%,transparent),color-mix(in srgb,var(--nav-bg) 55%,transparent));background-size:250% 250%}
 /* window-glass sheen: a diagonal light streak across the whole bar */
 .nav::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.10) 45%,rgba(255,255,255,.02) 55%,transparent 70%)}
