@@ -275,6 +275,31 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   .btn{padding:12px 20px;font-size:16px}
   .ucp-head{flex-direction:column;align-items:flex-start;gap:4px}
 }
+
+/* ---- one menu per page, distinct designs ---- */
+/* Admin menu: its own strip design (text links, filled active pill), not
+   the UCP glass bar — the glass container from the theme pass is removed. */
+.tabs{background:transparent;border:0;border-radius:0;padding:2px 0;box-shadow:none;
+  -webkit-backdrop-filter:none;backdrop-filter:none}
+.tabs a{padding:8px 12px}
+/* UCP menu: the single glass bar (the page-level .tabs is skipped on ucp
+   pages, so this is the only bar users see) */
+.subtabs{background:var(--glass-bg);
+  -webkit-backdrop-filter:blur(20px) saturate(180%);backdrop-filter:blur(20px) saturate(180%);
+  border:1px solid var(--glass-border);border-radius:16px;padding:6px;margin:0 0 18px}
+.subtabs a{padding:10px 14px;margin-bottom:0;border-radius:10px}
+.subtabs a:hover{background:var(--glass-hover);text-decoration:none}
+/* Menu scroll controls (built by _MENU_SCROLL_JS): hidden on desktop,
+   arrow buttons flanking the bar on small screens */
+.menuwrap{position:relative}
+.menu-arrow{display:none}
+@media (max-width:640px){
+  .menuwrap{display:flex;align-items:stretch;gap:6px}
+  .menuwrap .tabs,.menuwrap .subtabs{flex:1;min-width:0;user-select:none}
+  .menu-arrow{display:flex;align-items:center;justify-content:center;flex:none;width:36px;min-height:44px;border-radius:12px;border:1px solid var(--glass-border);background:var(--glass-bg);color:var(--fg);font-size:22px;cursor:pointer;
+    -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
+  .menu-arrow:disabled{opacity:.3;cursor:default}
+}
 """
 
 import contextvars
@@ -480,8 +505,72 @@ _PIN_ADMIN_JS = """<script>
 </script>"""
 
 
-def page(title, body, username="", role="", tab="", hide_tabs=()):
-    """hide_tabs: user-tab keys to leave out (e.g. {"ucp-bill"} in App store mode)."""
+# Menu scroll controls for small screens: touch users can already swipe a
+# cut-off menu bar, but mouse users cannot. This wraps every .tabs/.subtabs
+# bar with ‹ › buttons and adds mouse drag-to-scroll (mouse only; touch
+# keeps its native swipe, and a drag never fires the link under it).
+# Plain string, no backslash escapes (see the dashboard lesson above).
+_MENU_SCROLL_JS = """<script>
+(function(){
+  function setup(bar){
+    var wrap = document.createElement('div');
+    wrap.className = 'menuwrap';
+    bar.parentNode.insertBefore(wrap, bar);
+    wrap.appendChild(bar);
+    // Links are natively draggable: once a link-drag starts, pointermove
+    // stops firing and the bar freezes after a few pixels. Disabling that
+    // keeps both drag-scroll and plain clicks working (unlike cancelling
+    // pointerdown, which would also swallow the click).
+    var links = bar.querySelectorAll('a');
+    for (var j = 0; j < links.length; j++) links[j].draggable = false;
+    var prev = document.createElement('button');
+    prev.className = 'menu-arrow'; prev.type = 'button';
+    prev.setAttribute('aria-label', 'Scroll menu left'); prev.textContent = '‹';
+    var next = document.createElement('button');
+    next.className = 'menu-arrow'; next.type = 'button';
+    next.setAttribute('aria-label', 'Scroll menu right'); next.textContent = '›';
+    wrap.insertBefore(prev, bar); wrap.appendChild(next);
+    function update(){
+      var max = bar.scrollWidth - bar.clientWidth;
+      prev.disabled = bar.scrollLeft <= 0;
+      next.disabled = bar.scrollLeft >= max - 1;
+      wrap.classList.toggle('scrollable', max > 0);
+    }
+    prev.addEventListener('click', function(){ bar.scrollBy({left: -240, behavior: 'smooth'}); });
+    next.addEventListener('click', function(){ bar.scrollBy({left: 240, behavior: 'smooth'}); });
+    bar.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    var downX = 0, startScroll = 0, dragging = false, moved = false;
+    bar.addEventListener('pointerdown', function(e){
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      dragging = true; moved = false; downX = e.clientX; startScroll = bar.scrollLeft;
+    });
+    // Move/up on window, not the bar: setPointerCapture would retarget the
+    // click to the bar and links would stop navigating at all.
+    window.addEventListener('pointermove', function(e){
+      if (!dragging) return;
+      var dx = e.clientX - downX;
+      if (Math.abs(dx) > 5) moved = true;
+      bar.scrollLeft = startScroll - dx;
+    });
+    function endDrag(){ dragging = false; }
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('pointercancel', endDrag);
+    bar.addEventListener('click', function(e){
+      if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; }
+    }, true);
+    update();
+  }
+  var bars = document.querySelectorAll('.tabs, .subtabs');
+  for (var i = 0; i < bars.length; i++) setup(bars[i]);
+})();
+</script>"""
+
+
+def page(title, body, username="", role="", tab="", hide_tabs=(), skip_tabs=False):
+    """hide_tabs: user-tab keys to leave out (e.g. {"ucp-bill"} in App store mode).
+    skip_tabs: leave the page-level tab bar out (ucp pages already render their
+    own .subtabs bar; rendering both showed two near-duplicate menus)."""
     tabs = ""
     hide_admin = HIDE_ADMIN.get()
     if role == "admin" and not hide_admin:
@@ -547,6 +636,8 @@ def page(title, body, username="", role="", tab="", hide_tabs=()):
         tabs = '<div class="tabs">' + "".join(
             f'<a href="{h}" class="{"on" if k == tab else ""}">{label}</a>'
             for k, h, label in ucp_tabs if k not in hide_tabs) + "</div>"
+    if skip_tabs:
+        tabs = ""
     import html as _html
     shown_role = role + (", office-only admin" if role == "admin" and hide_admin else "")
     nav_user = f'<span>{_html.escape(username, quote=True)} ({_html.escape(shown_role, quote=True)})</span> <a href="/logout">Logout</a>' if username else ""
@@ -606,7 +697,7 @@ def page(title, body, username="", role="", tab="", hide_tabs=()):
 {_fav_tag}
 <style>{BASE_CSS}{_color_css}</style></head><body>
 <div class="{_nav_cls}">{brand_html}<span class="sp"></span>{_theme_btn}{nav_user}</div>
-<div class="wrap">{tabs}{_pinbar_div}<div class="card">{body}</div></div>{_footer}{_pin_js}</body></html>"""
+<div class="wrap">{tabs}{_pinbar_div}<div class="card">{body}</div></div>{_footer}{_pin_js}{_MENU_SCROLL_JS}</body></html>"""
 
 def login_html():
     """Login form with branding: logo and/or custom title per admin settings."""

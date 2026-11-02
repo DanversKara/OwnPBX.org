@@ -300,7 +300,9 @@ def _render(request, s, me, tab, title, body):
     content = sub + _flash(request) + head + body
     if hidden:
         content = M.app_api.web_neutral(content)
-    return HTMLResponse(M.page(title, content, s["username"], s["role"], tab, hide_tabs=hide))
+    # skip_tabs: this content already carries the .subtabs bar; the
+    # page-level user tabs would render a second, near-duplicate menu.
+    return HTMLResponse(M.page(title, content, s["username"], s["role"], tab, hide_tabs=hide, skip_tabs=True))
 
 
 def _device_status(me):
