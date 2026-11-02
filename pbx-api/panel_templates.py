@@ -300,6 +300,34 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
     -webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}
   .menu-arrow:disabled{opacity:.3;cursor:default}
 }
+
+/* ---- animated glass tube header ---- */
+/* Slim floating capsule, inset from the viewport edges, instead of the old
+   full-width bar. The liquid inside is the Branding preset gradient
+   (header color -> accent -> header) at glass translucency over blur,
+   with a wet top gloss. The Animated-gradient checkbox still drives it:
+   on = the liquid drifts (navslide) and a light streak sweeps the tube;
+   off = a static glass tube in the same colors. */
+.nav{margin:10px 12px 0;padding:7px 14px;border-radius:999px;overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 55%),linear-gradient(120deg,color-mix(in srgb,var(--nav-bg) 45%,transparent),color-mix(in srgb,var(--accent) 45%,transparent),color-mix(in srgb,var(--nav-bg) 45%,transparent));
+  background-size:auto,250% 250%;
+  border:1px solid rgba(255,255,255,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(255,255,255,.18),0 8px 24px rgba(0,0,0,.22)}
+/* Same layers for the animated variant: the older .nav.animated rule has
+   higher specificity than .nav, so it would otherwise win back the old
+   full-width background. Animation itself still comes from navslide. */
+.nav.animated{background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0) 55%),linear-gradient(120deg,color-mix(in srgb,var(--nav-bg) 45%,transparent),color-mix(in srgb,var(--accent) 45%,transparent),color-mix(in srgb,var(--nav-bg) 45%,transparent));background-size:auto,250% 250%}
+.nav.animated::after{left:-30%;right:-30%;animation:tubesheen 7s ease-in-out infinite}
+@keyframes tubesheen{0%{transform:translateX(-20%)}50%{transform:translateX(20%)}100%{transform:translateX(-20%)}}
+/* Slimmer header links: 36px total instead of 44px, so the tube stays slim.
+   border-box, or padding stacks on top of min-height (content-box) and the
+   header comes out ~12px taller than the numbers say. The moon button was
+   the tallest item at 44px, so it shrinks to match. */
+.nav a{box-sizing:border-box;min-height:36px;padding:6px 12px}
+.nav .theme-toggle{box-sizing:border-box;min-width:36px;min-height:36px;font-size:18px}
+@media (max-width:640px){
+  .nav{margin:8px 8px 0;padding:6px 10px}
+}
 """
 
 import contextvars
