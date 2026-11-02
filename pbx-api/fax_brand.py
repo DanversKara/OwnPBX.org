@@ -358,6 +358,34 @@ def export_template(c, login_id, tid):
     return d
 
 
+def brand_from_file(raw):
+    """A downloaded template file (bytes) -> (brand dict, logo bytes or b"")
+    for ONE fax. Nothing is stored: the caller renders the logo into a temp
+    file. Raises ValueError for anything that isn't a template from this PBX."""
+    import base64
+    import json
+    try:
+        data = json.loads((raw or b"").decode("utf-8"))
+    except Exception:
+        raise ValueError("That file is not a fax template (it should be a template downloaded from this PBX).")
+    if not isinstance(data, dict) or data.get("format") != TEMPLATE_FMT or data.get("version") != 1:
+        raise ValueError("That file is not a fax template (it should be a template downloaded from this PBX).")
+    b = dict(EMPTY)
+    b.update({k: _clean(k, data.get(k) or "") for k in FIELDS})
+    logo = b""
+    lr = str(data.get("logo") or "")
+    if lr:
+        if lr.startswith("data:"):
+            lr = lr.split(",", 1)[1] if "," in lr else ""
+        try:
+            logo = base64.b64decode(lr, validate=True)
+        except Exception:
+            raise ValueError("That template's logo couldn't be read.")
+        if len(logo) > MAX_LOGO:
+            raise ValueError("That template's logo is too large.")
+    return b, logo
+
+
 def import_template(c, login_id, data):
     """A template dict (from an exported file) -> a new saved template id. Raises ValueError."""
     import base64
@@ -777,6 +805,11 @@ def user_preview(request: Request):
         b = for_login(c, me)
         if request.query_params.get("own") == "1" and users_allowed(c):
             b = load(c, me["id"])
+        tid = request.query_params.get("template_id")
+        if tid:
+            b = template_brand(c, me["id"], tid)
+            if b is None:
+                raise HTTPException(404, "That template doesn't exist.")
     try:
         return _pdf_response(preview_pdf(b, _sample(request, me, b)))
     except Exception:
@@ -947,6 +980,40 @@ async def once_preview(request: Request):
         shutil.rmtree(d, ignore_errors=True)
 
 
+async def app_file_preview(request: Request):
+    """The app: cover preview from a template file on the phone. Nothing is
+    stored (the logo goes to a temp dir deleted right after)."""
+    import shutil
+    import tempfile
+    me = M.app_api._need(request)
+    if not M.fax_send.entitled(me):
+        raise HTTPException(403, "Faxing isn't included in your plan.")
+    f = await request.form()
+    up = f.get("template_file")
+    raw = await up.read(MAX_LOGO * 2) if hasattr(up, "read") else b""
+    try:
+        b, logo = brand_from_file(raw)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    d = tempfile.mkdtemp(prefix="once-brand-")
+    try:
+        if logo:
+            b["logo_file"] = os.path.join(d, "logo.png")
+            with open(b["logo_file"], "wb") as fh:
+                fh.write(bw_png(logo))
+        sample = _sample(request, me, b)
+        for k in ("to_name", "to_number", "from_did", "subject", "note"):
+            if f.get(k) is not None:
+                sample[{"from_did": "from_number"}.get(k, k)] = str(f.get(k))[:2000]
+        return _pdf_response(preview_pdf(b, sample))
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception:
+        raise HTTPException(500, "Couldn't draw the preview.")
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
+
+
 def summary(me):
     """For the app: which branding the user's faxes use."""
     try:
@@ -969,6 +1036,7 @@ def install(app_module):
     app.get("/ucp/faxes/branding/logo")(user_logo)
     app.get("/ucp/faxes/branding/preview")(user_preview)
     app.get("/api/v1/me/faxes/cover-preview")(user_preview)
+    app.post("/api/v1/me/faxes/cover-preview-file")(app_file_preview)
     app.post("/ucp/faxes/template")(template_save)
     app.post("/ucp/faxes/template/delete")(template_delete)
     app.post("/ucp/faxes/template/import")(template_import)
