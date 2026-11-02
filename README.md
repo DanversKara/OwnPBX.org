@@ -61,7 +61,9 @@ It’s a work in progress, and I’m looking forward to seeing where it goes.
 
 ![Dashboard](docs/screenshots/02-dashboard.png)
 
-> All screenshots use made-up demo data (names like "Front Desk" are just examples).
+> Screenshots use made-up demo data (names like "Front Desk" are just examples),
+> except the two theme previews in section 9, which are a real panel with
+> personal details blanked out.
 
 ---
 
@@ -694,11 +696,23 @@ alerts. A key is shown only once; revoke it any time.
 White-label the panel: site name, header logo (upload or URL, shown as text,
 logo, or both) with an optional separate dark-mode logo that auto-swaps with
 the theme, header and button colors with one-click presets (Ocean, Sunset,
-Royal…), an animated gradient header option, default dark/light theme
+Royal, Lagoon, Deep sea…), an animated gradient header option, default dark/light theme
 (visitors can flip it with the 🌙/☀️ icon; their choice sticks in the
 browser), login page logo/title/subtitle (also with a dark-mode variant),
 favicon, and an optional footer line. Logos are stored in the database, so
 they ride along with backups.
+
+**Panel look:** *Frosted glass* (the default) or *Wet liquid glass*: a water
+background that slowly drifts in your brand colors, clear glass cards with a
+curved shine and droplets, and jelly capsule buttons. Works in light and dark
+mode (tap a screenshot to open it full size and zoom in):
+
+<table>
+<tr>
+<td align="center"><a href="docs/screenshots/theme-wet-glass-light.webp"><img src="docs/screenshots/theme-wet-glass-light.webp" width="380" alt="Wet liquid glass theme, light mode: admin dashboard"></a><br><sub>Light mode</sub></td>
+<td align="center"><a href="docs/screenshots/theme-wet-glass-dark.webp"><img src="docs/screenshots/theme-wet-glass-dark.webp" width="380" alt="Wet liquid glass theme, dark mode: admin dashboard"></a><br><sub>Dark mode</sub></td>
+</tr>
+</table>
 
 **Regional:** time zone selector (defaults to Los Angeles); all call,
 message, voicemail and recording times display in 12-hour format in that
