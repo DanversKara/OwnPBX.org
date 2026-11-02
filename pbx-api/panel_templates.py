@@ -561,12 +561,14 @@ _PIN_ADMIN_JS = """<script>
 # prefers-reduced-motion.
 WET_CSS = """
 body.look-wet{--wet-a:var(--nav-bg);--wet-b:var(--accent);
-  --wet-fill:rgba(255,255,255,.07);--wet-rim:rgba(255,255,255,.34);--wet-rim-lo:rgba(255,255,255,.10);
-  --wet-shine:rgba(255,255,255,.26);--wet-drop:rgba(255,255,255,.75);
+  --wet-fill:rgba(9,18,30,.46);--wet-rim:rgba(255,255,255,.30);--wet-rim-lo:rgba(255,255,255,.10);
+  --wet-shine:rgba(255,255,255,.12);--wet-drop:rgba(255,255,255,.75);
+  --muted-fg:#c3cfdb;--muted2:#a9b7c6;--wet-text-shadow:0 1px 2px rgba(0,0,0,.45);
   --wet-shadow:0 18px 40px rgba(0,0,0,.40);--wet-well:rgba(0,0,0,.22);
   background:#06121c}
-[data-theme="light"] body.look-wet{--wet-fill:rgba(255,255,255,.38);--wet-rim:rgba(255,255,255,.95);
-  --wet-rim-lo:rgba(255,255,255,.45);--wet-shine:rgba(255,255,255,.65);--wet-drop:rgba(255,255,255,.95);
+[data-theme="light"] body.look-wet{--wet-fill:rgba(255,255,255,.62);--wet-rim:rgba(255,255,255,.95);
+  --wet-rim-lo:rgba(255,255,255,.45);--wet-shine:rgba(255,255,255,.55);
+  --muted-fg:#3f5262;--muted2:#4f6272;--wet-text-shadow:none;--wet-drop:rgba(255,255,255,.95);
   --wet-shadow:0 18px 40px rgba(10,40,70,.18);--wet-well:rgba(10,40,70,.08);background:#dcecf5}
 /* the water: big soft pools of the brand colors that slowly drift */
 body.look-wet::before{inset:-20%;
@@ -594,7 +596,7 @@ body.look-wet::after{content:"";position:fixed;inset:-10%;z-index:-1;pointer-eve
 body.look-wet .card,body.look-wet .panel,body.look-wet .subtabs,body.look-wet .tile,
 body.look-wet .stat,body.look-wet .plan,body.look-wet .flash,body.look-wet .safety-bar{
   background:
-    radial-gradient(120% 70% at 12% -12%,var(--wet-shine),transparent 52%),
+    radial-gradient(70% 34% at 18% -8%,var(--wet-shine),transparent 70%),
     linear-gradient(180deg,rgba(255,255,255,.10),transparent 38%),
     var(--wet-fill);
   -webkit-backdrop-filter:blur(26px) saturate(210%) brightness(1.05);backdrop-filter:blur(26px) saturate(210%) brightness(1.05);
@@ -607,10 +609,17 @@ body.look-wet .wrap>.card{border-radius:26px;
     radial-gradient(5px 5px at 93% 7%,var(--wet-drop),rgba(255,255,255,.2) 45%,transparent 70%),
     radial-gradient(3px 3px at 95.5% 11%,var(--wet-drop),transparent 70%),
     radial-gradient(4px 5px at 4% 96%,var(--wet-drop),rgba(255,255,255,.15) 45%,transparent 70%),
-    radial-gradient(120% 70% at 12% -12%,var(--wet-shine),transparent 52%),
+    radial-gradient(70% 34% at 18% -8%,var(--wet-shine),transparent 70%),
     linear-gradient(180deg,rgba(255,255,255,.10),transparent 38%),
     var(--wet-fill)}
 body.look-wet .stat,body.look-wet .tile{border-radius:20px}
+/* readable text on glass: menu links and labels at full strength, with a
+   soft shadow in dark mode so the drifting colors never wash them out */
+body.look-wet .subtabs a,body.look-wet .tabs a{color:var(--fg);text-shadow:var(--wet-text-shadow)}
+body.look-wet .subtabs a:hover,body.look-wet .tabs a:hover{background:rgba(255,255,255,.10)}
+body.look-wet .tile .lbl,body.look-wet .stat span,body.look-wet .muted{text-shadow:var(--wet-text-shadow)}
+body.look-wet .card h2,body.look-wet .card h3,body.look-wet .tile{text-shadow:var(--wet-text-shadow)}
+body.look-wet .subtabs{background:linear-gradient(180deg,rgba(255,255,255,.08),transparent 60%),var(--wet-fill)}
 body.look-wet table{background:transparent}
 body.look-wet th{background:rgba(255,255,255,.05)}
 /* jelly capsule buttons: glossy cap on top, light pooling at the bottom */
