@@ -301,6 +301,18 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   .menu-arrow:disabled{opacity:.3;cursor:default}
 }
 
+/* ---- native controls follow the theme ---- */
+/* A dropdown's open list is drawn by the browser: on glass it kept a white
+   background while taking the light text color, so options were unreadable.
+   color-scheme makes the browser draw its own parts (lists, scrollbars, date
+   pickers) dark in dark mode, and the options get explicit solid colors. */
+:root{color-scheme:light}
+[data-theme="dark"]{color-scheme:dark}
+select option,select optgroup{background:#ffffff;color:#13202b}
+[data-theme="dark"] select option,[data-theme="dark"] select optgroup{background:#152536;color:#e6eef6}
+select option:checked{background:var(--accent);color:#fff}
+select option:disabled{color:#8a97a5}
+
 /* ---- animated glass tube header ---- */
 /* Slim floating capsule, inset from the viewport edges, instead of the old
    full-width bar. The liquid inside is the Branding preset gradient
