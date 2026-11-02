@@ -658,3 +658,16 @@ CREATE TABLE IF NOT EXISTS sms_sender_did (
   exten TEXT PRIMARY KEY,
   did TEXT NOT NULL                          -- digits, a DID in did_sms_routes
 );
+
+-- Personal themes (My Phone -> Settings -> My theme): up to 5 per user.
+-- user_prefs.theme_slot picks one (0 = the site's Branding).
+CREATE TABLE IF NOT EXISTS user_themes (
+  login_id INTEGER NOT NULL REFERENCES logins(id) ON DELETE CASCADE,
+  slot INTEGER NOT NULL,                     -- 1..5
+  name TEXT NOT NULL DEFAULT '',
+  header TEXT NOT NULL DEFAULT '#1a1a2e',
+  accent TEXT NOT NULL DEFAULT '#1a1a2e',
+  look TEXT NOT NULL DEFAULT 'frost',        -- frost | wet
+  animated INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (login_id, slot)
+);
