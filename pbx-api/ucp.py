@@ -1353,11 +1353,17 @@ def settings_page(request: Request):
     s, me = _me(request)
     if not s:
         return RedirectResponse("/login")
+    theme_flash = {"saved": ("ok", "Theme saved and in use."), "used": ("ok", "Theme changed."),
+                   "deleted": ("ok", "Preset deleted."), "full": ("bad", "You already have 5 presets.")
+                   }.get(request.query_params.get("theme") or "")
+    top = f'<div class="flash {theme_flash[0]}">{esc(theme_flash[1])}</div>' if theme_flash else ""
+    theme = M.user_theme.section(s, me)
     if not me["exten"]:
-        return _render(request, s, me, "ucp-set", "Settings",
+        return _render(request, s, me, "ucp-set", "Settings", top +
                        '<p class="muted">Your login has no extension, so there are no phone settings. '
-                       'You can still change your password on the Logins page (admins) or ask the administrator.</p>')
-    return _render(request, s, me, "ucp-set", "Settings", _settings_body(request, s, me))
+                       'You can still change your password on the Logins page (admins) or ask the administrator.</p>'
+                       + theme)
+    return _render(request, s, me, "ucp-set", "Settings", top + _settings_body(request, s, me) + theme)
 
 
 async def settings_calls(request: Request):

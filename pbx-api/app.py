@@ -37,7 +37,7 @@ import bcrypt
 from fastapi import FastAPI, HTTPException, Request, Form, File, UploadFile
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse, FileResponse, PlainTextResponse
 from pydantic import BaseModel
-from panel_templates import page, LOGIN_HTML, HIDE_ADMIN, BRANDING, BRAND_DEFAULTS, login_html, fmt_ts, get_brand
+from panel_templates import page, LOGIN_HTML, HIDE_ADMIN, USER_THEME, BRANDING, BRAND_DEFAULTS, login_html, fmt_ts, get_brand
 import ucp
 import ivr_ui
 import billing
@@ -59,6 +59,7 @@ import voipms_sms
 import contacts
 import app_api
 import privacy_ui
+import user_theme
 import user_activity_ui
 
 
@@ -106,6 +107,8 @@ def _migrate(c):
         c.execute("ALTER TABLE blocked_numbers ADD COLUMN action TEXT NOT NULL DEFAULT 'disconnected'")
     if "target" not in cols("blocked_numbers"):
         c.execute("ALTER TABLE blocked_numbers ADD COLUMN target TEXT NOT NULL DEFAULT ''")
+    if "theme_slot" not in cols("user_prefs"):
+        c.execute("ALTER TABLE user_prefs ADD COLUMN theme_slot INTEGER NOT NULL DEFAULT 0")
     if "ring_seconds" not in cols("user_prefs"):
         c.execute("ALTER TABLE user_prefs ADD COLUMN ring_seconds INTEGER NOT NULL DEFAULT 0")
     if "answer_ivr_id" not in cols("user_prefs"):
@@ -649,6 +652,7 @@ async def _remote_guard(request: Request, call_next):
     blocked = is_remote(request) and _get_setting("admin_remote") != "1"
     HIDE_ADMIN.set(blocked)
     _load_branding()
+    user_theme.load(request)
     if blocked:
         path = request.url.path
         if path == "/":
@@ -1396,7 +1400,8 @@ def wipe_login(lid_i: int):
                          ("blocked_numbers", "login_id"),
                          ("contacts", "login_id"), ("contact_notes", "login_id"),
                          ("app_devices", "login_id"), ("ptt_trusted", "login_id"),
-                         ("fax_branding", "login_id"), ("fax_templates", "login_id")]:
+                         ("fax_branding", "login_id"), ("fax_templates", "login_id"),
+                         ("user_themes", "login_id")]:
             c.execute(f"DELETE FROM {tbl} WHERE {col}=?", (lid_i,))
         # Faxes: their copy goes; the fax itself once nobody else has it.
         for r in c.execute("SELECT fax_id FROM fax_recipients WHERE login_id=?", (lid_i,)).fetchall():
@@ -4589,4 +4594,5 @@ safety_ui.install(_sys.modules[__name__])
 contacts.install(_sys.modules[__name__])
 app_api.install(_sys.modules[__name__])
 privacy_ui.install(_sys.modules[__name__])
+user_theme.install(_sys.modules[__name__])
 user_activity_ui.install(_sys.modules[__name__])

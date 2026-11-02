@@ -360,6 +360,8 @@ HIDE_ADMIN = contextvars.ContextVar("hide_admin", default=False)
 #       login_mode, login_title, login_subtitle, favicon,
 #       footer_show, footer_text. Missing keys fall back to BRAND_DEFAULTS.
 BRANDING = contextvars.ContextVar("branding", default=None)
+# The signed-in user's own theme (user_theme.py), layered over BRANDING.
+USER_THEME = contextvars.ContextVar("user_theme", default=None)
 
 BRAND_DEFAULTS = {
     "site_name": "PBX Panel",
@@ -395,6 +397,11 @@ def get_brand():
         for k in b:
             if k in cur and cur[k] is not None:
                 b[k] = cur[k]
+    mine = USER_THEME.get()
+    if mine:
+        for k in ("header_color", "accent_color", "glass_style", "header_animated"):
+            if mine.get(k):
+                b[k] = mine[k]
     b["header_color"] = _brand_color(b["header_color"], BRAND_DEFAULTS["header_color"])
     b["accent_color"] = _brand_color(b["accent_color"], BRAND_DEFAULTS["accent_color"])
     if b["header_mode"] not in ("text", "logo", "both"):
