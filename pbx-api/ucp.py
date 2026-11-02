@@ -291,7 +291,13 @@ def _render(request, s, me, tab, title, body):
     hidden = M.app_api.web_hide_billing(me)
     hide = {"ucp-bill"} if hidden else set()
     tabs = [t for t in tabs if t[0] not in hide]
-    sub = '<div class="subtabs">' + "".join(
+    # Admins get an "Admin" button first: back to the dashboard and the full
+    # admin menu (My Phone pages only show this menu). Not for normal users,
+    # and not when admin pages are office-only and this visitor is remote.
+    admin_btn = ""
+    if s.get("role") == "admin" and not M.HIDE_ADMIN.get():
+        admin_btn = '<a href="/" class="admin-link" title="Back to the admin panel">&#8592; Admin</a>'
+    sub = '<div class="subtabs">' + admin_btn + "".join(
         f'<a href="{href}" class="{"on" if key == tab else ""}">{esc(label)}</a>'
         for key, href, label in tabs) + "</div>"
     head = (f'<div class="ucp-head"><div><h2>{esc(title)}</h2>'

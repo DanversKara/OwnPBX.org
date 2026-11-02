@@ -301,6 +301,10 @@ input[type=range]::-moz-range-thumb{width:28px;height:28px;border-radius:50%;bac
   .menu-arrow:disabled{opacity:.3;cursor:default}
 }
 
+/* "Admin" button at the start of the My Phone menu (admins only) */
+.subtabs a.admin-link{font-weight:700;color:var(--accent-fg);border:1px solid var(--accent-fg);border-radius:999px;margin-right:6px}
+.subtabs a.admin-link:hover{background:var(--glass-hover)}
+
 /* ---- native controls follow the theme ---- */
 /* A dropdown's open list is drawn by the browser: on glass it kept a white
    background while taking the light text color, so options were unreadable.
