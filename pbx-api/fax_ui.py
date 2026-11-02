@@ -571,8 +571,17 @@ def api_list(request: Request):
     hidden = M.app_api.hide_billing(me)
     for r in sent:
         r["last_error"] = M.app_api.neutral(me, r.get("last_error") or "", hidden)
+    try:
+        with M.db() as c:
+            templates = [{"id": t["id"], "name": t["name"], "company": t.get("company") or "",
+                          "has_logo": bool(t.get("has_logo"))} for t in M.fax_brand.list_templates(c, me["id"])]
+            can_save_templates = bool(M.fax_brand.users_allowed(c))
+    except Exception:
+        templates, can_save_templates = [], False
     return {"received": _received_json(me), "sent": sent, "numbers": M.fax_send.allowed_numbers(me),
             "branding": M.fax_brand.summary(me),
+            # Saved cover-page templates (one per client) to pick when sending.
+            "templates": templates, "can_save_templates": can_save_templates,
             "can_send": can, "why_not": M.app_api.neutral(me, why, hidden),
             # This month's sending allowance (null = unlimited, or not shown in store mode).
             "faxes_left": None if hidden else M.fax_send.faxes_left(me), "max_mb": M.fax_send.MAX_UPLOAD // (1024 * 1024)}
@@ -585,13 +594,49 @@ async def api_send(request: Request):
     f = await request.form()
     up = f.get("file")
     data = await up.read(M.fax_send.MAX_UPLOAD + 1) if hasattr(up, "read") else b""
+    cover = (f.get("cover") or "1") == "1"
+    # Cover branding: default | template (template_id) | file (a template
+    # file from the phone: one fax only, or saved first when save_template=1).
+    brand, temp_logo, note_b = None, None, ""
+    mode = f.get("brand_mode") or "default"
+    if cover and mode == "template":
+        with M.db() as c:
+            brand = M.fax_brand.template_brand(c, me["id"], f.get("template_id") or "")
+        if brand is None:
+            return {"ok": False, "code": "invalid", "message": "That template doesn't exist."}
+        note_b = " template"
+    elif cover and mode == "file":
+        tf = f.get("template_file")
+        raw = await tf.read(M.fax_brand.MAX_LOGO * 2) if hasattr(tf, "read") else b""
+        if f.get("save_template") == "1":
+            import json as _json
+            try:
+                with M.db() as c:
+                    if not M.fax_brand.users_allowed(c):
+                        return {"ok": False, "code": "invalid", "message": "Own branding is turned off by the admin."}
+                    tid = M.fax_brand.import_template(c, me["id"], _json.loads(raw.decode("utf-8")))
+                    brand = M.fax_brand.template_brand(c, me["id"], tid)
+            except ValueError as e:
+                return {"ok": False, "code": "invalid", "message": str(e)}
+            except Exception:
+                return {"ok": False, "code": "invalid",
+                        "message": "That file is not a fax template (it should be a template downloaded from this PBX)."}
+            M.ucp._audit(me, "fax.template.import", f"id={tid} (app)")
+            note_b = " imported template"
+        else:
+            try:
+                brand, temp_logo = M.fax_brand.brand_from_file(raw)
+            except ValueError as e:
+                return {"ok": False, "code": "invalid", "message": str(e)}
+            temp_logo = temp_logo or None
+            note_b = " one-time branding, not stored"
     fid, err = M.fax_send.queue(me, data, getattr(up, "filename", "") or "", f.get("to_number") or "",
                                 f.get("from_did") or "", to_name=f.get("to_name") or "",
                                 subject=f.get("subject") or "", note=f.get("note") or "",
-                                cover=(f.get("cover") or "1") == "1")
+                                cover=cover, brand=brand, temp_logo=temp_logo)
     if err:
         return {"ok": False, "code": "invalid", "message": M.app_api.neutral(me, err)}
-    M.ucp._audit(me, "fax.send", f"id={fid} to={f.get('to_number')} (app)")
+    M.ucp._audit(me, "fax.send", f"id={fid} to={f.get('to_number')} (app{',' + note_b if note_b else ''})")
     return {"ok": True, "code": "ok", "message": "Fax queued. Busy lines are tried again.", "id": fid}
 
 

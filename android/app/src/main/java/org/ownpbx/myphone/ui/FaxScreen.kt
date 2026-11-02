@@ -68,6 +68,8 @@ private data class Viewing(
     val number: String,
     /** Set: a cover-page preview with these details instead of a stored fax. */
     val preview: Map<String, String>? = null,
+    /** With [preview]: a template file from the phone to draw the cover with. */
+    val previewTemplate: ByteArray? = null,
 )
 
 /** Prefill for the send form ("Send again"). */
@@ -525,7 +527,9 @@ private fun FaxViewer(
 
     LaunchedEffect(v) {
         try {
-            if (v.preview != null) model.api().coverPreview(file, v.preview)
+            if (v.preview != null && v.previewTemplate != null)
+                model.api().coverPreviewFile(file, v.previewTemplate, v.preview)
+            else if (v.preview != null) model.api().coverPreview(file, v.preview)
             else if (!file.exists() || file.length() < 8) model.api().downloadFax(v.id, v.sent, file)
             doc = withContext(Dispatchers.IO) { PdfDoc(file) }
             if (!v.sent && v.preview == null) onOpened()
@@ -703,6 +707,13 @@ private fun FaxSendScreen(
     var to by rememberSaveable { mutableStateOf(start.to) }
     var from by rememberSaveable { mutableStateOf(start.from.ifBlank { data.numbers.firstOrNull() ?: "" }) }
     var cover by rememberSaveable { mutableStateOf(true) }
+    // Cover branding: "default" | "template" | "file" (a template file from the phone)
+    var brandMode by rememberSaveable { mutableStateOf("default") }
+    var templateId by rememberSaveable { mutableStateOf(data.templates.firstOrNull()?.id ?: 0L) }
+    var tplFile by remember { mutableStateOf<ByteArray?>(null) }
+    var tplFileName by remember { mutableStateOf("") }
+    var saveTpl by rememberSaveable { mutableStateOf(false) }
+    var tplOpen by remember { mutableStateOf(false) }
     var toName by rememberSaveable { mutableStateOf(start.toName) }
     var subject by rememberSaveable { mutableStateOf(start.subject) }
     var note by rememberSaveable { mutableStateOf("") }
@@ -738,10 +749,43 @@ private fun FaxSendScreen(
             problem = null
         }
 
+    val pickTemplate =
+        rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                val bytes =
+                    try {
+                        withContext(Dispatchers.IO) {
+                            ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().takeIf { b -> b.size < 12_000_000 } }
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                // A quick look before sending: a template downloaded from the PBX.
+                val text = bytes?.toString(Charsets.UTF_8) ?: ""
+                if (bytes == null || !text.contains("ownpbx-fax-template")) {
+                    problem = "That isn't a fax template file. Use one downloaded from My Phone (web) → Faxes → Saved templates."
+                } else {
+                    var name = "template"
+                    try {
+                        ctx.contentResolver.query(uri, null, null, null, null)?.use { c ->
+                            val n = c.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                            if (c.moveToFirst() && n >= 0) name = c.getString(n) ?: name
+                        }
+                    } catch (_: Exception) {}
+                    tplFile = bytes
+                    tplFileName = name
+                    brandMode = "file"
+                    problem = null
+                }
+            }
+        }
+
     val digits = to.filter { it.isDigit() }
     val numberOk = digits.length == 10 || (digits.length == 11 && digits.startsWith("1"))
     val tooBig = (file?.size ?: 0) > data.max_mb * 1024L * 1024L
-    val ready = file != null && numberOk && from.isNotBlank() && !tooBig && !busy
+    val brandOk = !cover || brandMode != "file" || tplFile != null
+    val ready = file != null && numberOk && from.isNotBlank() && !tooBig && !busy && brandOk
 
     fun send() {
         val f = file ?: return
@@ -773,7 +817,14 @@ private fun FaxSendScreen(
                 else -> {
                     val r =
                         model.guard {
-                            it.sendFax(bytes, f.name, f.mime, digits, from, toName.trim(), subject.trim(), note.trim(), cover)
+                            it.sendFax(
+                                bytes, f.name, f.mime, digits, from, toName.trim(), subject.trim(), note.trim(), cover,
+                                brandMode = if (cover) brandMode else "default",
+                                templateId = data.templates.firstOrNull { it.id == templateId }?.id
+                                    ?: data.templates.firstOrNull()?.id ?: 0L,
+                                templateFile = tplFile,
+                                saveTemplate = saveTpl,
+                            )
                         }
                     if (r != null) {
                         if (r.ok) {
@@ -909,42 +960,114 @@ private fun FaxSendScreen(
             }
             if (cover) {
                 val brand = data.branding
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Filled.Badge, null, tint = MaterialTheme.colorScheme.primary)
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(
-                            when {
-                                brand == null || (brand.name.isBlank() && !brand.logo) -> "Plain cover page"
-                                brand.own -> "Your branding: " + brand.name.ifBlank { "logo" }
-                                else -> "Branding: " + brand.name.ifBlank { "logo" }
-                            },
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        if (brand?.editable == true)
-                            Text(
-                                "Change your logo and company details in My Phone (web) → Faxes → My fax branding",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                val defaultLabel =
+                    when {
+                        brand == null || (brand.name.isBlank() && !brand.logo) -> "Plain cover page"
+                        brand.own -> "My branding: " + brand.name.ifBlank { "logo" }
+                        else -> "Branding: " + brand.name.ifBlank { "logo" }
                     }
-                    TextButton({
-                        preview =
-                            Viewing(
-                                0,
-                                false,
-                                "Cover page preview",
-                                "",
-                                preview =
-                                    mapOf(
-                                        "to_name" to toName.trim(),
-                                        "to_number" to to.filter { it.isDigit() },
-                                        "from_did" to from,
-                                        "subject" to subject.trim(),
-                                        "note" to note.trim(),
-                                    ),
-                            )
-                    }) {
+                Text("Cover branding", style = MaterialTheme.typography.titleSmall)
+                // 1. default branding
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(brandMode == "default", { brandMode = "default" })
+                    Text(defaultLabel, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                }
+                // 2. a saved template
+                if (data.templates.isNotEmpty()) {
+                    val cur = data.templates.firstOrNull { it.id == templateId } ?: data.templates.first()
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(brandMode == "template", { brandMode = "template" })
+                        Text("Saved template", Modifier.padding(end = 8.dp))
+                        Box(Modifier.weight(1f)) {
+                            OutlinedButton({ brandMode = "template"; tplOpen = true }, Modifier.fillMaxWidth()) {
+                                Text(cur.name.ifBlank { cur.company.ifBlank { "Template" } }, Modifier.weight(1f),
+                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Icon(Icons.Filled.ArrowDropDown, null)
+                            }
+                            DropdownMenu(tplOpen, { tplOpen = false }) {
+                                data.templates.forEach { t ->
+                                    DropdownMenuItem(
+                                        text = {
+                                            Column {
+                                                Text(t.name)
+                                                if (t.company.isNotBlank() && t.company != t.name)
+                                                    Text(t.company, style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        },
+                                        onClick = { templateId = t.id; brandMode = "template"; tplOpen = false },
+                                        trailingIcon = { if (t.id == cur.id) Icon(Icons.Filled.Check, null) },
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+                // 3. a template file from the phone / cloud
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(brandMode == "file", { if (tplFile != null) brandMode = "file" else pickTemplate.launch(arrayOf("application/json", "text/plain", "application/octet-stream", "*/*")) })
+                    Column(Modifier.weight(1f)) {
+                        Text(if (tplFile != null) "Template file: $tplFileName" else "Template file from this phone",
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            "A template downloaded from My Phone (web) → Faxes, from your phone or cloud storage",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    TextButton({ pickTemplate.launch(arrayOf("application/json", "text/plain", "application/octet-stream", "*/*")) }) {
+                        Text(if (tplFile != null) "Change" else "Choose")
+                    }
+                }
+                if (brandMode == "file" && tplFile != null) {
+                    if (data.can_save_templates)
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(start = 12.dp)) {
+                            Checkbox(saveTpl, { saveTpl = it })
+                            Text("Also save it to my templates", style = MaterialTheme.typography.bodyMedium)
+                        }
+                    if (!saveTpl)
+                        Text(
+                            "Used for this fax only. It isn't stored on the server.",
+                            Modifier.padding(start = 12.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (brand?.editable == true && brandMode == "default")
+                        Text(
+                            "Change your logo and company details in My Phone (web) → Faxes → My fax branding",
+                            Modifier.weight(1f),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    else Spacer(Modifier.weight(1f))
+                    TextButton(
+                        {
+                            val fields =
+                                mutableMapOf(
+                                    "to_name" to toName.trim(),
+                                    "to_number" to to.filter { it.isDigit() },
+                                    "from_did" to from,
+                                    "subject" to subject.trim(),
+                                    "note" to note.trim(),
+                                )
+                            if (brandMode == "template")
+                                fields["template_id"] =
+                                    (data.templates.firstOrNull { it.id == templateId }?.id
+                                        ?: data.templates.firstOrNull()?.id ?: 0L).toString()
+                            preview =
+                                Viewing(
+                                    0,
+                                    false,
+                                    "Cover page preview",
+                                    "",
+                                    preview = fields,
+                                    previewTemplate = if (brandMode == "file") tplFile else null,
+                                )
+                        },
+                        enabled = brandMode != "file" || tplFile != null,
+                    ) {
                         Text("Preview")
                     }
                 }

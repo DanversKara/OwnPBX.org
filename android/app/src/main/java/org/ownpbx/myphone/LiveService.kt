@@ -50,6 +50,9 @@ class LiveService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Record crashes that happen in the background too (the app's screen
+        // may never have opened since Android restarted the process).
+        CrashLog.install(this)
         // Back online after being offline (no signal, airplane mode, PBX
         // unreachable): catch up at once, so missed calls and texts notify
         // as soon as the phone can reach the PBX.
@@ -241,7 +244,9 @@ class LiveService : Service() {
                 Notifier.record(store, "PBX answered with error ${e.status}; retrying")
                 pause(backoff)
                 backoff = (backoff * 2).coerceAtMost(120_000L)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Anything unexpected (not just network errors) keeps the
+                // loop alive instead of ending the connection for good.
                 Notifier.record(
                     store,
                     "Couldn't reach the PBX (${e.javaClass.simpleName}); retrying",
@@ -344,6 +349,7 @@ class BootReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED -> {
+                CrashLog.install(ctx)
                 Notifier.schedule(ctx)
                 LiveService.sync(ctx)
             }

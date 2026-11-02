@@ -38,5 +38,42 @@ object CrashLog {
     }
 
     fun read(ctx: Context): String? = file(ctx).takeIf { it.exists() }?.readText()
+
+    /**
+     * Why Android ended My Phone the last few times (Android 11+ keeps this record): a crash, the
+     * phone's battery saver, low memory, a force stop... Newest first, as short plain lines.
+     */
+    fun lastExits(ctx: Context, max: Int = 5): List<String> {
+        if (Build.VERSION.SDK_INT < 30) return emptyList()
+        return try {
+            val am = ctx.getSystemService(android.app.ActivityManager::class.java)
+            val fmt = SimpleDateFormat("MMM d, h:mm a", Locale.US)
+            am.getHistoricalProcessExitReasons(ctx.packageName, 0, max).map { e ->
+                fmt.format(Date(e.timestamp)) + ": " + reason(e.reason) +
+                    (e.description?.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: "")
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    private fun reason(r: Int): String =
+        when (r) {
+            1 -> "closed itself (normal)"
+            2 -> "killed by the system, often the phone maker's battery saver"
+            3 -> "closed by Android to free memory"
+            4 -> "crashed (app error)"
+            5 -> "crashed in the phone engine"
+            6 -> "froze and Android closed it"
+            7 -> "failed to start"
+            8 -> "restarted after a permission change"
+            9 -> "closed by Android for using too much battery"
+            10 -> "force-stopped (by you, or by the phone's battery manager)"
+            11 -> "stopped from Android's task manager"
+            12 -> "closed because something it relies on stopped"
+            14 -> "frozen by Android while unused"
+            15, 16 -> "restarted for an app update"
+            else -> "stopped (other reason)"
+        }
     fun clear(ctx: Context) { file(ctx).delete() }
 }

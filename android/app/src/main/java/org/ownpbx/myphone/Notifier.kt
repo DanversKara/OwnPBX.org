@@ -535,6 +535,7 @@ object Notifier {
  */
 class CheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
+        CrashLog.install(applicationContext)
         val store = Store(applicationContext)
         try {
             Notifier.run(applicationContext, inputData.getBoolean("seen_only", false))

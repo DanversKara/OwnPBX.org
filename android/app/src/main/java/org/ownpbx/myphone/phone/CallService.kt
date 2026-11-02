@@ -23,6 +23,7 @@ class CallService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        org.ownpbx.myphone.CrashLog.install(this)
         when (intent?.action) {
             ACTION_HANG_UP -> { Phone.hangUp(); stopSelf(); return START_NOT_STICKY }
             ACTION_DECLINE -> { Phone.decline(); stopSelf(); return START_NOT_STICKY }

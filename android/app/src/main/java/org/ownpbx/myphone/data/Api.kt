@@ -259,6 +259,10 @@ data class FaxBrand(
     val editable: Boolean = false,
 )
 
+/** A saved cover-page template (one per client), from My Phone (web) → Faxes. */
+@Serializable
+data class FaxTemplate(val id: Long, val name: String = "", val company: String = "", val has_logo: Boolean = false)
+
 @Serializable
 data class FaxList(
     val received: List<FaxIn> = emptyList(),
@@ -271,6 +275,9 @@ data class FaxList(
     val branding: FaxBrand? = null,
     /** Faxes left to send this month (null = unlimited). */
     val faxes_left: Int? = null,
+    val templates: List<FaxTemplate> = emptyList(),
+    /** The user may save templates (the admin allows own branding). */
+    val can_save_templates: Boolean = false,
 )
 
 @Serializable
@@ -542,6 +549,27 @@ class Api(base: String, private val token: String?) {
             dest
         }
 
+    /** Cover preview from a template file on the phone (nothing is stored on the PBX). */
+    suspend fun coverPreviewFile(dest: java.io.File, templateFile: ByteArray, fields: Map<String, String>) =
+        withContext(Dispatchers.IO) {
+            val mb =
+                okhttp3.MultipartBody.Builder()
+                    .setType(okhttp3.MultipartBody.FORM)
+                    .addFormDataPart(
+                        "template_file",
+                        "template.json",
+                        templateFile.toRequestBody("application/json".toMediaType()),
+                    )
+            fields.forEach { (k, v) -> mb.addFormDataPart(k, v) }
+            val b = Request.Builder().url(url("/me/faxes/cover-preview-file")).post(mb.build())
+            authHeaders().forEach { (k, v) -> b.header(k, v) }
+            http.newCall(b.build()).execute().use { r ->
+                if (!r.isSuccessful) throw ApiException(r.code, errorText(r.body?.string() ?: "", r.code))
+                r.body!!.byteStream().use { inp -> dest.outputStream().use { inp.copyTo(it) } }
+            }
+            dest
+        }
+
     /** Queue a fax: the file plus where it goes and the cover page details. */
     suspend fun sendFax(
         data: ByteArray,
@@ -553,9 +581,15 @@ class Api(base: String, private val token: String?) {
         subject: String,
         note: String,
         cover: Boolean,
+        /** Cover branding: "default", "template" ([templateId]) or "file" ([templateFile]). */
+        brandMode: String = "default",
+        templateId: Long = 0,
+        templateFile: ByteArray? = null,
+        /** With a template file: also keep it under the user's saved templates. */
+        saveTemplate: Boolean = false,
     ): Result =
         withContext(Dispatchers.IO) {
-            val body =
+            val mb =
                 okhttp3.MultipartBody.Builder()
                     .setType(okhttp3.MultipartBody.FORM)
                     .addFormDataPart("file", filename, data.toRequestBody(mime.toMediaType()))
@@ -565,7 +599,17 @@ class Api(base: String, private val token: String?) {
                     .addFormDataPart("subject", subject)
                     .addFormDataPart("note", note)
                     .addFormDataPart("cover", if (cover) "1" else "0")
-                    .build()
+                    .addFormDataPart("brand_mode", brandMode)
+            if (brandMode == "template") mb.addFormDataPart("template_id", templateId.toString())
+            if (brandMode == "file" && templateFile != null) {
+                mb.addFormDataPart(
+                    "template_file",
+                    "template.json",
+                    templateFile.toRequestBody("application/json".toMediaType()),
+                )
+                if (saveTemplate) mb.addFormDataPart("save_template", "1")
+            }
+            val body = mb.build()
             val b = Request.Builder().url(url("/me/faxes/send")).post(body)
             authHeaders().forEach { (k, v) -> b.header(k, v) }
             // Converting a long document on the PBX can take a while.
