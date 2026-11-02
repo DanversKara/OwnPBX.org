@@ -353,6 +353,7 @@ BRAND_DEFAULTS = {
     "header_color": "#1a1a2e",
     "accent_color": "#1a1a2e",
     "header_animated": "0",     # 1 = animated gradient header
+    "glass_style": "frost",     # frost | wet (Branding -> Panel look)
     "login_mode": "text",       # text | logo | both
     "login_title": "",
     "login_subtitle": "",
@@ -388,6 +389,8 @@ def get_brand():
         b["theme_default"] = "dark"
     if b["header_animated"] != "1":
         b["header_animated"] = "0"
+    if b["glass_style"] not in ("frost", "wet"):
+        b["glass_style"] = "frost"
     try:
         ZoneInfo(b["timezone"] or "America/Los_Angeles")
     except Exception:
@@ -538,6 +541,106 @@ _PIN_ADMIN_JS = """<script>
 # bar with ‹ › buttons and adds mouse drag-to-scroll (mouse only; touch
 # keeps its native swipe, and a drag never fires the link under it).
 # Plain string, no backslash escapes (see the dashboard lesson above).
+# "Wet liquid glass" panel look (Branding -> Panel look). Emitted only when
+# chosen, and scoped to body.look-wet so it layers over the frosted theme.
+# Pure CSS: water background that drifts in the brand colors, thin clear
+# glass with a curved specular highlight, refraction rims, a couple of
+# droplets on cards, and jelly capsule buttons. Motion stops under
+# prefers-reduced-motion.
+WET_CSS = """
+body.look-wet{--wet-a:var(--nav-bg);--wet-b:var(--accent);
+  --wet-fill:rgba(255,255,255,.07);--wet-rim:rgba(255,255,255,.34);--wet-rim-lo:rgba(255,255,255,.10);
+  --wet-shine:rgba(255,255,255,.26);--wet-drop:rgba(255,255,255,.75);
+  --wet-shadow:0 18px 40px rgba(0,0,0,.40);--wet-well:rgba(0,0,0,.22);
+  background:#06121c}
+[data-theme="light"] body.look-wet{--wet-fill:rgba(255,255,255,.38);--wet-rim:rgba(255,255,255,.95);
+  --wet-rim-lo:rgba(255,255,255,.45);--wet-shine:rgba(255,255,255,.65);--wet-drop:rgba(255,255,255,.95);
+  --wet-shadow:0 18px 40px rgba(10,40,70,.18);--wet-well:rgba(10,40,70,.08);background:#dcecf5}
+/* the water: big soft pools of the brand colors that slowly drift */
+body.look-wet::before{inset:-20%;
+  background:
+    radial-gradient(38% 34% at 18% 22%,color-mix(in srgb,var(--wet-b) 55%,transparent),transparent 70%),
+    radial-gradient(42% 38% at 82% 18%,color-mix(in srgb,#19b6e0 45%,transparent),transparent 70%),
+    radial-gradient(46% 42% at 70% 86%,color-mix(in srgb,var(--wet-a) 70%,transparent),transparent 72%),
+    radial-gradient(36% 30% at 12% 88%,color-mix(in srgb,#2ee6c8 30%,transparent),transparent 70%);
+  filter:blur(30px) saturate(140%);animation:wetdrift 38s ease-in-out infinite alternate}
+[data-theme="dark"] body.look-wet::before{
+  background:
+    radial-gradient(38% 34% at 18% 22%,color-mix(in srgb,var(--wet-b) 55%,transparent),transparent 70%),
+    radial-gradient(42% 38% at 82% 18%,color-mix(in srgb,#19b6e0 45%,transparent),transparent 70%),
+    radial-gradient(46% 42% at 70% 86%,color-mix(in srgb,var(--wet-a) 70%,transparent),transparent 72%),
+    radial-gradient(36% 30% at 12% 88%,color-mix(in srgb,#2ee6c8 30%,transparent),transparent 70%)}
+/* caustics: faint rippling light, like sun through a pool */
+body.look-wet::after{content:"";position:fixed;inset:-10%;z-index:-1;pointer-events:none;opacity:.10;
+  background:
+    repeating-radial-gradient(circle at 30% 40%,rgba(255,255,255,.9) 0 2px,transparent 3px 46px),
+    repeating-radial-gradient(circle at 70% 60%,rgba(255,255,255,.7) 0 1px,transparent 2px 38px);
+  filter:blur(3px);mix-blend-mode:overlay;animation:wetripple 22s linear infinite}
+@keyframes wetdrift{0%{transform:translate(0,0) scale(1)}50%{transform:translate(-3%,2%) scale(1.06)}100%{transform:translate(3%,-2%) scale(1.03)}}
+@keyframes wetripple{0%{transform:translate(0,0) rotate(0)}100%{transform:translate(-4%,3%) rotate(6deg)}}
+/* clear wet glass: thin fill, curved top shine, refraction rims */
+body.look-wet .card,body.look-wet .panel,body.look-wet .subtabs,body.look-wet .tile,
+body.look-wet .stat,body.look-wet .plan,body.look-wet .flash,body.look-wet .safety-bar{
+  background:
+    radial-gradient(120% 70% at 12% -12%,var(--wet-shine),transparent 52%),
+    linear-gradient(180deg,rgba(255,255,255,.10),transparent 38%),
+    var(--wet-fill);
+  -webkit-backdrop-filter:blur(26px) saturate(210%) brightness(1.05);backdrop-filter:blur(26px) saturate(210%) brightness(1.05);
+  border:1px solid var(--wet-rim-lo);border-top-color:var(--wet-rim);border-left-color:var(--wet-rim);
+  box-shadow:inset 0 1px 1px var(--wet-rim),inset 0 -1px 1px var(--wet-rim-lo),
+    inset 0 -18px 30px -18px rgba(255,255,255,.18),var(--wet-shadow)}
+/* water droplets beading on the big cards */
+body.look-wet .wrap>.card{border-radius:26px;
+  background:
+    radial-gradient(5px 5px at 93% 7%,var(--wet-drop),rgba(255,255,255,.2) 45%,transparent 70%),
+    radial-gradient(3px 3px at 95.5% 11%,var(--wet-drop),transparent 70%),
+    radial-gradient(4px 5px at 4% 96%,var(--wet-drop),rgba(255,255,255,.15) 45%,transparent 70%),
+    radial-gradient(120% 70% at 12% -12%,var(--wet-shine),transparent 52%),
+    linear-gradient(180deg,rgba(255,255,255,.10),transparent 38%),
+    var(--wet-fill)}
+body.look-wet .stat,body.look-wet .tile{border-radius:20px}
+body.look-wet table{background:transparent}
+body.look-wet th{background:rgba(255,255,255,.05)}
+/* jelly capsule buttons: glossy cap on top, light pooling at the bottom */
+body.look-wet .btn{border-radius:999px;
+  background:
+    radial-gradient(90% 60% at 50% -10%,rgba(255,255,255,.65),rgba(255,255,255,0) 60%),
+    radial-gradient(70% 50% at 50% 115%,rgba(255,255,255,.35),transparent 70%),
+    color-mix(in srgb,var(--accent) 62%,transparent);
+  border:1px solid rgba(255,255,255,.45);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.85),inset 0 -2px 6px rgba(255,255,255,.25),
+    0 8px 22px color-mix(in srgb,var(--accent) 40%,transparent),0 2px 4px rgba(0,0,0,.25);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1),filter .2s,box-shadow .2s}
+body.look-wet .btn:hover{transform:translateY(-1px) scale(1.02);filter:brightness(1.1) saturate(1.15)}
+body.look-wet .btn:active{transform:scale(.96,.92);transition-duration:.08s}
+body.look-wet .btn.ghost,body.look-wet .btn.danger{
+  background:radial-gradient(90% 60% at 50% -10%,rgba(255,255,255,.35),rgba(255,255,255,0) 60%),rgba(255,255,255,.06);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.5),0 4px 14px rgba(0,0,0,.18)}
+body.look-wet .btn:disabled{filter:saturate(.4);opacity:.55;transform:none}
+/* active menu item = a bead of the accent color */
+body.look-wet .tabs a.on,body.look-wet .subtabs a.on{border-radius:999px;color:#fff;border-color:transparent;
+  background:radial-gradient(90% 60% at 50% -10%,rgba(255,255,255,.55),rgba(255,255,255,0) 60%),color-mix(in srgb,var(--accent) 70%,transparent);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.8),0 6px 16px color-mix(in srgb,var(--accent) 45%,transparent)}
+body.look-wet .tabs a{border-radius:999px}
+/* inputs: a wet well, darker at the top, a light rim at the bottom */
+body.look-wet input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),
+body.look-wet select,body.look-wet textarea{
+  background:linear-gradient(180deg,var(--wet-well),transparent 70%),rgba(255,255,255,.05);
+  border:1px solid var(--wet-rim-lo);border-bottom-color:var(--wet-rim);border-radius:14px;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.18)}
+body.look-wet input:focus,body.look-wet select:focus,body.look-wet textarea:focus{
+  border-color:color-mix(in srgb,var(--accent) 70%,#fff);
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.18),0 0 0 4px color-mix(in srgb,var(--accent) 28%,transparent)}
+/* header tube: wetter, with a bead of light riding on top */
+body.look-wet .nav{border:1px solid rgba(255,255,255,.40);
+  box-shadow:inset 0 1px 1px rgba(255,255,255,.8),inset 0 -6px 14px -6px rgba(255,255,255,.35),0 10px 30px rgba(0,0,0,.30)}
+body.look-wet .nav::before{content:"";position:absolute;left:3%;right:3%;top:1px;height:45%;pointer-events:none;border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.30),rgba(255,255,255,0))}
+@media (prefers-reduced-motion:reduce){body.look-wet::before,body.look-wet::after{animation:none}
+  body.look-wet .btn{transition:none}}
+"""
+
+
 _MENU_SCROLL_JS = """<script>
 (function(){
   function setup(bar){
@@ -681,6 +784,7 @@ def page(title, body, username="", role="", tab="", hide_tabs=(), skip_tabs=Fals
     else:
         brand_html = f"<strong>{_name}</strong>"
     _nav_cls = "nav animated" if brand["header_animated"] == "1" else "nav"
+    _wet = brand["glass_style"] == "wet"
     # Custom colors (validated hex in get_brand). Emitted as CSS variables
     # AFTER the theme blocks so branding wins in both light and dark mode.
     _brand_vars = []
@@ -723,7 +827,7 @@ def page(title, body, username="", role="", tab="", hide_tabs=(), skip_tabs=Fals
 <meta name="viewport" content="width=device-width, initial-scale=1">
 {_theme_js}
 {_fav_tag}
-<style>{BASE_CSS}{_color_css}</style></head><body>
+<style>{BASE_CSS}{WET_CSS if _wet else ""}{_color_css}</style></head><body{' class="look-wet"' if _wet else ''}>
 <div class="{_nav_cls}">{brand_html}<span class="sp"></span>{_theme_btn}{nav_user}</div>
 <div class="wrap">{tabs}{_pinbar_div}<div class="card">{body}</div></div>{_footer}{_pin_js}{_MENU_SCROLL_JS}</body></html>"""
 
