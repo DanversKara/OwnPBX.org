@@ -554,6 +554,47 @@ fun SettingsScreen(model: AppModel, overview: Overview?, modifier: Modifier) {
                 } catch (_: Exception) {}
             }
         }
+        // Why the app stopped: Android's own record (crash vs battery saver vs force stop).
+        val exits = remember { org.ownpbx.myphone.CrashLog.lastExits(ctx) }
+        var showExits by remember { mutableStateOf(false) }
+        if (android.os.Build.VERSION.SDK_INT >= 30)
+            ClickRow(
+                Icons.Filled.History,
+                "Why did My Phone stop?",
+                exits.firstOrNull()?.let { "Last: $it" } ?: "Android hasn't recorded any stops yet",
+            ) {
+                showExits = true
+            }
+        if (showExits) {
+            val crash = org.ownpbx.myphone.CrashLog.read(ctx)
+            val text =
+                (if (exits.isEmpty()) "No stops recorded yet." else exits.joinToString("\n")) +
+                    (crash?.let { "\n\nLast crash report:\n" + it.take(4000) } ?: "")
+            val clip = androidx.compose.ui.platform.LocalClipboardManager.current
+            AlertDialog(
+                onDismissRequest = { showExits = false },
+                title = { Text("Why My Phone stopped") },
+                text = {
+                    Column(Modifier.verticalScroll(rememberScrollState())) {
+                        Text(
+                            "\"Battery saver\", \"free memory\" or \"force-stopped\" means the phone closed the app: " +
+                                "check the two rows above. \"Crashed\" means a bug in the app: tap Copy and send it to your admin.",
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(text, style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    TextButton({
+                        clip.setText(androidx.compose.ui.text.AnnotatedString(
+                            "My Phone ${org.ownpbx.BuildConfig.VERSION_NAME}, ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}, Android ${android.os.Build.VERSION.RELEASE}\n" + text))
+                        model.notice = "Copied"
+                    }) { Text("Copy") }
+                },
+                dismissButton = { TextButton({ showExits = false }) { Text("Close") } },
+            )
+        }
         SwitchRow(
             Icons.Filled.Sms,
             "Show text in notifications",
