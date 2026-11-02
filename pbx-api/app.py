@@ -3166,6 +3166,7 @@ def branding_page(request: Request):
             ("Midnight", "#101024", "#5a5ad6"), ("Sunset", "#431407", "#ea580c"),
             ("Forest", "#0c2417", "#22a355"), ("Royal", "#2b0f4d", "#8b3fd9"),
             ("Crimson", "#3d0a12", "#e0263c"), ("Amber", "#2e2008", "#d9a416"),
+            ("Lagoon", "#06364d", "#18b4d8"), ("Deep sea", "#04182b", "#2ee6c8"),
         ])
     body = f"""<h2>Branding</h2>
 <p class="muted">White-label the panel: your name, logo, colors, login page and footer. Changes apply immediately.</p>
@@ -3210,6 +3211,10 @@ document.querySelectorAll('.preset').forEach(function(btn){{btn.addEventListener
   if(h)h.value=btn.dataset.header; if(a)a.value=btn.dataset.accent;
 }});}});
 </script><br>
+<label>Panel look<br><select name="glass_style">
+<option value="frost" {sel(b.get('glass_style','frost'),'frost')}>Frosted glass</option>
+<option value="wet" {sel(b.get('glass_style','frost'),'wet')}>Wet liquid glass (water background, clear glass, jelly buttons)</option>
+</select></label><br>
 <label><input type="checkbox" name="header_animated" value="1" {chk(b['header_animated'])}> Animated gradient header <span class="muted">(flows between the header and accent colors)</span></label><br>
 <h3>Login page</h3>
 <label>Shows<br><select name="login_mode">
@@ -3278,6 +3283,7 @@ async def branding_save(request: Request,
         "footer_text": (f.get("footer_text") or "").strip()[:140],
         "theme_default": (f.get("theme_default") or "dark") if (f.get("theme_default") in ("dark", "light")) else "dark",
         "header_animated": "1" if f.get("header_animated") else "0",
+        "glass_style": "wet" if f.get("glass_style") == "wet" else "frost",
         "timezone": (f.get("timezone") or "America/Los_Angeles")
         if (f.get("timezone") in ("America/Los_Angeles", "America/Denver", "America/Chicago",
                                   "America/New_York", "America/Anchorage", "Pacific/Honolulu", "UTC"))
