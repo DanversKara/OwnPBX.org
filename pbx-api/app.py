@@ -61,6 +61,7 @@ import app_api
 import privacy_ui
 import user_theme
 import people
+import msg_media
 import user_activity_ui
 
 
@@ -566,7 +567,7 @@ REMOTE_ALLOWED_PREFIXES = (
     "/stripe/webhook", "/healthz", "/api/vm-greeting", "/api/voicemail-audio/",
     "/api/recording-audio/", "/api/ivr-greeting/", "/api/v1/me", "/favicon",
     "/hooks/voipms-sms", "/invite/", "/api/v1/app/", "/store", "/api/fax/",
-    "/data-export/",
+    "/data-export/", "/mms/",
 )
 
 
@@ -648,7 +649,7 @@ def _remote_path_allowed(path: str) -> bool:
                               (p.endswith("/") and path.startswith(p)) for p in REMOTE_ALLOWED_PREFIXES)
 
 
-MAX_BODY = 25 * 1024 * 1024    # uploads (greetings) are far smaller
+MAX_BODY = 80 * 1024 * 1024    # up to 3 message videos of 25 MB each
 
 SECURITY_HEADERS = {
     "X-Frame-Options": "DENY",                          # no clickjacking
@@ -1405,6 +1406,7 @@ def wipe_login(lid_i: int):
                     except OSError:
                         pass
         people.wipe_login_photos(c, lid_i)
+        msg_media.wipe_login(c, lid_i)
         # Login-scoped rows (FK cascades are not enforced in sqlite here).
         for tbl, col in [("login_feature_access", "login_id"), ("message_hidden", "login_id"),
                          ("user_prefs", "login_id"), ("ivr_menus", "owner_login_id"),
@@ -4609,4 +4611,5 @@ app_api.install(_sys.modules[__name__])
 privacy_ui.install(_sys.modules[__name__])
 user_theme.install(_sys.modules[__name__])
 people.install(_sys.modules[__name__])
+msg_media.install(_sys.modules[__name__])
 user_activity_ui.install(_sys.modules[__name__])

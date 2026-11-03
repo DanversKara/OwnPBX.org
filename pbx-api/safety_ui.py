@@ -263,7 +263,9 @@ async def report(request: Request):
         if not m:
             return _go(back, "reportbad")
         other = m["to_ext"] if m["from_ext"] == me["exten"] else m["from_ext"]
-        detail = f'text from {m["from_ext"]} to {m["to_ext"]} at {m["sent_at"]}: {m["body"][:500]}'
+        marks = " ".join(f"[MMS: {r}]" for r in M.msg_media.refs_in(m["body"]))
+        detail = (f'text from {m["from_ext"]} to {m["to_ext"]} at {m["sent_at"]}: '
+                  f'{M.msg_media.strip_marks(m["body"])[:500]}' + (f" {marks}" if marks else ""))
     elif kind == "call":
         cr = next((x for x in M.ucp._my_calls(me, limit=2000) if x["id"] == ref), None)
         if not cr:
@@ -291,6 +293,20 @@ def _admin(request):
     return s if s and s["role"] == "admin" else None
 
 
+def _detail_html(detail):
+    """Report text with any photos/videos it mentions as links the admin can open."""
+    out, last = [], 0
+    for m in M.msg_media.MARK.finditer(detail or ""):
+        out.append(esc(detail[last:m.start()]))
+        ref = m.group(1)
+        lm = M.msg_media.LOCAL.match(ref)
+        url = f"/ucp/media/{lm.group(1)}.{lm.group(2)}" if lm else (ref if ref.startswith(("https://", "http://")) else "")
+        out.append(f'<a href="{esc(url)}" target="_blank" rel="noopener">[attachment]</a>' if url else esc(m.group(0)))
+        last = m.end()
+    out.append(esc((detail or "")[last:]))
+    return "".join(out)
+
+
 def reports_page(request: Request):
     s = _admin(request)
     if not s:
@@ -315,7 +331,7 @@ def reports_page(request: Request):
         f"<tr><td class='muted'>{esc(r['at'])}</td><td>{esc(r['kind'])}</td>"
         f"<td>{esc(r['reporter'] or '-')} <span class='muted'>{esc(r['reporter_ext'] or '')}</span></td>"
         f"<td><b>{esc(r['other'])}</b>{(' <span class=muted>' + esc(names[r['other']]) + '</span>') if r['other'] in names else ''}</td>"
-        f"<td>{esc(r['note']) or '<span class=muted>-</span>'}</td><td>{esc(r['detail'])}</td>"
+        f"<td>{esc(r['note']) or '<span class=muted>-</span>'}</td><td>{_detail_html(r['detail'])}</td>"
         f"<td>{'<span class=\"pill warn\">open</span>' if r['status'] == 'open' else '<span class=\"pill\">resolved</span>'}</td>"
         f"<td>{actions(r)}</td></tr>" for r in rows) \
         or '<tr><td colspan="8" class="muted">No reports.</td></tr>'

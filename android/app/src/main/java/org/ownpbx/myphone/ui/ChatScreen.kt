@@ -25,7 +25,14 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.ownpbx.myphone.data.Attachment
 import org.ownpbx.myphone.data.Msg
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.platform.LocalContext
 
 @Composable
 fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: () -> Unit) {
@@ -43,6 +50,35 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
     val list = rememberLazyListState()
     val clip = LocalClipboardManager.current
     val haptic = LocalHapticFeedback.current
+    val ctx = LocalContext.current
+    // Photos/videos waiting to go with the next message, the emoji panel,
+    // the full-screen viewer, and the message being forwarded.
+    var attachments by remember { mutableStateOf<List<Attachment>>(emptyList()) }
+    var emojiOpen by remember { mutableStateOf(false) }
+    var viewer by remember { mutableStateOf<Pair<java.io.File, org.ownpbx.myphone.data.MediaItem>?>(null) }
+    var forwarding by remember { mutableStateOf<Msg?>(null) }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_ATTACH)) { uris ->
+        if (uris.isEmpty()) return@rememberLauncherForActivityResult
+        model.bg.launch {
+            val got = mutableListOf<Attachment>()
+            for (u in uris) {
+                val (a, err) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    try { readAttachment(ctx, u) } catch (e: Exception) { null to "Couldn't open that file." }
+                }
+                if (a != null) got += a else model.notice = err
+            }
+            val all = attachments + got
+            if (all.size > MAX_ATTACH) model.notice = "Up to $MAX_ATTACH photos or videos at a time."
+            attachments = all.take(MAX_ATTACH)
+        }
+    }
+    fun saveMedia(m: Msg) = model.bg.launch {
+        for (it in m.media) {
+            val f = model.guard { a -> a.mediaFile(it.url, ctx.cacheDir) } ?: return@launch
+            try { model.notice = "Saved to " + saveToDownloads(ctx, f, it.mime) }
+            catch (e: Exception) { model.notice = "Couldn't save: ${e.message}" }
+        }
+    }
 
     suspend fun refresh() {
         model.guard { it.thread(peer) }?.let {
@@ -56,11 +92,13 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
 
     fun send() {
         val body = text.trim()
-        if (body.isEmpty() || sending) return
+        if ((body.isEmpty() && attachments.isEmpty()) || sending) return
         sending = true
         scope.launch {
             val from = if (fromNumbers.size > 1) fromDid else ""
-            if (model.change { it.send(peer, body, from) }) { text = ""; refresh(); list.animateScrollToItem(0) }
+            if (model.change { it.send(peer, body, from, attachments) }) {
+                text = ""; attachments = emptyList(); emojiOpen = false; refresh(); list.animateScrollToItem(0)
+            }
             sending = false
         }
     }
@@ -72,8 +110,21 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                 title = { Text("${selected.size} selected") },
                 navigationIcon = { IconButton({ selected = emptySet() }) { Icon(Icons.Filled.Close, "Cancel") } },
                 actions = {
+                    val one = if (selected.size == 1) msgs.firstOrNull { it.id in selected } else null
+                    if (one != null) {
+                        IconButton({ forwarding = one; selected = emptySet() }) {
+                            Icon(Icons.AutoMirrored.Filled.Forward, "Forward")
+                        }
+                        if (one.media.isNotEmpty()) IconButton({ saveMedia(one); selected = emptySet() }) {
+                            Icon(Icons.Filled.Download, "Save to Downloads")
+                        }
+                        if (!one.mine) IconButton({
+                            selected = emptySet()
+                            scope.launch { if (model.change { it.report("message", one.id) }) model.notice = "Reported. The administrator has been notified." }
+                        }) { Icon(Icons.Filled.Flag, "Report") }
+                    }
                     IconButton({
-                        clip.setText(AnnotatedString(msgs.filter { it.id in selected }.reversed().joinToString("\n") { it.body }))
+                        clip.setText(AnnotatedString(msgs.filter { it.id in selected }.reversed().joinToString("\n") { it.text ?: it.body }))
                         selected = emptySet()
                     }) { Icon(Icons.Filled.ContentCopy, "Copy") }
                     IconButton({
@@ -124,15 +175,36 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                     }
                 }
             }
+            if (attachments.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())
+                .padding(start = 12.dp, top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                attachments.forEach { a ->
+                    InputChip(
+                        selected = false,
+                        onClick = { attachments = attachments - a },
+                        label = { Text(a.name.take(18) + " · " + (a.bytes.size / 1024).let { if (it > 1024) "${it / 1024} MB" else "$it KB" }) },
+                        leadingIcon = { Icon(if (a.mime.startsWith("video")) Icons.Filled.Videocam else Icons.Filled.Image, null, Modifier.size(18.dp)) },
+                        trailingIcon = { Icon(Icons.Filled.Close, "Remove", Modifier.size(18.dp)) },
+                    )
+                }
+            }
             Row(Modifier.fillMaxWidth().padding(8.dp),
                 verticalAlignment = Alignment.CenterVertically) {
+                IconButton({ emojiOpen = !emojiOpen }) {
+                    Icon(if (emojiOpen) Icons.Filled.Keyboard else Icons.Filled.EmojiEmotions, "Emoji")
+                }
+                IconButton({
+                    picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo))
+                }, enabled = attachments.size < MAX_ATTACH) { Icon(Icons.Filled.AttachFile, "Photo or video") }
                 OutlinedTextField(text, { text = it.take(1000) }, Modifier.weight(1f), maxLines = 5,
                     placeholder = { Text("Text message") }, shape = RoundedCornerShape(24.dp))
                 Spacer(Modifier.width(8.dp))
-                FilledIconButton(::send, Modifier.size(52.dp), enabled = text.isNotBlank() && !sending) {
-                    Icon(Icons.AutoMirrored.Filled.Send, "Send")
+                FilledIconButton(::send, Modifier.size(52.dp),
+                    enabled = (text.isNotBlank() || attachments.isNotEmpty()) && !sending) {
+                    if (sending) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                    else Icon(Icons.AutoMirrored.Filled.Send, "Send")
                 }
             }
+            if (emojiOpen) EmojiPanel { e -> if (text.length + e.length <= 1000) text += e }
           }
         },
     ) { pad ->
@@ -153,7 +225,16 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                             onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); selected = selected + m.id }),
                     ) {
                         Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
-                            Text(m.body)
+                            val t = m.text ?: m.body
+                            if (t.isNotBlank() || m.media.isEmpty()) Text(t)
+                            m.media.forEach { item ->
+                                MediaBubble(model, item, onLong = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress); selected = selected + m.id
+                                }) { f ->
+                                    if (selected.isEmpty()) viewer = f to item
+                                    else selected = if (isSel) selected - m.id else selected + m.id
+                                }
+                            }
                             Text(shortTime(m.sent_at) + if (m.via_did.isNotEmpty()) " · via ${prettyNumber(m.via_did)}" else "",
                                 style = MaterialTheme.typography.labelSmall)
                         }
@@ -161,5 +242,39 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                 }
             }
         }
+    }
+    viewer?.let { (f, item) ->
+        MediaViewer(f, item.kind, onSave = {
+            model.bg.launch {
+                try { model.notice = "Saved to " + saveToDownloads(ctx, f, item.mime) }
+                catch (e: Exception) { model.notice = "Couldn't save: ${e.message}" }
+            }
+        }, onClose = { viewer = null })
+    }
+    forwarding?.let { m ->
+        var to by remember { mutableStateOf("") }
+        var busy by remember { mutableStateOf(false) }
+        AlertDialog(
+            onDismissRequest = { if (!busy) forwarding = null },
+            title = { Text("Forward") },
+            text = {
+                Column {
+                    Text((m.text ?: m.body).take(120), style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(to, { to = it.take(20) }, label = { Text("Extension or phone number") }, singleLine = true)
+                }
+            },
+            confirmButton = {
+                TextButton({
+                    busy = true
+                    scope.launch {
+                        val ok = model.change { it.send(to.trim(), m.text ?: m.body, fwd = m.media.map { x -> x.ref }) }
+                        busy = false
+                        if (ok) { forwarding = null; model.notice = "Forwarded" }
+                    }
+                }, enabled = to.isNotBlank() && !busy) { Text("Send") }
+            },
+            dismissButton = { TextButton({ forwarding = null }, enabled = !busy) { Text("Cancel") } },
+        )
     }
 }

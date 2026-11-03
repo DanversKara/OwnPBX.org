@@ -332,8 +332,11 @@ def _peer(me, m):
 
 
 def _msg(me, m):
+    # body: the text (or "📷 Photo" when it's only media); media: the attachments.
     return {"id": m["id"], "peer": _peer(me, m), "mine": m["from_ext"] == me["exten"],
-            "body": m["body"], "sent_at": m["sent_at"], "via_did": m.get("via_did") or ""}
+            "body": M.msg_media.display_body(m["body"]), "text": M.msg_media.strip_marks(m["body"]),
+            "media": M.msg_media.items(m["body"], "/api/v1/me"),
+            "sent_at": m["sent_at"], "via_did": m.get("via_did") or ""}
 
 
 def me_threads(request: Request):
@@ -817,6 +820,8 @@ def _flash_json(resp):
     q = urllib.parse.parse_qs(urllib.parse.urlparse(loc).query)
     key = (q.get("msg") or q.get("bmsg") or [""])[0]
     cls, text = M.ucp.FLASH.get(key, ("ok", "Done."))
+    if key == "msgmediaerr" and q.get("merr"):
+        text = q["merr"][0][:300]
     status = 200 if cls == "ok" else (423 if key == "locked" else 400)
     return JSONResponse({"ok": cls == "ok", "code": key or "ok", "message": text}, status_code=status)
 
