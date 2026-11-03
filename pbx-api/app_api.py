@@ -545,8 +545,9 @@ def me_contacts(request: Request, q: str = ""):
         r["notes_count"] = counts.get(r["id"], 0)
         r["last_at"] = ""
         r["ptt"] = _contact_ptt(r, ptt_map)
+    M.people.decorate(me, rows)   # presence ring + photo
     # Most-recently-active first would need a scan; name order is fine and cheap.
-    return {"contacts": rows}
+    return {"contacts": rows, "me": M.people.my_info(me)}
 
 
 def me_contact_detail(request: Request, contact_id: int):
@@ -556,6 +557,8 @@ def me_contact_detail(request: Request, contact_id: int):
         raise HTTPException(404, "no such contact")
     c["notes_count"] = M.contacts.note_counts(me["id"]).get(c["id"], 0)
     c["ptt"] = _contact_ptt(c, _ptt_by_exten())
+    c["photo_pref"] = c.get("photo_pref") or "auto"
+    M.people.decorate(me, [c])
     return {"contact": c,
             "timeline": M.contacts.timeline_for(me["id"], limit=200, contact_id=contact_id),
             "notes": M.contacts.notes_for(me["id"], contact_id=contact_id)}

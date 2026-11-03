@@ -1357,7 +1357,7 @@ def settings_page(request: Request):
                    "deleted": ("ok", "Preset deleted."), "full": ("bad", "You already have 5 presets.")
                    }.get(request.query_params.get("theme") or "")
     top = f'<div class="flash {theme_flash[0]}">{esc(theme_flash[1])}</div>' if theme_flash else ""
-    theme = M.user_theme.section(s, me)
+    theme = M.people.settings_section(request, s, me) + M.user_theme.section(s, me)
     if not me["exten"]:
         return _render(request, s, me, "ucp-set", "Settings", top +
                        '<p class="muted">Your login has no extension, so there are no phone settings. '
