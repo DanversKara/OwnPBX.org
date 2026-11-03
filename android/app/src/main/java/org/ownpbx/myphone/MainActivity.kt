@@ -34,6 +34,16 @@ class MainActivity : FragmentActivity() {
         Notifier.createChannels(this)
         if (savedInstanceState == null) { handlePairLink(intent); handleOpen(intent) }
         showOverLockForCalls()
+        // Open straight in the last known panel theme (refreshed from the PBX once signed in).
+        org.ownpbx.myphone.ui.AppTheme.mode = model.store.themeMode
+        org.ownpbx.myphone.ui.AppTheme.panel =
+            try {
+                model.store.themeJson.takeIf { it.isNotBlank() }?.let {
+                    org.ownpbx.myphone.data.Api.json.decodeFromString(org.ownpbx.myphone.data.PanelTheme.serializer(), it)
+                }
+            } catch (_: Exception) {
+                null
+            }
         setContent { MyPhoneTheme { AppRoot(model, this) } }
     }
 

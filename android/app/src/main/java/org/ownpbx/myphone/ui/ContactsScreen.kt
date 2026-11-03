@@ -164,7 +164,9 @@ fun ContactsScreen(model: AppModel, snack: SnackbarHostState, modifier: Modifier
                                             if (c.ptt) ({ model.pttCallRequest = c.number })
                                             else null,
                                     ),
-                                leadingContent = { Avatar(c.name.ifBlank { c.number }) },
+                                leadingContent = {
+                                    ContactAvatar(model, c.name.ifBlank { c.number }, c.photo_url, c.presence)
+                                },
                                 headlineContent = {
                                     Text(c.name.ifBlank { prettyNumber(c.number) })
                                 },
@@ -294,12 +296,40 @@ private fun ContactDetailScreen(model: AppModel, id: Long, onClose: () -> Unit) 
     var edit by remember { mutableStateOf<Contact?>(null) }
     var noteBody by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var photoMenu by remember { mutableStateOf(false) }
 
     suspend fun refresh() {
         val d = model.guard { it.contactDetail(id) }
         if (d == null) model.notice = "Couldn't load contact" else detail = d
     }
     LaunchedEffect(id) { refresh() }
+    // Pick a picture for this contact (gallery, files, cloud).
+    val pickPhoto =
+        androidx.activity.compose.rememberLauncherForActivityResult(
+            androidx.activity.result.contract.ActivityResultContracts.GetContent()
+        ) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            scope.launch {
+                val bytes =
+                    try {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        }
+                    } catch (e: Exception) {
+                        null
+                    }
+                if (bytes == null) {
+                    model.notice = "Couldn't read that picture"
+                    return@launch
+                }
+                val mime = ctx.contentResolver.getType(uri) ?: "image/jpeg"
+                model.guard { it.uploadPhoto("/me/contacts/$id/photo", bytes, mime) }?.let {
+                    model.notice = it.message
+                    if (it.ok) refresh()
+                }
+            }
+        }
 
     val c = detail?.contact
     Scaffold(
@@ -339,13 +369,60 @@ private fun ContactDetailScreen(model: AppModel, id: Long, onClose: () -> Unit) 
                         val cc = d.contact
                         Column(Modifier.padding(16.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Avatar(cc.name.ifBlank { cc.number })
+                                Box {
+                                    Box(Modifier.clickable { photoMenu = true }) {
+                                        ContactAvatar(model, cc.name.ifBlank { cc.number }, cc.photo_url, cc.presence, 72.dp)
+                                    }
+                                    DropdownMenu(photoMenu, { photoMenu = false }) {
+                                        DropdownMenuItem(
+                                            { Text(if (cc.has_my_photo) "Change my photo for them" else "Set a photo for them") },
+                                            leadingIcon = { Icon(Icons.Filled.AddAPhoto, null) },
+                                            onClick = { photoMenu = false; pickPhoto.launch("image/*") },
+                                        )
+                                        if (cc.has_my_photo)
+                                            DropdownMenuItem(
+                                                { Text("Remove my photo for them") },
+                                                leadingIcon = { Icon(Icons.Filled.HideImage, null) },
+                                                onClick = {
+                                                    photoMenu = false
+                                                    scope.launch {
+                                                        model.change { it.deletePhoto("/me/contacts/$id/photo/delete") }
+                                                        refresh()
+                                                    }
+                                                },
+                                            )
+                                        if (cc.is_extension) {
+                                            HorizontalDivider()
+                                            listOf(
+                                                "auto" to "Automatic (their photo if they have one)",
+                                                "theirs" to "Show their profile photo",
+                                                "mine" to "Show my photo for them",
+                                            ).forEach { (k, label) ->
+                                                DropdownMenuItem(
+                                                    { Text(label) },
+                                                    trailingIcon = { if (cc.photo_pref == k) Icon(Icons.Filled.Check, null) },
+                                                    onClick = {
+                                                        photoMenu = false
+                                                        scope.launch {
+                                                            model.change { it.setPhotoPref(id, k) }
+                                                            refresh()
+                                                        }
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                                 Spacer(Modifier.width(12.dp))
                                 Column {
                                     Text(
                                         cc.name.ifBlank { prettyNumber(cc.number) },
                                         style = MaterialTheme.typography.titleLarge,
                                     )
+                                    presenceLabel(cc.presence).takeIf { it.isNotBlank() }?.let {
+                                        Text(it, style = MaterialTheme.typography.bodySmall,
+                                            color = presenceColor(cc.presence) ?: MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
                                     if (cc.name.isNotBlank())
                                         Text(
                                             prettyNumber(cc.number),

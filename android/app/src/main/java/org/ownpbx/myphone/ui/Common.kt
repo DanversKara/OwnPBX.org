@@ -4,7 +4,9 @@
 package org.ownpbx.myphone.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -13,6 +15,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -64,4 +72,74 @@ fun duration(sec: Int?): String {
 fun prettyNumber(n: String): String {
     val d = n.filter { it.isDigit() }.let { if (it.length == 11 && it.startsWith("1")) it.drop(1) else it }
     return if (d.length == 10) "(${d.take(3)}) ${d.substring(3, 6)}-${d.takeLast(4)}" else n
+}
+
+
+/** Decoded contact photos by server path (the path carries a version, so entries never go stale). */
+private val photoCache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(60)
+
+/** Presence ring colors: online, recent (last 30 min), offline. Hidden / outside numbers: none. */
+fun presenceColor(presence: String): Color? =
+    when (presence) {
+        "online" -> Color(0xFF22C55E)
+        "recent" -> Color(0xFFEAB308)
+        "offline" -> Color(0xFFEF4444)
+        else -> null
+    }
+
+fun presenceLabel(presence: String): String =
+    when (presence) {
+        "online" -> "Online"
+        "recent" -> "Online in the last 30 minutes"
+        "offline" -> "Offline"
+        "hidden" -> "Status hidden"
+        else -> ""
+    }
+
+/** Round contact picture: their photo (or initials) with a presence ring. */
+@Composable
+fun ContactAvatar(
+    model: AppModel,
+    who: String,
+    photoUrl: String,
+    presence: String = "",
+    size: androidx.compose.ui.unit.Dp = 44.dp,
+) {
+    var img by remember(photoUrl) { mutableStateOf(if (photoUrl.isBlank()) null else photoCache.get(photoUrl)) }
+    LaunchedEffect(photoUrl) {
+        if (photoUrl.isBlank() || img != null) return@LaunchedEffect
+        try {
+            val bytes = model.api().photoBytes(photoUrl)
+            val bmp = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+            }
+            if (bmp != null) {
+                photoCache.put(photoUrl, bmp)
+                img = bmp
+            }
+        } catch (_: Exception) {}
+    }
+    val ring = presenceColor(presence)
+    Box(
+        Modifier.size(size + 6.dp)
+            .then(if (ring != null) Modifier.border(3.dp, ring, CircleShape) else Modifier)
+            .padding(3.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        val bmp = img
+        if (bmp != null)
+            androidx.compose.foundation.Image(
+                bmp,
+                presenceLabel(presence).ifBlank { null },
+                Modifier.size(size).clip(CircleShape),
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            )
+        else
+            Box(Modifier.size(size).clip(CircleShape)
+                .background(Color(palette[(who.hashCode() and 0x7fffffff) % palette.size])),
+                contentAlignment = Alignment.Center) {
+                Text(who.filter { it.isLetterOrDigit() }.takeLast(2).ifEmpty { "?" }, color = Color.White,
+                    style = if (size > 50.dp) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium)
+            }
+    }
 }

@@ -188,6 +188,16 @@ class Store(context: Context) {
         get() = prefs.getBoolean("incoming_calls", true)
         set(v) = prefs.edit().putBoolean("incoming_calls", v).apply()
 
+    /** The panel theme last fetched (JSON of PanelTheme), so the app opens in it right away. */
+    var themeJson: String
+        get() = prefs.getString("theme_json", "") ?: ""
+        set(v) = prefs.edit().putString("theme_json", v).apply()
+
+    /** "panel" = match the web panel theme (default), "phone" = Material You. */
+    var themeMode: String
+        get() = prefs.getString("theme_mode", "panel") ?: "panel"
+        set(v) = prefs.edit().putString("theme_mode", v).apply()
+
     var notifyAsked: Boolean
         get() = prefs.getBoolean("notify_asked", false)
         set(v) = prefs.edit().putBoolean("notify_asked", v).apply()
