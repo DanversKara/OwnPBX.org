@@ -77,8 +77,6 @@ fun prettyNumber(n: String): String {
 }
 
 
-/** Decoded contact photos by server path (the path carries a version, so entries never go stale). */
-private val photoCache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(60)
 
 /** Ring colour for a presence: green online / on a call; red DND / recent / offline; none hidden. */
 fun presenceColor(presence: String): Color? =
