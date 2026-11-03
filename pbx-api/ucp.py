@@ -1023,7 +1023,8 @@ def messages_page(request: Request):
     if sel:
         sel_name = (convs.get(sel) or [{}])[0].get("peer_name") or ""
         thread = (f'<div class="muted" style="margin-bottom:8px">Conversation with <b>{_who(sel_name, sel)}</b> · '
-                  f'{M.safety_ui.block_button(csrf_m, sel, back_m, M.safety_ui.is_blocked(me["id"], sel))}</div>') + thread
+                  f'{M.safety_ui.block_button(csrf_m, sel, back_m, M.safety_ui.is_blocked(me["id"], sel))} · '
+                  f'<a href="/ucp/messages/export?with={urllib.parse.quote(sel)}" download>Download conversation</a></div>') + thread
     mleft = _left(me, "messages")
     can_send = _quota(me, "messages") != 0 and mleft != 0
     csrf = M._csrf_field(s)
@@ -1278,6 +1279,33 @@ async def msg_send(request: Request):
     except Exception:
         pass
     return RedirectResponse(back + "msg=msgsent", status_code=303)
+
+
+def msg_export(request: Request):
+    """One conversation as a text file (oldest first). Photos/videos are listed
+    as links to open in My Phone (signed in)."""
+    from fastapi.responses import Response
+    s, me = _me(request)
+    if not s:
+        raise HTTPException(401)
+    peer = request.query_params.get("with", "")
+    ex = me["exten"]
+    rows = [m for m in _my_messages(me, limit=100000) if (m["to_ext"] if m["from_ext"] == ex else m["from_ext"]) == peer]
+    if not rows:
+        raise HTTPException(404)
+    name = rows[0].get("peer_name") or ""
+    base = M.public_base(request)
+    lines = [f"Conversation with {name + ' ' if name else ''}({peer})", ""]
+    for m in reversed(rows):
+        who = "Me" if m["from_ext"] == ex else (name or peer)
+        text = M.msg_media.strip_marks(m["body"])
+        lines.append(f"[{_ago(m['sent_at'])}] {who}: {text}".rstrip())
+        for it in M.msg_media.items(m["body"], "/ucp"):
+            u = it["url"] if it["url"].startswith("http") else base + it["url"]
+            lines.append(f"    ({it['kind']}) {u}")
+    fn = "conversation-" + re.sub(r"[^0-9A-Za-z+]", "", peer)[:20] + ".txt"
+    return Response("\n".join(lines) + "\n", media_type="text/plain; charset=utf-8",
+                    headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
 
 def msg_latest(request: Request):
@@ -1757,6 +1785,8 @@ def install(app_module):
     app.post("/ucp/messages/delete")(msg_delete)
     app.post("/ucp/messages/send")(msg_send)
     app.get("/ucp/messages/latest")(msg_latest)
+    app.get("/ucp/messages/export")(msg_export)
+    app.get("/api/v1/me/messages/export")(msg_export)
     app.get("/ucp/settings", **html)(settings_page)
     app.post("/ucp/settings/calls")(settings_calls)
     app.post("/ucp/settings/prefs")(settings_prefs)

@@ -196,7 +196,7 @@ fun MediaViewer(file: File, kind: String, onSave: () -> Unit, onClose: () -> Uni
 /** Copy a downloaded attachment to the phone's Downloads (Download/OwnPBX). Returns where it went. */
 suspend fun saveToDownloads(ctx: Context, file: File, mime: String): String =
     withContext(Dispatchers.IO) {
-        val name = "ownpbx-" + file.name.takeLast(20)
+        val name = "ownpbx-" + file.name.takeLast(40)
         if (Build.VERSION.SDK_INT >= 29) {
             val v = ContentValues().apply {
                 put(MediaStore.Downloads.DISPLAY_NAME, name)
