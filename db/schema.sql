@@ -695,3 +695,21 @@ CREATE TABLE IF NOT EXISTS mms_cache (
   last_error TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- A copy of everything deleted or cleared, emailed to the admin, then the
+-- contents dropped (deletion_log.py). Triggers fill it for deletes made
+-- straight in the database (SSH); the panel fills it for its own deletes.
+CREATE TABLE IF NOT EXISTS deletion_copies (
+  id INTEGER PRIMARY KEY,
+  at TEXT NOT NULL DEFAULT (datetime('now')),
+  actor TEXT NOT NULL DEFAULT '',
+  action TEXT NOT NULL DEFAULT 'deleted',      -- deleted | hidden | user_hidden
+  tbl TEXT NOT NULL DEFAULT '',
+  rows_json TEXT NOT NULL DEFAULT '[]',        -- emptied once emailed
+  emailed_at TEXT,
+  last_error TEXT NOT NULL DEFAULT ''
+);
+-- A row here (only inside the panel's own transaction) tells the
+-- copy-on-delete triggers to skip: the panel copied the rows itself, or
+-- they must not be kept (account deletion).
+CREATE TABLE IF NOT EXISTS deletion_quiet (n INTEGER, at TEXT NOT NULL DEFAULT (datetime('now')));

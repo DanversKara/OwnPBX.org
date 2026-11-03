@@ -139,6 +139,9 @@ chmod 440 /etc/sudoers.d/pbx-apply-config
 visudo -cf /etc/sudoers.d/pbx-apply-config
 # `pbx-update` shortcut: pull + deploy + edge in one command (scripts/update.sh).
 ln -sf "$SRC_DIR/scripts/update.sh" /usr/local/bin/pbx-update
+# `pbx-clear-logs`: delete logs from SSH, emailing the admin a copy first.
+install -m 755 -o root -g root "$SRC_DIR/scripts/pbx-clear-logs.py" /opt/pbx/bin/pbx-clear-logs
+ln -sf /opt/pbx/bin/pbx-clear-logs /usr/local/bin/pbx-clear-logs
 # Login notice when GitHub has a newer version (tells only, never updates).
 sed "s|@@SRC_DIR@@|$SRC_DIR|g" "$SRC_DIR/scripts/update-check.sh" > /etc/profile.d/pbx-update-check.sh
 chmod 644 /etc/profile.d/pbx-update-check.sh

@@ -62,6 +62,7 @@ import privacy_ui
 import user_theme
 import people
 import msg_media
+import deletion_log
 import user_activity_ui
 
 
@@ -2276,7 +2277,7 @@ async def cdr_delete(request: Request):
     form = await request.form()
     everything = form.get("mode") == "all"
     ids = [int(x) for x in form.getlist("ids") if str(x).isdigit()]
-    n = _delete_rows("cdr", ids, everything)
+    n = _delete_rows("cdr", ids, everything, s["username"])
     _audit_log(s["username"], "cdr.delete", "all" if everything else f"{n} rows")
     return RedirectResponse(f"/cdr?deleted={n}", status_code=303)
 
@@ -2536,16 +2537,18 @@ async def messages_delete_admin(request: Request):
     s, form, everything, ids = await _admin_bulk_form(request, "msgs")
     if s is None:
         return form
-    with db() as c:
+    with db() as c, deletion_log.quiet(c):
         if everything:
+            deletion_log.capture(c, s["username"], "deleted", "messages", c.execute("SELECT * FROM messages").fetchall())
             c.execute("DELETE FROM message_hidden")
             n = c.execute("DELETE FROM messages").rowcount
         else:
             n = 0
             for i in ids:
+                deletion_log.capture(c, s["username"], "deleted", "messages",
+                                     c.execute("SELECT * FROM messages WHERE id=?", (i,)).fetchall())
                 c.execute("DELETE FROM message_hidden WHERE message_id=?", (i,))
                 n += c.execute("DELETE FROM messages WHERE id=?", (i,)).rowcount
-        c.commit()
     _audit_log(s["username"], "messages.delete", "all" if everything else f"{n} rows")
     return RedirectResponse(f"/messages?deleted={n}", status_code=303)
 
@@ -4198,19 +4201,23 @@ class DeleteIn(BaseModel):
     all: bool = False
 
 
-def _delete_rows(table: str, ids, everything: bool) -> int:
+def _delete_rows(table: str, ids, everything: bool, actor: str = "admin") -> int:
+    """Delete rows; the admin is emailed a copy first (deletion_log)."""
     assert table in ("signins", "cdr")
     with db() as c:
-        if everything:
-            n = c.execute(f"DELETE FROM {table}").rowcount
-        else:
-            ids = [int(i) for i in ids][:5000]
-            if not ids:
-                return 0
-            n = 0
-            for i in range(0, len(ids), 500):
-                chunk = ids[i:i + 500]
-                n += c.execute(f"DELETE FROM {table} WHERE id IN ({','.join('?' * len(chunk))})", chunk).rowcount
+        with deletion_log.quiet(c):
+            if everything:
+                deletion_log.capture(c, actor, "deleted", table, c.execute(f"SELECT * FROM {table}").fetchall())
+                n = c.execute(f"DELETE FROM {table}").rowcount
+            else:
+                ids = [int(i) for i in ids][:5000]
+                n = 0
+                for i in range(0, len(ids), 500):
+                    chunk = ids[i:i + 500]
+                    q = ','.join('?' * len(chunk))
+                    deletion_log.capture(c, actor, "deleted", table,
+                                         c.execute(f"SELECT * FROM {table} WHERE id IN ({q})", chunk).fetchall())
+                    n += c.execute(f"DELETE FROM {table} WHERE id IN ({q})", chunk).rowcount
         c.commit()
     return n
 
@@ -4233,14 +4240,18 @@ def v1_signins_delete(request: Request, body: DeleteIn):
     # Hidden from the panel, not deleted: security records are kept LOG_KEEP.
     with db() as c:
         if body.all:
+            deletion_log.capture(c, actor["username"], "hidden", "signins",
+                                 c.execute("SELECT * FROM signins WHERE hidden=0").fetchall())
             n = c.execute("UPDATE signins SET hidden=1 WHERE hidden=0").rowcount
         else:
             ids = [int(i) for i in (body.ids or [])][:5000]
             n = 0
             for i in range(0, len(ids), 500):
                 chunk = ids[i:i + 500]
-                n += c.execute(f"UPDATE signins SET hidden=1 WHERE id IN ({','.join('?' * len(chunk))})",
-                               chunk).rowcount
+                q = ','.join('?' * len(chunk))
+                deletion_log.capture(c, actor["username"], "hidden", "signins",
+                                     c.execute(f"SELECT * FROM signins WHERE hidden=0 AND id IN ({q})", chunk).fetchall())
+                n += c.execute(f"UPDATE signins SET hidden=1 WHERE id IN ({q})", chunk).rowcount
         c.commit()
     _audit_log(actor["username"], "signins.clear", "all" if body.all else f"{n} rows")
     return {"deleted": n}
@@ -4252,7 +4263,7 @@ def v1_cdr_delete(request: Request, body: DeleteIn):
     actor = _v1_admin(request)
     _check_csrf_v1(request)
     _safety_allows_mutation()
-    n = _delete_rows("cdr", body.ids, body.all)
+    n = _delete_rows("cdr", body.ids, body.all, actor["username"])
     _audit_log(actor["username"], "cdr.delete", "all" if body.all else f"{n} rows")
     return {"deleted": n}
 
@@ -4615,4 +4626,5 @@ privacy_ui.install(_sys.modules[__name__])
 user_theme.install(_sys.modules[__name__])
 people.install(_sys.modules[__name__])
 msg_media.install(_sys.modules[__name__])
+deletion_log.install(_sys.modules[__name__])
 user_activity_ui.install(_sys.modules[__name__])

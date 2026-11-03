@@ -446,6 +446,8 @@ def purge_extension_data(exts, moving_login_id=None):
     if not exts:
         return counts
     with M.db() as c:
+      # On purpose (account deletion / extension reassignment): no copy is kept.
+      with M.deletion_log.quiet(c):
         for e in exts:
             rows = c.execute("SELECT id, path FROM recordings WHERE exten=? OR peer=?",
                              (e, e)).fetchall()
@@ -1105,7 +1107,8 @@ def messages_page(request: Request):
 <p class="muted">Send up to 3 photos, GIFs or videos at a time (25 MB each to extensions; about 1.2 MB each
 to phone numbers, where photos are shrunk to fit). Photos are sent without their hidden location details.
 Tick a conversation on the left to delete all of it, or tick single messages. Deleting only removes
-messages from your view; the other person keeps their copy. You can also text from your phone app; both count
+messages from your view; the other person keeps their copy, and the administrator is sent a copy of what
+you delete. You can also text from your phone app; both count
 toward your plan's monthly texts.</p>"""
     return _render(request, s, me, "ucp-msg", "Messages", body)
 
@@ -1349,6 +1352,10 @@ async def msg_delete(request: Request):
         ids = [m["id"] for m in mine
                if m["id"] in want_ids or (m["to_ext"] if m["from_ext"] == ex else m["from_ext"]) in want_convs]
     with M.db() as c:
+        idset = set(ids)
+        M.deletion_log.capture(c, f'{me["username"]} (ext {ex})', "user_hidden", "messages",
+                               [{k: m[k] for k in ("id", "sent_at", "from_ext", "to_ext", "via_did", "body")}
+                                for m in mine if m["id"] in idset])
         c.executemany("INSERT OR IGNORE INTO message_hidden (message_id, login_id) VALUES (?,?)",
                       [(i, me["id"]) for i in ids])
         c.commit()
