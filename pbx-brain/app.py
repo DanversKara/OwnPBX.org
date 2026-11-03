@@ -895,6 +895,23 @@ def handle_ptt(channel, me, target):
         deny_and_hangup(channel, DENIED_PROMPT,
                         "PTT not enabled for %s" % callee["exten"])
         return
+    if get_prefs(callee["id"]).get("dnd"):
+        # Do Not Disturb stops push-to-talk the same way it stops calls:
+        # only a number the callee marked "always ring (VIP)" gets through.
+        rule = block_rule(callee["id"], me["exten"])
+        if not (rule and rule["action"] == "vip"):
+            CALLS[channel.id] = {
+                "caller": me["exten"], "callee": callee["exten"],
+                "start": time.time(), "direction": "ptt", "login_id": me["id"],
+                "callee_id": callee["id"], "ptt": True,
+            }
+            if get_voicemail_box(callee["id"]):
+                log.info("PTT %s -> %s: callee on DND -> voicemail", me["exten"], callee["exten"])
+                route_to_voicemail(channel.id, callee["exten"])
+            else:
+                deny_and_hangup(channel, DENIED_PROMPT,
+                                "PTT %s is on Do Not Disturb" % callee["exten"])
+            return
     # Headers ride on the B leg as ARI originate variables: on a PJSIP
     # channel, setting "PJSIP_HEADER(add,<Header>)" is the one mechanism
     # Asterisk offers for adding a header to the outgoing INVITE, and the
@@ -911,7 +928,7 @@ def handle_ptt(channel, me, target):
     # field every other flow uses (inbound / outbound / internal /
     # forwarded / emergency), so PTT needs no schema change. It also keeps
     # PTT out of the minute quotas. Deliberately no DND / forward / block /
-    # IVR handling: a PTT page rings only the callee's own phones, and if
+    # IVR handling (DND is checked above): a PTT page rings only the callee's own phones, and if
     # nobody accepts, the only exits are the callee's own missed-PTT
     # choices (chirp again, then voicemail \u2014 see ptt_no_answer);
     # on_legb_answer bridges the first leg that answers/accepts.
