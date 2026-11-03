@@ -196,6 +196,9 @@ d.execute("INSERT INTO messages (from_ext, to_ext, body, login_id) VALUES ('5551
           ("[MMS: https://voip.ms/media/err.jpg]",)); d.commit()
 check("an error page isn't saved as the picture", msg_media.cache_pass() == 0 and
       d.execute("SELECT token FROM mms_cache WHERE url LIKE '%err.jpg'").fetchone()[0] is None)
+msg_media._wake.clear(); msg_media.kick("hello"); k1 = msg_media._wake.is_set()
+msg_media.kick("pic [MMS: https://voip.ms/media/a.jpg]")
+check("a new MMS wakes the copier at once (plain texts don't)", not k1 and msg_media._wake.is_set())
 check("web shows a note when a provider picture won't load", "Picture not available right now" in w.get("/ucp/messages?with=8800").text)
 
 # --- account deletion removes their files
