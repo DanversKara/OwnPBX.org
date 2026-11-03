@@ -90,6 +90,14 @@ B.ring_local(a3, me, callee)
 check("app rings when main originate fails", [x[1] for x in LOG if x[0]=="originate"] == [f"PJSIP/{u}-app"] and not a3.hung)
 FAIL.clear()
 
+# callee has no phone online at all -> voicemail, not a hang-up (was SIP 603)
+B.PENDING.clear(); B.CALLS.clear(); LOG.clear(); vm.clear()
+FAIL.add(f"PJSIP/{u}"); STATES[f"{u}-app"] = "offline"
+a5 = FakeChan(id="a5"); CHANS["a5"] = a5
+B.ring_local(a5, me, callee)
+check("offline callee -> voicemail", vm == [("a5", "8800")] and not a5.hung, (vm, a5.hung))
+FAIL.clear(); STATES[f"{u}-app"] = "online"
+
 # ring_group rings app lines too
 B.PENDING.clear(); B.CALLS.clear(); LOG.clear()
 a4 = FakeChan(id="a4"); CHANS["a4"] = a4
