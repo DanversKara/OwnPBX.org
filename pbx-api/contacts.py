@@ -432,13 +432,14 @@ def contacts_page(request: Request):
     if not s:
         return RedirectResponse("/login")
     q = (request.query_params.get("q") or "").strip()[:60]
-    rows = contacts_for(me["id"], q=q)
+    rows = M.people.decorate(me, contacts_for(me["id"], q=q))
     counts = note_counts(me["id"])
     csrf = M._csrf_field(s)
     flash = M.ucp._flash(request)
     trs = "".join(
         f'<tr><td><input type="checkbox" name="ids" value="{r["id"]}" aria-label="Select {M.esc(r["name"])}"></td>'
-        f'<td><a href="/ucp/contacts/{r["id"]}">{M.esc(r["name"])}</a></td>'
+        f'<td><a href="/ucp/contacts/{r["id"]}" style="display:inline-flex;align-items:center;gap:10px">'
+        f'{M.people.avatar_html(r, 34)}{M.esc(r["name"])}</a></td>'
         f'<td>{M.esc(r["number"])}</td><td>{M.esc(r["org"])}</td>'
         f'<td>{counts.get(r["id"], 0) or ""}</td>'
         f'<td class="actions"><form method="post" action="/ucp/contacts/delete" class="inline"'
@@ -511,6 +512,7 @@ def contact_page(request: Request, cid: int):
     body = f"""{flash}
 <p><a href="/ucp/contacts">← All contacts</a></p>
 <h3>{M.esc(c["name"])}</h3>
+{M.people.contact_photo_panel(request, s, me, c)}
 <p class="muted">{M.esc(c["number"])} · {M.esc(c["org"])} · {M.esc(c["email"])}</p>
 <form method="post" action="/ucp/contacts/save" class="inline">{csrf}
 <input type="hidden" name="id" value="{c["id"]}">

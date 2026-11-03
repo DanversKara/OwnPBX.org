@@ -214,6 +214,9 @@ def build_export(login_id):
             ["sent_at", "from_ext", "to_ext", "contact", "via_did", "body"]))
         z.writestr("sign_ins.csv", _csv([dict(r, result="signed in" if r["ok"] else "failed") for r in sign_ins],
                                         ["at", "ip", "result"]))
+        with M.db() as c2:
+            for arc, src in M.people.photo_files(c2, login_id):
+                z.write(src, arc, compress_type=zipfile.ZIP_STORED)
         z.writestr("activity.csv", _csv(activity, ["at", "action", "detail"]))
         z.writestr("contacts.csv", _csv(contacts, ["name", "number", "org", "email", "created_at", "updated_at"]))
         z.writestr("contact_notes.csv", _csv(notes, ["contact_id", "item_type", "item_at", "body", "created_at"]))

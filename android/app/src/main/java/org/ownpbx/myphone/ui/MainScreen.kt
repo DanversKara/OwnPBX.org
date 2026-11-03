@@ -107,6 +107,14 @@ fun MainScreen(model: AppModel) {
         }
     LaunchedEffect(Unit) {
         Notifier.schedule(ctx)
+        // Panel theme: follow the user's My theme / the site's Branding.
+        model.guardQuiet { it.theme() }?.let { t ->
+            AppTheme.panel = t
+            try {
+                model.store.themeJson = org.ownpbx.myphone.data.Api.json.encodeToString(
+                    org.ownpbx.myphone.data.PanelTheme.serializer(), t)
+            } catch (_: Exception) {}
+        }
         // Phone login: fill it in from the PBX (first sign-in) or bring it up to date.
         model.guardQuiet { it.sip() }?.let { pbx ->
             model.sip = pbx

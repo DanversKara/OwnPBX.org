@@ -298,9 +298,36 @@ data class Contact(
      * wish are both on).
      */
     val ptt: Boolean = false,
+    /** Another extension on this PBX (gets a presence ring). */
+    val is_extension: Boolean = false,
+    /** online | recent (last 30 min) | offline | hidden | "" (not an extension). */
+    val presence: String = "",
+    /** Server path of the picture to show ("" = initials). */
+    val photo_url: String = "",
+    /** theirs | mine | "" */
+    val photo_source: String = "",
+    val has_their_photo: Boolean = false,
+    val has_my_photo: Boolean = false,
+    /** auto | theirs | mine */
+    val photo_pref: String = "auto",
 )
 
-@Serializable data class Contacts(val contacts: List<Contact> = emptyList())
+/** The signed-in user's own photo and status switch. */
+@Serializable data class Profile(val photo_url: String = "", val show_status: Boolean = true)
+
+@Serializable data class Contacts(val contacts: List<Contact> = emptyList(), val me: Profile? = null)
+
+/** The panel theme this user sees (their My theme preset, else the site's Branding). */
+@Serializable
+data class PanelTheme(
+    val header: String = "#1a1a2e",
+    val accent: String = "#1a1a2e",
+    val look: String = "frost",
+    val animated: Boolean = false,
+    val dark_default: Boolean = true,
+    val source: String = "site",
+    val name: String = "",
+)
 
 @Serializable
 data class NoteItem(
@@ -622,6 +649,47 @@ class Api(base: String, private val token: String?) {
         }
 
     suspend fun deleteFaxes(ids: List<Long>) = form("/me/faxes/delete", ids.map { "ids" to it.toString() })
+
+    // ---- photos, presence, theme
+    suspend fun profile(): Profile = get("/me/profile")
+
+    suspend fun theme(): PanelTheme = get("/me/theme")
+
+    /** A photo by the server path the API gave (photo_url), as bytes. */
+    suspend fun photoBytes(path: String): ByteArray =
+        withContext(Dispatchers.IO) {
+            val b = Request.Builder().url(base + path)
+            authHeaders().forEach { (k, v) -> b.header(k, v) }
+            http.newCall(b.build()).execute().use { r ->
+                if (!r.isSuccessful) throw ApiException(r.code, "photo ${r.code}")
+                r.body!!.bytes()
+            }
+        }
+
+    /** Upload a picture to [path] (e.g. /me/photo or /me/contacts/{id}/photo). */
+    suspend fun uploadPhoto(path: String, data: ByteArray, mime: String): Result =
+        withContext(Dispatchers.IO) {
+            val body =
+                okhttp3.MultipartBody.Builder()
+                    .setType(okhttp3.MultipartBody.FORM)
+                    .addFormDataPart("photo", "photo", data.toRequestBody(mime.toMediaType()))
+                    .build()
+            val b = Request.Builder().url(url(path)).post(body)
+            authHeaders().forEach { (k, v) -> b.header(k, v) }
+            http.newCall(b.build()).execute().use { r ->
+                val text = r.body?.string() ?: ""
+                if (!r.isSuccessful) throw ApiException(r.code, errorText(text, r.code))
+                json.decodeFromString<Result>(text)
+            }
+        }
+
+    suspend fun deletePhoto(path: String) = form(path, emptyList())
+
+    suspend fun setPhotoPref(contactId: Long, pref: String) =
+        form("/me/contacts/$contactId/photo-pref", listOf("pref" to pref))
+
+    suspend fun setShowStatus(on: Boolean) =
+        form("/me/status-privacy", listOf("show_status" to if (on) "1" else "0"))
 
     suspend fun deleteSentFaxes(ids: List<Long>) =
         form("/me/faxes/sent/delete", ids.map { "ids" to it.toString() })

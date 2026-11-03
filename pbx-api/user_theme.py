@@ -178,7 +178,34 @@ async def save(request: Request):
     return _back("")
 
 
+def effective(me):
+    """The theme this user sees: their preset if they picked one, else the
+    site's Branding. For the app (GET /api/v1/me/theme)."""
+    b = M._brand_settings()
+    out = {"header": _color(b.get("header_color"), "#1a1a2e"), "accent": _color(b.get("accent_color"), "#1a1a2e"),
+           "look": b.get("glass_style") if b.get("glass_style") in dict(LOOKS) else "frost",
+           "animated": b.get("header_animated") == "1", "dark_default": b.get("theme_default") != "light",
+           "source": "site", "name": ""}
+    with M.db() as c:
+        slot = active_slot(c, me["id"])
+        if slot:
+            r = c.execute("SELECT name, header, accent, look, animated FROM user_themes WHERE login_id=? AND slot=?",
+                          (me["id"], slot)).fetchone()
+            if r:
+                out.update(header=r["header"], accent=r["accent"], look=r["look"], animated=bool(r["animated"]),
+                           source="mine", name=r["name"])
+    return out
+
+
+def api_theme(request: Request):
+    s, me = M.ucp._me(request)
+    if not s:
+        raise HTTPException(401)
+    return effective(me)
+
+
 def install(app_module):
     global M
     M = app_module
     M.app.post("/ucp/settings/theme")(save)
+    M.app.get("/api/v1/me/theme")(api_theme)

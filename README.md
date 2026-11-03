@@ -735,6 +735,9 @@ see section 16) with their panel username and password.
 | **IVR** | personal menus (if their plan allows) |
 | **Billing** | choose, switch or cancel a plan (Stripe) |
 | **App** | pair the Android app: **Get a pairing code** shows a QR code, tap-to-copy code and server, and an *Open in the My Phone app* button; **Show phone login QR** gives the app its phone login; see and sign out signed-in phones |
+| **Contacts** | rings and photos like the app; on a contact: upload your photo for them, or choose theirs / yours |
+| **Settings → My photo and status** | profile photo other users see, and **Show my online status** (off = others see no ring at all) |
+| **Settings → My theme** | up to 5 personal theme presets (colors, Frosted or Wet glass); the app follows it too (app: Settings → Look) |
 | **Delete account** | `/ucp/delete`: ask for a copy of your data (emailed as a download link) or for the account to be deleted within 90 days; cancel until it's done |
 | **Settings** | DND, forwarding, ring time, answer with IVR, "Record my calls" (with legal acknowledgement), notification email, text emails on/off, receive/send texts on/off, call filtering (block list: per number choose "not in service", straight to voicemail, or forward to another number), 911 notice, phone setup, SIP password, panel password |
 
@@ -783,6 +786,7 @@ the Notifications and Calling settings.*
 | Screen | What it does |
 |---|---|
 | **Messages** | inbox with search and unread dots, swipe or multi-select delete with Undo, Start chat to any extension or number, copy, block, call; **From** chip to pick the sending number when you have several |
+| **Contacts** | other extensions show a **presence ring** (green online, yellow online in the last 30 min, red offline; none if they hide their status), their **profile photo** or your own photo for them (tap the picture to choose) |
 | **Calls** | All / Missed / **Hidden** (hide calls instead of deleting; they go after 90 days with the rest), call back, text, block, **dial pad**; the missed-call badge clears when you look |
 | **Voicemail** | New / Old, player with seek bar and 1x / 1.5x / 2x, call back, text, move, block, delete |
 | **Settings** | the same switches as My Phone, plus **Notifications**, **Calling** and **App security** |

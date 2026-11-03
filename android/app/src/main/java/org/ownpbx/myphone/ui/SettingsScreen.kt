@@ -734,7 +734,80 @@ fun SettingsScreen(model: AppModel, overview: Overview?, modifier: Modifier) {
             edit = "sip"
         }
 
+        Section("Look")
+        SwitchRow(
+            Icons.Filled.Palette,
+            "Match my panel theme",
+            if (AppTheme.mode == "panel")
+                (AppTheme.panel?.let { t -> if (t.source == "mine") "Your theme \"${t.name}\"" else "The site's colors" } ?: "Loading…") +
+                    " · change it in My Phone (web) → Settings → My theme"
+            else "Off: the app uses your phone's own colors (Material You)",
+            AppTheme.mode == "panel",
+        ) { on ->
+            AppTheme.mode = if (on) "panel" else "phone"
+            store.themeMode = AppTheme.mode
+            if (on) scope.launch { model.guardQuiet { it.theme() }?.let { AppTheme.panel = it } }
+        }
+
         Section("Account")
+        // My photo + whether others see my online status (contacts' presence ring).
+        var profile by remember { mutableStateOf<org.ownpbx.myphone.data.Profile?>(null) }
+        LaunchedEffect(Unit) { profile = model.guardQuiet { it.profile() } }
+        val pickMyPhoto =
+            androidx.activity.compose.rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.GetContent()
+            ) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                scope.launch {
+                    val bytes =
+                        try {
+                            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                            }
+                        } catch (e: Exception) {
+                            null
+                        }
+                    if (bytes == null) {
+                        model.notice = "Couldn't read that picture"
+                        return@launch
+                    }
+                    model.guard { it.uploadPhoto("/me/photo", bytes, ctx.contentResolver.getType(uri) ?: "image/jpeg") }
+                        ?.let { model.notice = it.message }
+                    profile = model.guardQuiet { it.profile() }
+                }
+            }
+        profile?.let { p ->
+            ListItem(
+                leadingContent = {
+                    ContactAvatar(model, store.username.ifBlank { "Me" }, p.photo_url,
+                        if (p.show_status) "online" else "", 40.dp)
+                },
+                headlineContent = { Text("My photo") },
+                supportingContent = { Text("Shows on your contact for other users of this PBX") },
+                trailingContent = {
+                    Row {
+                        TextButton({ pickMyPhoto.launch("image/*") }) { Text(if (p.photo_url.isBlank()) "Add" else "Change") }
+                        if (p.photo_url.isNotBlank())
+                            TextButton({
+                                scope.launch {
+                                    model.change { it.deletePhoto("/me/photo/delete") }
+                                    profile = model.guardQuiet { it.profile() }
+                                }
+                            }) { Text("Remove") }
+                    }
+                },
+            )
+            SwitchRow(
+                Icons.Filled.Visibility,
+                "Show my online status",
+                if (p.show_status) "Others see a green ring when you're online, yellow if you were in the last 30 minutes, red when offline"
+                else "Hidden: others see no ring for you at all",
+                p.show_status,
+            ) { on ->
+                profile = p.copy(show_status = on)
+                scope.launch { model.change { it.setShowStatus(on) } }
+            }
+        }
         ClickRow(Icons.Filled.Dns, "Server", store.server) {}
         ClickRow(
             Icons.Filled.Password,

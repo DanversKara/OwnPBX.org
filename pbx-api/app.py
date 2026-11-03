@@ -60,6 +60,7 @@ import contacts
 import app_api
 import privacy_ui
 import user_theme
+import people
 import user_activity_ui
 
 
@@ -107,6 +108,17 @@ def _migrate(c):
         c.execute("ALTER TABLE blocked_numbers ADD COLUMN action TEXT NOT NULL DEFAULT 'disconnected'")
     if "target" not in cols("blocked_numbers"):
         c.execute("ALTER TABLE blocked_numbers ADD COLUMN target TEXT NOT NULL DEFAULT ''")
+    # Contacts presence + photos (people.py).
+    if "photo" not in cols("logins"):
+        c.execute("ALTER TABLE logins ADD COLUMN photo TEXT NOT NULL DEFAULT ''")
+    if "show_status" not in cols("logins"):
+        c.execute("ALTER TABLE logins ADD COLUMN show_status INTEGER NOT NULL DEFAULT 1")
+    if "last_seen_at" not in cols("logins"):
+        c.execute("ALTER TABLE logins ADD COLUMN last_seen_at TEXT DEFAULT NULL")
+    if "photo" not in cols("contacts"):
+        c.execute("ALTER TABLE contacts ADD COLUMN photo TEXT NOT NULL DEFAULT ''")
+    if "photo_pref" not in cols("contacts"):
+        c.execute("ALTER TABLE contacts ADD COLUMN photo_pref TEXT NOT NULL DEFAULT 'auto'")
     if "theme_slot" not in cols("user_prefs"):
         c.execute("ALTER TABLE user_prefs ADD COLUMN theme_slot INTEGER NOT NULL DEFAULT 0")
     if "ring_seconds" not in cols("user_prefs"):
@@ -1392,6 +1404,7 @@ def wipe_login(lid_i: int):
                         os.remove(p)
                     except OSError:
                         pass
+        people.wipe_login_photos(c, lid_i)
         # Login-scoped rows (FK cascades are not enforced in sqlite here).
         for tbl, col in [("login_feature_access", "login_id"), ("message_hidden", "login_id"),
                          ("user_prefs", "login_id"), ("ivr_menus", "owner_login_id"),
@@ -4595,4 +4608,5 @@ contacts.install(_sys.modules[__name__])
 app_api.install(_sys.modules[__name__])
 privacy_ui.install(_sys.modules[__name__])
 user_theme.install(_sys.modules[__name__])
+people.install(_sys.modules[__name__])
 user_activity_ui.install(_sys.modules[__name__])
