@@ -683,3 +683,15 @@ CREATE TABLE IF NOT EXISTS message_media (
   public INTEGER NOT NULL DEFAULT 0,         -- 1 = texted to a phone number (voip.ms fetches /mms/<file>)
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Local copies of pictures/videos that arrived by MMS (msg_media.cache_pass):
+-- the provider's link stops working when their servers are down, so the PBX
+-- keeps its own copy and points the message at it.
+CREATE TABLE IF NOT EXISTS mms_cache (
+  url TEXT PRIMARY KEY,                      -- the provider's link
+  token TEXT,                                -- message_media.token once saved
+  tries INTEGER NOT NULL DEFAULT 0,
+  next_try TEXT NOT NULL DEFAULT (datetime('now')),
+  last_error TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

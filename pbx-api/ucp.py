@@ -993,6 +993,16 @@ MSG_JS = """<script>
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
     });
   });
+  // A picture still on the provider's server (not copied to the PBX yet) that won't load.
+  function gone(img) {
+    var s = document.createElement('span'); s.className = 'muted';
+    s.textContent = '📷 Picture not available right now (your provider isn\u2019t answering). It will show here once the PBX saves a copy.';
+    (img.closest('a') || img).replaceWith(s);
+  }
+  document.querySelectorAll('img.mm').forEach(function (img) {
+    if (img.complete && img.naturalWidth === 0) gone(img);
+    else img.addEventListener('error', function () { gone(img); });
+  });
   var th = document.querySelector('.thread'); if (th) th.scrollTop = th.scrollHeight;
 })();
 </script>"""
