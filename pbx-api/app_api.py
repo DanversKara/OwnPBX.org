@@ -461,6 +461,12 @@ async def me_calls_hide(request: Request):
         if f.get("unhide") == "1":
             c.executemany("DELETE FROM call_hidden WHERE cdr_id=? AND login_id=?", [(i, me["id"]) for i in ids])
         else:
+            q = ",".join("?" * len(ids))
+            if ids:
+                M.deletion_log.capture(c, f'{me["username"]} (ext {me["exten"]})', "user_hidden", "cdr",
+                                       c.execute(f"SELECT * FROM cdr WHERE id IN ({q}) AND id NOT IN "
+                                                 "(SELECT cdr_id FROM call_hidden WHERE login_id=?)",
+                                                 (*ids, me["id"])).fetchall())
             c.executemany("INSERT OR IGNORE INTO call_hidden (cdr_id, login_id) VALUES (?,?)",
                           [(i, me["id"]) for i in ids])
         c.commit()

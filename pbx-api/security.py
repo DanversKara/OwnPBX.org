@@ -229,6 +229,17 @@ def activity(request: Request, limit: int = 60):
 
 # ---------------------------------------------------------------- settings (Email page)
 
+def _waiting_note():
+    try:
+        n, err = M.deletion_log.waiting()
+    except Exception:
+        return ""
+    if not n:
+        return ""
+    why = f" Last try: {M.esc(err)}" if err else (" Set the address and mail server to send them." if not _alert_to() else "")
+    return f"<b>{n} deletion cop{'y is' if n == 1 else 'ies are'} waiting to be emailed.</b>{why}"
+
+
 def settings_panel(csrf):
     to = _kv("sec_alert_to")
     chk = lambda k: "checked" if _kv(k, "1") == "1" else ""  # noqa: E731
@@ -238,6 +249,9 @@ def settings_panel(csrf):
 <p class="muted">Email when the edge box blocks an attacker, someone is locked out of the web panel
 for wrong passwords, or the kill switch / safety lock changes. At most one email per address per hour
 for the same event, and {ALERT_MAX_PER_HOUR} per hour in total.</p>
+<p class="muted">This address also gets a copy (CSV files in a zip) of anything deleted or cleared:
+logs, call history and messages, including logs deleted straight in the database over SSH.
+{_waiting_note()}</p>
 <form method="post" action="/security/alerts">{csrf}
 <label>Send alerts to<br><input name="sec_alert_to" type="email" value="{esc(to)}" placeholder="you@example.com"></label>
 <label class="switch"><input type="checkbox" name="sec_alert_bans" value="1" {chk('sec_alert_bans')}> <span>Blocked IPs on the phone server (scanners, password guessing, floods)</span></label>
