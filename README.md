@@ -731,7 +731,7 @@ see section 16) with their panel username and password.
 | **Calls** | 90-day history (can't be deleted), recordings, **Block** and **Report** for each call |
 | **Voicemail** | listen, download, move, delete; greeting upload or record by phone (`*98`) |
 | **Recordings** | the user's own recordings |
-| **Messages** | conversations, send a text to any extension (including Zoiper and other SIP apps), **Block**, **Report**; updates by itself. ESP32 devices can make calls too, see the [ESP32-S3-Box-3 project](https://github.com/DanversKara/ESP32-S3-Box-3) |
+| **Messages** | conversations with a reply box underneath, **emoji**, **photos / GIFs / videos** (Download, Forward, Report), send a text to any extension (including Zoiper and other SIP apps), **Block**, **Report**; updates by itself. ESP32 devices can make calls too, see the [ESP32-S3-Box-3 project](https://github.com/DanversKara/ESP32-S3-Box-3) |
 | **IVR** | personal menus (if their plan allows) |
 | **Billing** | choose, switch or cancel a plan (Stripe) |
 | **App** | pair the Android app: **Get a pairing code** shows a QR code, tap-to-copy code and server, and an *Open in the My Phone app* button; **Show phone login QR** gives the app its phone login; see and sign out signed-in phones |
@@ -785,7 +785,7 @@ the Notifications and Calling settings.*
 
 | Screen | What it does |
 |---|---|
-| **Messages** | inbox with search and unread dots, swipe or multi-select delete with Undo, Start chat to any extension or number, copy, block, call; **From** chip to pick the sending number when you have several |
+| **Messages** | inbox with search and unread dots, swipe or multi-select delete with Undo, Start chat to any extension or number, copy, block, call; **emoji**, attach **photos and videos**, **animated GIFs**, forward, save to Downloads, report; **From** chip to pick the sending number when you have several |
 | **Contacts** | other extensions show a **presence ring** (solid green Online, dotted green + phone On a call, red slash Do Not Disturb, dotted red Recently online (30 min), solid red Offline; none if they hide their status), their **profile photo** or your own photo for them (tap the picture to choose) |
 | **Calls** | All / Missed / **Hidden** (hide calls instead of deleting; they go after 90 days with the rest), call back, text, block, **dial pad**; the missed-call badge clears when you look |
 | **Voicemail** | New / Old, player with seek bar and 1x / 1.5x / 2x, call back, text, move, block, delete |
