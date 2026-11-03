@@ -524,7 +524,7 @@ def overview(request: Request):
     n_contacts = M.contacts.count_contacts(me["id"])
     csrf = M._csrf_field(s)
     if p["dnd"]:
-        status = '<span class="pill bad">Do not disturb</span> <span class="muted">Calls go straight to voicemail</span>'
+        status = '<span class="pill bad">Do not disturb</span> <span class="muted">Calls and push-to-talk go straight to voicemail</span>'
     elif p["forward_always"]:
         status = f'<span class="pill warn">Forwarding</span> <span class="muted">All calls go to {esc(p["forward_always"])}</span>'
     else:

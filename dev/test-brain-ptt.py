@@ -242,5 +242,21 @@ row = d.execute("SELECT direction, disposition FROM cdr WHERE call_id='a6'").fet
 check("c: CDR marked as PTT", row is not None and row["direction"] == "ptt"
       and row["disposition"] == "ANSWERED", dict(row) if row else None)
 
+# (j) Do Not Disturb: the PTT never rings; the caller goes to voicemail.
+#     A VIP ("always ring") number still gets through.
+def set_dnd(exten, on):
+    d.execute("INSERT INTO user_prefs (login_id, dnd) VALUES (?,?) ON CONFLICT(login_id)"
+              " DO UPDATE SET dnd=excluded.dnd", (ids[exten], on)); d.commit()
+reset(); set_ptt("8800", 1, 1); set_ptt("8801", 1, 1); set_trusted("8801", None); set_dnd("8801", 1)
+STATES[sip["8801"] + "-app"] = "online"
+a = dial_ptt("a11")
+check("j: DND -> nothing rings", originates() == [], originates())
+check("j: DND -> caller routed to voicemail", VM == [("a11", "8801")], VM)
+d.execute("INSERT INTO blocked_numbers (login_id, number, action) VALUES (?, '8800', 'vip')", (ids["8801"],)); d.commit()
+reset(); STATES[sip["8801"] + "-app"] = "online"
+a = dial_ptt("a12")
+check("j: VIP caller rings through DND", len(originates()) >= 1 and VM == [], (originates(), VM))
+d.execute("DELETE FROM blocked_numbers WHERE login_id=?", (ids["8801"],)); set_dnd("8801", 0)
+
 print("ALL PASSED" if not fails else f"FAILED {fails}")
 sys.exit(1 if fails else 0)
