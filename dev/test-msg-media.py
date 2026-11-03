@@ -158,6 +158,13 @@ r = c.post("/api/v1/me/report", headers=H1, data={"kind": "message", "ref": str(
 check("report a photo", r.json().get("ok"), r.text)
 check("report keeps the file", fn in d.execute("SELECT detail FROM reports ORDER BY id DESC LIMIT 1").fetchone()[0])
 
+# --- download a whole conversation
+r = c.get("/api/v1/me/messages/export", headers=H1, params={"with": "8800"})
+check("conversation downloads as text", r.status_code == 200 and "attachment" in r.headers["content-disposition"]
+      and "look 😀" in r.text and "/ucp/media/" in r.text, r.text[:200])
+check("web has Download conversation", "/ucp/messages/export?with=8800" in w.get("/ucp/messages?with=8800").text)
+check("no conversation, 404", c.get("/api/v1/me/messages/export", headers=H1, params={"with": "999"}).status_code == 404)
+
 # --- account deletion removes their files
 path = os.path.join(msg_media.MEDIA_DIR, fn)
 check("file on disk", os.path.isfile(path))

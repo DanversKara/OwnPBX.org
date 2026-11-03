@@ -771,6 +771,19 @@ class Api(base: String, private val token: String?) {
             f
         }
 
+    /** One conversation as a text file in [dest]. */
+    suspend fun exportConversation(peer: String, dest: java.io.File): java.io.File =
+        withContext(Dispatchers.IO) {
+            val u = url("/me/messages/export").toHttpUrl().newBuilder().addQueryParameter("with", peer).build()
+            val b = Request.Builder().url(u)
+            authHeaders().forEach { (k, v) -> b.header(k, v) }
+            http.newCall(b.build()).execute().use { r ->
+                if (!r.isSuccessful) throw ApiException(r.code, errorText(r.body?.string() ?: "", r.code))
+                r.body!!.byteStream().use { inp -> dest.outputStream().use { inp.copyTo(it) } }
+            }
+            dest
+        }
+
     /** Report a message (or a call) to the admin. */
     suspend fun report(kind: String, id: Long, note: String = "") =
         form("/me/report", listOf("kind" to kind, "ref" to id.toString(), "note" to note))

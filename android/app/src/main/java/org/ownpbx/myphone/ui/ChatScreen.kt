@@ -147,6 +147,16 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                         DropdownMenuItem({ Text("Block") }, leadingIcon = { Icon(Icons.Filled.Block, null) }, onClick = {
                             menu = false; scope.launch { model.change { it.block(peer) }.also { if (it) model.notice = "Blocked" } }
                         })
+                        DropdownMenuItem({ Text("Download conversation") }, leadingIcon = { Icon(Icons.Filled.Download, null) }, onClick = {
+                            menu = false
+                            model.bg.launch {
+                                val f = java.io.File(ctx.cacheDir, "conversation-" + peer.filter { it.isLetterOrDigit() }.take(20) + ".txt")
+                                model.guard { it.exportConversation(peer, f) }?.let {
+                                    try { model.notice = "Saved to " + saveToDownloads(ctx, it, "text/plain") }
+                                    catch (e: Exception) { model.notice = "Couldn't save: ${e.message}" }
+                                }
+                            }
+                        })
                         DropdownMenuItem({ Text("Delete conversation") }, leadingIcon = { Icon(Icons.Filled.Delete, null) }, onClick = {
                             menu = false; model.bg.launch { if (model.change { it.deleteMessages(peers = listOf(peer)) }) back() }
                         })
