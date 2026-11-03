@@ -113,7 +113,7 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                     val one = if (selected.size == 1) msgs.firstOrNull { it.id in selected } else null
                     if (one != null) {
                         IconButton({ forwarding = one; selected = emptySet() }) {
-                            Icon(Icons.AutoMirrored.Filled.Forward, "Forward")
+                            Icon(Icons.Filled.Forward, "Forward")
                         }
                         if (one.media.isNotEmpty()) IconButton({ saveMedia(one); selected = emptySet() }) {
                             Icon(Icons.Filled.Download, "Save to Downloads")
