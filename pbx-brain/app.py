@@ -615,7 +615,21 @@ def ring_local(channel, me, callee, hops=0, caller_label=None,
         except Exception:
             log.exception("originate to %s (%s) failed", callee["username"], ep)
     if not legs:
-        channel.hangup()
+        # No phone signed in (or none reachable): treat it as a no-answer
+        # right away (forward-on-no-answer, else voicemail) instead of
+        # hanging up, which callers saw as "603 / cannot be completed".
+        CALLS[channel.id] = info
+        log.info("%s has no phone online: %s -> no-answer handling", callee["exten"], info["caller"])
+        if direction == "internal" and try_forward_noanswer(channel.id, info):
+            return
+        if direction == "inbound" and try_forward_noanswer_inbound(
+                channel.id, dict(info, ring_ids=[callee["id"]])):
+            return
+        if get_voicemail_box(callee["id"]) and channel.id not in NO_VM:
+            route_to_voicemail(channel.id, callee["exten"])
+        else:
+            deny_and_hangup(channel, UNAVAILABLE_PROMPT,
+                            "%s has no phone online and no voicemail" % callee["exten"])
         return
     leg_b = legs[0]
     for leg in legs:
