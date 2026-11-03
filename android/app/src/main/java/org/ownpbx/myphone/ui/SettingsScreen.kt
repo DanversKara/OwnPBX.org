@@ -800,7 +800,7 @@ fun SettingsScreen(model: AppModel, overview: Overview?, modifier: Modifier) {
             SwitchRow(
                 Icons.Filled.Visibility,
                 "Show my online status",
-                if (p.show_status) "Others see a green ring when you're online, yellow if you were in the last 30 minutes, red when offline"
+                if (p.show_status) "Others see your status around your picture: Online, On a call, Do Not Disturb, Recently online or Offline. Same switch as on the web"
                 else "Hidden: others see no ring for you at all",
                 p.show_status,
             ) { on ->
