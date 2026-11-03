@@ -112,6 +112,27 @@ table.kv td:first-child{color:var(--muted-fg);width:110px}
 .bubble.mine{background:var(--accent);color:#fff;align-self:flex-end}
 .bubble .muted{display:block;font-size:11px;margin-top:2px}
 .bubble.mine .muted{color:#bbc}
+.thread-col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.thread-col .thread{max-height:62vh;overflow-y:auto;padding-right:4px}
+.mtext{white-space:pre-wrap;word-break:break-word}
+.mm-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mm{max-width:260px;max-height:260px;border-radius:10px;display:block;background:rgba(0,0,0,.15)}
+.bubble .muted a,.bubble details.fwd summary{color:inherit;text-decoration:underline;cursor:pointer}
+.bubble details.fwd{display:inline}
+.bubble details.fwd summary{display:inline;list-style:none}
+.bubble details.fwd summary::-webkit-details-marker{display:none}
+.bubble details.fwd form{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.msg-compose textarea{width:100%;margin-top:6px;box-sizing:border-box}
+.msg-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px}
+.msg-tools .btn:last-child{margin-left:auto}
+.msg-files{font-size:12px;overflow:hidden;text-overflow:ellipsis;max-width:40ch;white-space:nowrap}
+.emo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:2px;max-height:180px;overflow-y:auto;
+  margin-top:6px;padding:6px;border:1px solid var(--border);border-radius:10px}
+.emo-grid .emo{font-size:22px;background:none;border:0;cursor:pointer;padding:4px;border-radius:6px;line-height:1}
+.emo-grid .emo:hover{background:var(--pill-bg)}
+.msg-reply{border-top:1px solid var(--border);padding-top:8px}
+details.msg-new summary{cursor:pointer}
+.msg-tools label.btn{display:inline-block;margin:0}
 table.keys td{padding:5px 6px}
 table.keys td.key{font-weight:700;font-size:18px;width:34px;text-align:center}
 .dest{display:flex;gap:6px;flex-wrap:wrap}

@@ -671,3 +671,15 @@ CREATE TABLE IF NOT EXISTS user_themes (
   animated INTEGER NOT NULL DEFAULT 0,
   PRIMARY KEY (login_id, slot)
 );
+
+-- Photos, videos and GIFs sent in messages (msg_media.py). The file is
+-- MEDIA_DIR/<token>.<ext>; messages.body carries "[MMS: media:<token>.<ext>]".
+CREATE TABLE IF NOT EXISTS message_media (
+  token TEXT PRIMARY KEY,                    -- 32 hex characters
+  login_id INTEGER REFERENCES logins(id) ON DELETE CASCADE,   -- who sent it
+  ext TEXT NOT NULL,
+  size INTEGER NOT NULL DEFAULT 0,
+  name TEXT NOT NULL DEFAULT '',
+  public INTEGER NOT NULL DEFAULT 0,         -- 1 = texted to a phone number (voip.ms fetches /mms/<file>)
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);

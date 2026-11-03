@@ -143,8 +143,9 @@ def send_sms_via_voipms(api_username: str, api_password: str, did: str,
 
 
 def send_mms_via_voipms(api_username: str, api_password: str, did: str,
-                        dst: str, message: str, media_url: str = "") -> dict:
-    """Send MMS via voip.ms. media_url optional (publicly reachable image)."""
+                        dst: str, message: str, media_url="") -> dict:
+    """Send MMS via voip.ms. media_url: one public URL or a list of up to 3
+    (voip.ms fetches each; sent as media1..media3)."""
     did_d = normalize_digits(did)
     if len(did_d) == 11 and did_d.startswith("1"):
         did_send = did_d[1:]
@@ -157,8 +158,9 @@ def send_mms_via_voipms(api_username: str, api_password: str, did: str,
         "dst": dst_d,
         "message": (message or "")[:2048],
     }
-    if media_url:
-        params["media_url"] = media_url
+    urls = [media_url] if isinstance(media_url, str) else list(media_url or [])
+    for i, u in enumerate([u for u in urls if u][:3], 1):
+        params[f"media{i}"] = u
     return voipms_api_call(api_username, api_password, params)
 
 

@@ -73,6 +73,9 @@ FLASH = {
     "reportbad": ("bad", "Couldn't find that call or message."),
     "reportrate": ("bad", "Too many reports in an hour - try again later."),
     "msgempty": ("bad", "Type a message first."),
+    "msgmany": ("bad", "You can send up to 3 photos or videos at a time."),
+    "msgmedia": ("bad", "That photo or video can't be forwarded."),
+    "msgmediaerr": ("bad", "That file can't be sent."),
     "msgto": ("bad", "That isn't another user's extension number."),
     "msgquota": ("bad", "You have no texts left on your plan this month."),
     "msgrate": ("bad", "Too many messages in a minute - wait a moment."),
@@ -260,6 +263,8 @@ def _flash(request: Request):
     if key not in FLASH:
         return ""
     cls, text = FLASH[key]
+    if key == "msgmediaerr" and request.query_params.get("merr"):
+        text = request.query_params.get("merr", "")[:300]
     return f'<div class="flash {cls}">{esc(text)}</div>'
 
 
@@ -907,6 +912,92 @@ def _my_messages(me, limit=500):
     return rows
 
 
+EMOJI = ("😀 😃 😄 😁 😆 😅 😂 🤣 😊 😇 🙂 😉 😍 🥰 😘 😋 😜 🤪 😎 🤩 🥳 😏 😒 😔 😢 😭 😤 😠 😡 🤯 😳 🥺 😱 "
+         "😴 🤔 🤗 🤭 🤫 🙄 😬 🤐 🤢 🤮 🤧 😷 🤒 🤕 👍 👎 👌 ✌️ 🤞 🤟 🤙 👏 🙌 🙏 💪 👋 🤝 ✋ 👀 💯 🔥 ✨ "
+         "🎉 🎊 🎂 🎁 ❤️ 🧡 💛 💚 💙 💜 🖤 🤍 💔 💕 💖 ⭐ 🌟 ☀️ 🌙 ⚡ ☔ ❄️ 🌈 🌹 🌻 🍀 🍕 🍔 🍟 🌮 🍩 🍪 "
+         "☕ 🍺 🍷 🥂 🚗 ✈️ 🏠 📞 📱 💻 📷 🎵 ⚽ 🏀 🐶 🐱 🦄 👻 💩 ✅ ❌ ❓ ❗ ⏰ 📍").split()
+
+
+def _compose_box(dis, placeholder):
+    """Text box with emoji picker and photo/video button (both message forms share it)."""
+    grid = "".join(f'<button type="button" class="emo">{e}</button>' for e in EMOJI)
+    return f"""<textarea name="body" rows="2" maxlength="1000" placeholder="{esc(placeholder)}" {dis}></textarea>
+<div class="msg-tools"><button type="button" class="btn ghost emo-btn" title="Emoji" {dis}>😊</button>
+<label class="btn ghost" title="Photo, GIF or video">📎 Photo/video<input type="file" name="media" accept="image/*,video/*" multiple hidden {dis}></label>
+<span class="msg-files muted"></span><button class="btn" {dis}>Send</button></div>
+<div class="emo-grid" hidden>{grid}</div>"""
+
+
+def _media_html(items):
+    out = []
+    for it in items:
+        u = esc(it["url"])
+        if it["kind"] in ("image", "gif"):
+            out.append(f'<a href="{u}" target="_blank" rel="noopener"><img class="mm" src="{u}" loading="lazy" '
+                       f'alt="{"GIF" if it["kind"] == "gif" else "Photo"}"></a>')
+        elif it["kind"] == "video":
+            out.append(f'<video class="mm" src="{u}" controls preload="metadata"></video>')
+        else:
+            out.append(f'<a href="{u}" target="_blank" rel="noopener">📎 {esc(it["name"])}</a>')
+    return f'<div class="mm-list">{"".join(out)}</div>' if out else ""
+
+
+def _bubble(m, ex, csrf, back):
+    """One message: text, photos/videos/GIFs, and Download / Forward / Report."""
+    mine = m["from_ext"] == ex
+    items = M.msg_media.items(m["body"], "/ucp")
+    text = M.msg_media.strip_marks(m["body"])
+    acts = [_ago(m["sent_at"])]
+    for i, it in enumerate(items):
+        local = it["url"].startswith("/ucp/")
+        dl = it["url"] + ("?dl=1" if local else "")
+        acts.append(f'<a href="{esc(dl)}" {"download" if local else "target=_blank rel=noopener"}>'
+                    f'Download{" " + str(i + 1) if len(items) > 1 else ""}</a>')
+    fwd_refs = "".join(f'<input type="hidden" name="fwd" value="{esc(it["ref"])}">' for it in items)
+    acts.append(f'<details class="fwd"><summary>Forward</summary>'
+                f'<form method="post" action="/ucp/messages/send">{csrf}{fwd_refs}'
+                f'<input type="hidden" name="body" value="{esc(text)}">'
+                f'<input name="to" placeholder="Extension or phone number" size="16" required> '
+                f'<button class="btn">Send</button></form></details>')
+    if not mine:
+        acts.append(M.safety_ui.report_button(csrf, "message", m["id"], back))
+    return (f'<div class="bubble {"mine" if mine else ""}">'
+            f'<input type="checkbox" class="sel" name="ids" value="{int(m["id"])}" form="msgdel" aria-label="Select message">'
+            f'<span class="mtext">{esc(text)}</span>{_media_html(items)}'
+            f'<span class="muted">{" · ".join(acts)}</span></div>')
+
+
+# Emoji picker, chosen-file names, Enter-to-send in the reply box, and the
+# conversation scrolled to the newest message. Plain string (not an f-string).
+MSG_JS = """<script>
+(function () {
+  document.querySelectorAll('.msg-compose').forEach(function (form) {
+    var ta = form.querySelector('textarea'), grid = form.querySelector('.emo-grid');
+    var btn = form.querySelector('.emo-btn'), file = form.querySelector('input[type=file]');
+    var names = form.querySelector('.msg-files');
+    if (btn) btn.addEventListener('click', function () { grid.hidden = !grid.hidden; });
+    if (grid) grid.addEventListener('click', function (e) {
+      var b = e.target.closest('.emo'); if (!b || !ta) return;
+      var s = ta.selectionStart || ta.value.length, en = ta.selectionEnd || s;
+      ta.value = ta.value.slice(0, s) + b.textContent + ta.value.slice(en);
+      ta.selectionStart = ta.selectionEnd = s + b.textContent.length; ta.focus();
+    });
+    if (file) file.addEventListener('change', function () {
+      if (file.files.length > 3) { alert('Up to 3 photos or videos at a time.'); file.value = ''; }
+      names.textContent = Array.prototype.map.call(file.files, function (f) { return f.name; }).join(', ');
+    });
+    form.addEventListener('submit', function (e) {
+      if (ta && !ta.value.trim() && !(file && file.files.length)) { e.preventDefault(); ta.focus(); }
+    });
+    if (form.classList.contains('msg-reply') && ta) ta.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
+    });
+  });
+  var th = document.querySelector('.thread'); if (th) th.scrollTop = th.scrollHeight;
+})();
+</script>"""
+
+
 def messages_page(request: Request):
     s, me = _me(request)
     if not s:
@@ -924,16 +1015,11 @@ def messages_page(request: Request):
     side = "".join(
         f'<div class="conv-row"><input type="checkbox" class="sel" name="convs" value="{esc(o)}" form="msgdel" aria-label="Select conversation">'
         f'<a href="/ucp/messages?with={urllib.parse.quote(o)}" class="conv {"on" if o == sel else ""}">'
-        f'<b>{esc(ms[0].get("peer_name") or o)}</b><span class="muted">{esc(ms[0]["body"][:40])} · {len(ms)}</span></a></div>'
+        f'<b>{esc(ms[0].get("peer_name") or o)}</b><span class="muted">{esc(M.msg_media.display_body(ms[0]["body"])[:40])} · {len(ms)}</span></a></div>'
         for o, ms in convs.items()) or '<p class="muted">No messages yet.</p>'
     csrf_m = M._csrf_field(s)
     back_m = "messages:" + sel
-    thread = "".join(
-        f'<div class="bubble {"mine" if m["from_ext"] == ex else ""}">'
-        f'<input type="checkbox" class="sel" name="ids" value="{int(m["id"])}" form="msgdel" aria-label="Select message">'
-        f'{esc(m["body"])}<span class="muted">{_ago(m["sent_at"])}'
-        f'{"" if m["from_ext"] == ex else " · " + M.safety_ui.report_button(csrf_m, "message", m["id"], back_m)}</span></div>'
-        for m in reversed(convs.get(sel, [])))
+    thread = "".join(_bubble(m, ex, csrf_m, back_m) for m in reversed(convs.get(sel, [])))
     if sel:
         sel_name = (convs.get(sel) or [{}])[0].get("peer_name") or ""
         thread = (f'<div class="muted" style="margin-bottom:8px">Conversation with <b>{_who(sel_name, sel)}</b> · '
@@ -956,11 +1042,21 @@ def messages_page(request: Request):
                            for d in nums)
             from_html = (f' <label class="muted" style="white-space:nowrap">From <select name="from_did" {dis}>{opts}</select></label>'
                          ' <span class="muted" style="font-size:12px">(for texts to phone numbers)</span>')
-    compose = f"""<form method="post" action="/ucp/messages/send" class="panel msg-compose">{csrf}
-<b>New message</b> <span class="muted">· {esc(left_txt) if can_send else 'Sending isn\'t available on your plan right now'}</span><br>
-<input name="to" value="{esc(sel)}" placeholder="Extension (e.g. 8801)" inputmode="numeric" size="12" required {dis}>{from_html}
-<textarea name="body" rows="2" maxlength="1000" placeholder="Type a message" required {dis} style="width:100%;margin-top:6px"></textarea>
-<button class="btn" {dis}>Send</button></form>"""
+    status_txt = esc(left_txt) if can_send else "Sending isn't available on your plan right now"
+    # New message (to anyone) at the top; folded away while a conversation is open,
+    # because the reply box sits under the conversation.
+    compose = f"""<details class="panel msg-new" {"" if sel else "open"}><summary><b>New message</b>
+<span class="muted">· {status_txt}</span></summary>
+<form method="post" action="/ucp/messages/send" enctype="multipart/form-data" class="msg-compose">{csrf}
+<input name="to" value="" placeholder="Extension or phone number" size="16" required {dis}>{from_html}
+{_compose_box(dis, "Type a message")}</form></details>"""
+    reply = ""
+    if sel:
+        reply = f"""<form method="post" action="/ucp/messages/send" enctype="multipart/form-data" class="msg-compose msg-reply">{csrf}
+<input type="hidden" name="to" value="{esc(sel)}">
+<div class="muted" style="font-size:12px">Reply to <b>{_who((convs.get(sel) or [{}])[0].get("peer_name") or "", sel)}</b>
+ · {status_txt}{from_html}</div>
+{_compose_box(dis, "Reply… (Enter sends, Shift+Enter for a new line)")}</form>"""
     mnote = ""
     if _quota(me, "messages") == 0:
         mnote = _plan_note("Sending texts isn't included in your plan. You can still read messages you receive.")
@@ -970,17 +1066,19 @@ def messages_page(request: Request):
 {compose}
 {_bulkbar(s, "msgdel", "/ucp/messages/delete", len(msgs), "messages", f'<input type="hidden" name="with" value="{esc(sel)}">')}
 <label class="inline-chk muted" style="margin-bottom:8px!important"><input type="checkbox" id="msgdel-all"> Select everything shown</label>
-<div class="msgs"><div class="convs">{side}</div><div class="thread">{thread or '<p class="muted">Pick a conversation.</p>'}</div></div>
+<div class="msgs"><div class="convs">{side}</div><div class="thread-col"><div class="thread">{thread or '<p class="muted">Pick a conversation.</p>'}</div>{reply}</div></div>
+{MSG_JS}
 {_bulk_js("msgdel")}
 <div id="msg-new" class="flash ok" style="display:none;position:sticky;bottom:10px;cursor:pointer">New message - <u>show</u></div>
 <script>
 (function () {{
   var latest = {max([m["id"] for m in msgs], default=0)};
   var box = document.getElementById('msg-new');
-  var th = document.querySelector('.thread'); if (th) th.scrollTop = th.scrollHeight;
   function busy() {{
-    var t = document.querySelector('.msg-compose textarea');
-    return (t && t.value.trim() !== '') || document.querySelector('input.sel:checked');
+    var typed = Array.prototype.some.call(document.querySelectorAll('.msg-compose textarea'), function (t) {{ return t.value.trim() !== ''; }});
+    var files = Array.prototype.some.call(document.querySelectorAll('.msg-compose input[type=file]'), function (f) {{ return f.files.length > 0; }});
+    var open = document.querySelector('details.fwd[open]');
+    return typed || files || open || document.querySelector('input.sel:checked');
   }}
   box.addEventListener('click', function () {{ location.reload(); }});
   setInterval(function () {{
@@ -993,7 +1091,9 @@ def messages_page(request: Request):
   }}, 10000);
 }})();
 </script>
-<p class="muted">Tick a conversation on the left to delete all of it, or tick single messages. Deleting only removes
+<p class="muted">Send up to 3 photos, GIFs or videos at a time (25 MB each to extensions; about 1.2 MB each
+to phone numbers, where photos are shrunk to fit). Photos are sent without their hidden location details.
+Tick a conversation on the left to delete all of it, or tick single messages. Deleting only removes
 messages from your view; the other person keeps their copy. You can also text from your phone app; both count
 toward your plan's monthly texts.</p>"""
     return _render(request, s, me, "ucp-msg", "Messages", body)
@@ -1044,13 +1144,52 @@ async def msg_send(request: Request):
     await M._check_csrf(request, s)
     f = await request.form()
     to = (f.get("to") or "").strip()
-    body = "".join(ch for ch in (f.get("body") or "").replace("\r", "") if ch == "\n" or ch.isprintable()).strip()[:1000]
+    # Typed text never carries attachment markers; those come only from
+    # real uploads / forwards checked below.
+    body = M.msg_media.strip_marks(
+        "".join(ch for ch in (f.get("body") or "").replace("\r", "") if ch == "\n" or ch.isprintable()).strip()[:1000])
     back = "/ucp/messages" + (f"?with={urllib.parse.quote(to)}&" if to else "?")
     if not me["exten"]:
         return RedirectResponse(back + "msg=msgnoext", status_code=303)
-    if not body:
-        return RedirectResponse(back + "msg=msgempty", status_code=303)
     is_external = voipms_sms.is_external_number(to)
+    uploads = [u for u in f.getlist("media") if hasattr(u, "read") and getattr(u, "filename", "")]
+    fwd = [r.strip() for r in f.getlist("fwd") if isinstance(r, str) and r.strip()]
+    if len(uploads) + len(fwd) > M.msg_media.MAX_FILES:
+        return RedirectResponse(back + "msg=msgmany", status_code=303)
+    if any(not M.msg_media.can_forward(me, r) for r in fwd):
+        return RedirectResponse(back + "msg=msgmedia", status_code=303)
+    prepared = []
+    for u in uploads:
+        data = await u.read(M.msg_media.MAX_FILE + 1)
+        try:
+            prepared.append((*M.msg_media.prepare(data, is_external), u.filename))
+        except M.msg_media.MediaError as e:
+            return RedirectResponse(back + "msg=msgmediaerr&merr=" + urllib.parse.quote(str(e)), status_code=303)
+    if not body and not prepared and not fwd:
+        return RedirectResponse(back + "msg=msgempty", status_code=303)
+    if is_external and fwd:
+        # Forwarded files must also fit an MMS, and voip.ms must be able to fetch them.
+        for r in fwd:
+            m = M.msg_media.LOCAL.match(r)
+            if m and os.path.getsize(os.path.join(M.msg_media.MEDIA_DIR, f"{m.group(1)}.{m.group(2)}")) > M.msg_media.MAX_MMS:
+                return RedirectResponse(back + "msg=msgmediaerr&merr=" + urllib.parse.quote(
+                    "That file is too big to text to a phone number (about 1.2 MB at most)."), status_code=303)
+
+    def attach(c):
+        """Save the uploads; returns (full body for the database, public URLs for voip.ms)."""
+        refs = [M.msg_media.store(c, me, d, ext, name, is_external) for d, ext, name in prepared] + fwd
+        if is_external:
+            for r in fwd:
+                m = M.msg_media.LOCAL.match(r)
+                if m:
+                    c.execute("UPDATE message_media SET public=1 WHERE token=?", (m.group(1),))
+        base = M.public_base(request)
+        urls = []
+        for r in refs:
+            m = M.msg_media.LOCAL.match(r)
+            urls.append(f"{base}/mms/{m.group(1)}.{m.group(2)}" if m else r)
+        full = (body + "".join(f"\n[MMS: {r}]" for r in refs)).strip()
+        return full, urls
     with M.db() as c:
         if is_external:
             # External SMS via voip.ms - validate sender only
@@ -1081,13 +1220,18 @@ async def msg_send(request: Request):
             if len(recent) >= MSG_RATE:
                 return RedirectResponse(back + "msg=msgrate", status_code=303)
             _send_times[me["id"]] = recent + [now]
+            full, urls = attach(c)
             c.execute("INSERT INTO messages (from_ext, to_ext, body, login_id, via_did) VALUES (?,?,?,?,?)",
-                      (me["exten"], dest_e164, body, me["id"], voipms_sms.normalize_did(sender_did)))
+                      (me["exten"], dest_e164, full, me["id"], voipms_sms.normalize_did(sender_did)))
             c.commit()
             # Send via voip.ms API (outside DB lock)
             try:
-                voipms_sms.send_sms_via_voipms(cfg["voipms_api_username"], cfg["voipms_api_password"],
-                                              sender_did, dest_e164, body)
+                if urls:
+                    voipms_sms.send_mms_via_voipms(cfg["voipms_api_username"], cfg["voipms_api_password"],
+                                                   sender_did, dest_e164, body, urls)
+                else:
+                    voipms_sms.send_sms_via_voipms(cfg["voipms_api_username"], cfg["voipms_api_password"],
+                                                   sender_did, dest_e164, body)
             except Exception:
                 pass
             return RedirectResponse(back + "msg=msgsent", status_code=303)
@@ -1116,16 +1260,19 @@ async def msg_send(request: Request):
         if len(recent) >= MSG_RATE:
             return RedirectResponse(back + "msg=msgrate", status_code=303)
         _send_times[me["id"]] = recent + [now]
+        full, urls = attach(c)
         c.execute("INSERT INTO messages (from_ext, to_ext, body, login_id) VALUES (?,?,?,?)",
-                  (me["exten"], to, body, me["id"]))
+                  (me["exten"], to, full, me["id"]))
         c.commit()
+    # Desk phones get the text plus a note (they can't show the files).
+    phone_body = (body + (f" [{M.msg_media.label(urls)} - open My Phone to view]" if urls else "")).strip()
     # Push to the recipient's phone (best effort; it's stored either way).
     M.app_api.push_notify(dest["id"], "message")
     try:
         import json as _json
         import urllib.request as _ur
         req = _ur.Request(M.BRAIN_STATUS_URL + "/messages/send",
-                          data=_json.dumps({"to": to, "from": me["exten"], "body": body}).encode(),
+                          data=_json.dumps({"to": to, "from": me["exten"], "body": phone_body}).encode(),
                           headers={"Content-Type": "application/json"}, method="POST")
         _ur.urlopen(req, timeout=5).read()
     except Exception:

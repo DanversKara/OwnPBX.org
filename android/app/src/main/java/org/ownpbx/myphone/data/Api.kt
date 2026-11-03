@@ -30,10 +30,27 @@ data class Msg(
     val id: Long,
     val peer: String,
     val mine: Boolean,
+    /** The text, or "📷 Photo" etc. when the message is only media. */
     val body: String,
     val sent_at: String = "",
     val via_did: String = "",
+    /** The text alone (empty for media-only); older PBXes don't send it. */
+    val text: String? = null,
+    val media: List<MediaItem> = emptyList(),
 )
+
+/** A photo, GIF or video in a message. [url] is a PBX path or, for MMS, a web address; [ref] forwards it. */
+@Serializable
+data class MediaItem(
+    val url: String,
+    val ref: String = "",
+    val kind: String = "file",
+    val mime: String = "",
+    val name: String = "",
+)
+
+/** A photo/video picked on the phone, to send. */
+class Attachment(val bytes: ByteArray, val mime: String, val name: String)
 
 @Serializable
 data class ChatThread(
@@ -707,11 +724,56 @@ class Api(base: String, private val token: String?) {
         get("/me/timeline", mapOf("limit" to limit))
 
     // ---- changes
-    suspend fun send(to: String, body: String, fromDid: String = "") =
-        form(
-            "/me/messages/send",
-            listOf("to" to to, "body" to body) + if (fromDid.isNotEmpty()) listOf("from_did" to fromDid) else emptyList(),
-        )
+    suspend fun send(
+        to: String,
+        body: String,
+        fromDid: String = "",
+        files: List<Attachment> = emptyList(),
+        fwd: List<String> = emptyList(),
+    ): Result {
+        val fields = listOf("to" to to, "body" to body) +
+            (if (fromDid.isNotEmpty()) listOf("from_did" to fromDid) else emptyList()) + fwd.map { "fwd" to it }
+        if (files.isEmpty()) return form("/me/messages/send", fields)
+        return withContext(Dispatchers.IO) {
+            val mb = okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
+            fields.forEach { (k, v) -> mb.addFormDataPart(k, v) }
+            files.forEach { f -> mb.addFormDataPart("media", f.name, f.bytes.toRequestBody(f.mime.toMediaType())) }
+            val b = Request.Builder().url(url("/me/messages/send")).post(mb.build())
+            authHeaders().forEach { (k, v) -> b.header(k, v) }
+            http.newBuilder().readTimeout(120, TimeUnit.SECONDS).writeTimeout(180, TimeUnit.SECONDS).build()
+                .newCall(b.build()).execute().use { r ->
+                    val text = r.body?.string() ?: ""
+                    if (r.code == 401) throw ApiException(401, errorText(text, 401))
+                    try { json.decodeFromString<Result>(text) }
+                    catch (e: Exception) { Result(false, "error", errorText(text, r.code)) }
+                }
+        }
+    }
+
+    /**
+     * A message attachment as a file in [dir] (kept as a cache: the name comes from the address).
+     * PBX paths get the sign-in; MMS pictures hosted elsewhere don't.
+     */
+    suspend fun mediaFile(u: String, dir: java.io.File): java.io.File =
+        withContext(Dispatchers.IO) {
+            val d = java.io.File(dir, "msg-media").apply { mkdirs() }
+            val ext = u.substringBefore('?').substringAfterLast('.', "").take(4).filter { it.isLetterOrDigit() }
+            val f = java.io.File(d, "%08x%08x".format(u.hashCode(), u.reversed().hashCode()) + if (ext.isNotEmpty()) ".$ext" else "")
+            if (f.isFile && f.length() > 0) return@withContext f
+            val b = Request.Builder().url(if (u.startsWith("/")) base + u else u)
+            if (u.startsWith("/")) authHeaders().forEach { (k, v) -> b.header(k, v) }
+            http.newBuilder().readTimeout(120, TimeUnit.SECONDS).build().newCall(b.build()).execute().use { r ->
+                if (!r.isSuccessful) throw ApiException(r.code, "media ${r.code}")
+                val tmp = java.io.File(d, f.name + ".part")
+                r.body!!.byteStream().use { inp -> tmp.outputStream().use { inp.copyTo(it) } }
+                tmp.renameTo(f)
+            }
+            f
+        }
+
+    /** Report a message (or a call) to the admin. */
+    suspend fun report(kind: String, id: Long, note: String = "") =
+        form("/me/report", listOf("kind" to kind, "ref" to id.toString(), "note" to note))
 
     suspend fun deleteMessages(ids: List<Long> = emptyList(), peers: List<String> = emptyList()) =
         form(
