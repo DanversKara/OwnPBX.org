@@ -280,8 +280,9 @@ def files_for_export(c, login_id):
 # ------------------------------------------------------------------ MMS copies
 # Pictures that arrive by MMS are links to the provider's servers (voip.ms).
 # When those are down (e.g. a Cloudflare outage) the picture vanishes, so a
-# background pass downloads each one into MEDIA_DIR and rewrites the message
-# to point at the local copy. Failed downloads are retried with a growing
+# background pass downloads each one into MEDIA_DIR the moment it arrives
+# (kick() from the incoming-text handler) and rewrites the message to point
+# at the local copy. Failed downloads are retried with a growing
 # wait (1 min, 2, 4 ... up to 6 hours) for CACHE_GIVE_UP_DAYS.
 CACHE_SECS = 20
 CACHE_GIVE_UP_DAYS = 14
@@ -369,14 +370,25 @@ def _point_to_copy(c, url, tok):
               (f"[MMS: {url}]", f"[MMS: media:{tok}.{r['ext']}]", f"%[MMS: {url}]%"))
 
 
+_wake = threading.Event()
+
+
+def kick(body=""):
+    """A text just came in: if it has a picture/video link, copy it now."""
+    if not body or "[MMS: http" in body:
+        _wake.set()
+
+
 def _cache_loop():
-    time.sleep(10)
+    time.sleep(2)
     while True:
+        _wake.clear()
         try:
             cache_pass()
         except Exception:
             pass
-        time.sleep(CACHE_SECS)
+        # Wakes at once for a new MMS (kick), else every CACHE_SECS for retries.
+        _wake.wait(CACHE_SECS)
 
 
 def install(app_module):

@@ -2672,6 +2672,9 @@ def _handle_voipms_inbound(params: dict) -> tuple[bool, str]:
                           " VALUES (?,?,?,?,?)",
                           (from_disp, d, body, None, via_did))
         c.commit()
+    # Pictures/videos: copy them into the PBX right away (the provider's link
+    # stops working while their servers are down).
+    msg_media.kick(body)
     # Deliver to Zoiper/softphones via pbx-brain (best effort; stored anyway)
     for d in valid:
         app_api.push_exten(d, "message")
