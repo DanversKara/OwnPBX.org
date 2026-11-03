@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
@@ -75,28 +77,34 @@ fun prettyNumber(n: String): String {
 }
 
 
-/** Decoded contact photos by server path (the path carries a version, so entries never go stale). */
-private val photoCache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(60)
 
-/** Presence ring colors: online, recent (last 30 min), offline. Hidden / outside numbers: none. */
+/** Ring colour for a presence: green online / on a call; red DND / recent / offline; none hidden. */
 fun presenceColor(presence: String): Color? =
     when (presence) {
-        "online" -> Color(0xFF22C55E)
-        "recent" -> Color(0xFFEAB308)
-        "offline" -> Color(0xFFEF4444)
+        "online", "oncall" -> Color(0xFF22C55E)
+        "dnd", "recent", "offline" -> Color(0xFFEF4444)
         else -> null
     }
 
 fun presenceLabel(presence: String): String =
     when (presence) {
         "online" -> "Online"
-        "recent" -> "Online in the last 30 minutes"
+        "oncall" -> "Online / On a call"
+        "dnd" -> "Do Not Disturb"
+        "recent" -> "Recently online (last 30 minutes)"
         "offline" -> "Offline"
         "hidden" -> "Status hidden"
         else -> ""
     }
 
-/** Round contact picture: their photo (or initials) with a presence ring. */
+/** Decoded contact photos by server path (the path carries a version, so entries never go stale). */
+private val photoCache = android.util.LruCache<String, androidx.compose.ui.graphics.ImageBitmap>(60)
+
+/**
+ * Round contact picture (their photo, or initials) inside the presence ring: solid green online,
+ * dotted green with a phone on a call, red with a slash for Do Not Disturb, dotted red recently
+ * online, solid red offline, none when hidden or an outside number.
+ */
 @Composable
 fun ContactAvatar(
     model: AppModel,
@@ -120,10 +128,38 @@ fun ContactAvatar(
         } catch (_: Exception) {}
     }
     val ring = presenceColor(presence)
+    val dotted = presence == "oncall" || presence == "recent"
+    val slash = presence == "dnd"
+    val stroke = if (size > 50.dp) 4.dp else 3.dp
     Box(
-        Modifier.size(size + 6.dp)
-            .then(if (ring != null) Modifier.border(3.dp, ring, CircleShape) else Modifier)
-            .padding(3.dp),
+        Modifier.size(size + stroke * 2 + 2.dp)
+            .drawWithContent {
+                drawContent()
+                if (ring != null) {
+                    val w = stroke.toPx()
+                    val r = this.size.minDimension / 2 - w / 2
+                    drawCircle(
+                        ring,
+                        radius = r,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = w,
+                            pathEffect = if (dotted)
+                                androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(w * 0.9f, w * 1.1f))
+                            else null,
+                            cap = if (dotted) androidx.compose.ui.graphics.StrokeCap.Round
+                                else androidx.compose.ui.graphics.StrokeCap.Butt,
+                        ),
+                    )
+                    if (slash) {
+                        // The "no entry" slash, corner to corner inside the ring.
+                        val c = center
+                        val d = r * 0.7071f
+                        drawLine(ring, androidx.compose.ui.geometry.Offset(c.x - d, c.y - d),
+                            androidx.compose.ui.geometry.Offset(c.x + d, c.y + d), strokeWidth = w,
+                            cap = androidx.compose.ui.graphics.StrokeCap.Round)
+                    }
+                }
+            },
         contentAlignment = Alignment.Center,
     ) {
         val bmp = img
@@ -140,6 +176,12 @@ fun ContactAvatar(
                 contentAlignment = Alignment.Center) {
                 Text(who.filter { it.isLetterOrDigit() }.takeLast(2).ifEmpty { "?" }, color = Color.White,
                     style = if (size > 50.dp) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleMedium)
+            }
+        if (presence == "oncall")
+            Box(Modifier.size(size).clip(CircleShape).background(Color.Black.copy(alpha = 0.45f)),
+                contentAlignment = Alignment.Center) {
+                Icon(androidx.compose.material.icons.Icons.Filled.Call, "On a call", tint = Color.White,
+                    modifier = Modifier.size(size * 0.45f))
             }
     }
 }

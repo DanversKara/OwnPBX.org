@@ -549,7 +549,8 @@ def overview(request: Request):
     body = f"""
 <div class="tiles">
   <div class="tile"><span class="lbl">My phone</span>{dev_html}</div>
-  <div class="tile"><span class="lbl">Status</span><div>{status}</div><div style="margin-top:10px">{dnd_btn}</div></div>
+  <div class="tile"><span class="lbl">Status</span><div>{status}</div><div style="margin-top:10px">{dnd_btn}</div>
+  {M.people.overview_status_switch(s, me)}</div>
   <a class="tile link" href="/ucp/voicemail"><span class="lbl">New voicemail</span><b>{new_vm}</b></a>
   <a class="tile link" href="/ucp/calls?missed=1"><span class="lbl">Missed calls (recent)</span><b>{missed}</b></a>
   <a class="tile link" href="/ucp/contacts"><span class="lbl">Contacts</span><b>{n_contacts}</b></a>

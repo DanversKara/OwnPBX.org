@@ -41,6 +41,18 @@ people.sample()                                     # stamps 8801 last_seen
 status["contacts"] = []                             # 8801 drops off
 cl = {x["name"]: x for x in c.get("/api/v1/me/contacts", headers=H0).json()["contacts"]}
 check("just dropped off shows recent", cl["Bob"]["presence"] == "recent", cl["Bob"])
+d.execute("INSERT INTO user_prefs (login_id, dnd) VALUES (?,1) ON CONFLICT(login_id) DO UPDATE SET dnd=1", (uid("phone8801"),)); d.commit()
+cl = {x["name"]: x for x in c.get("/api/v1/me/contacts", headers=H0).json()["contacts"]}
+check("do not disturb shows dnd", cl["Bob"]["presence"] == "dnd", cl["Bob"])
+bob_id = uid("phone8801")
+A._brain_calls = lambda: [{"caller": "8801", "callee": "5551112222", "state": "bridged", "direction": "out", "login_id": bob_id}]
+cl = {x["name"]: x for x in c.get("/api/v1/me/contacts", headers=H0).json()["contacts"]}
+check("on a call beats do not disturb", cl["Bob"]["presence"] == "oncall", cl["Bob"])
+A._brain_calls = lambda: [{"caller": "8801", "callee": "8800", "state": "ringing", "direction": "internal"}]
+cl = {x["name"]: x for x in c.get("/api/v1/me/contacts", headers=H0).json()["contacts"]}
+check("a ringing call isn't on a call yet", cl["Bob"]["presence"] == "dnd", cl["Bob"])
+A._brain_calls = lambda: []
+d.execute("UPDATE user_prefs SET dnd=0 WHERE login_id=?", (uid("phone8801"),)); d.commit()
 d.execute("UPDATE logins SET last_seen_at=datetime('now','-31 minutes') WHERE username='phone8801'"); d.commit()
 cl = {x["name"]: x for x in c.get("/api/v1/me/contacts", headers=H0).json()["contacts"]}
 check("over 30 minutes shows offline", cl["Bob"]["presence"] == "offline", cl["Bob"])
