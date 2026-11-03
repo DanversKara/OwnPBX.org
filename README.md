@@ -786,7 +786,7 @@ the Notifications and Calling settings.*
 | Screen | What it does |
 |---|---|
 | **Messages** | inbox with search and unread dots, swipe or multi-select delete with Undo, Start chat to any extension or number, copy, block, call; **From** chip to pick the sending number when you have several |
-| **Contacts** | other extensions show a **presence ring** (green online, yellow online in the last 30 min, red offline; none if they hide their status), their **profile photo** or your own photo for them (tap the picture to choose) |
+| **Contacts** | other extensions show a **presence ring** (solid green Online, dotted green + phone On a call, red slash Do Not Disturb, dotted red Recently online (30 min), solid red Offline; none if they hide their status), their **profile photo** or your own photo for them (tap the picture to choose) |
 | **Calls** | All / Missed / **Hidden** (hide calls instead of deleting; they go after 90 days with the rest), call back, text, block, **dial pad**; the missed-call badge clears when you look |
 | **Voicemail** | New / Old, player with seek bar and 1x / 1.5x / 2x, call back, text, move, block, delete |
 | **Settings** | the same switches as My Phone, plus **Notifications**, **Calling** and **App security** |
