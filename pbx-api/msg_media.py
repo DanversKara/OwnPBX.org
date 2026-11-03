@@ -24,6 +24,9 @@ import io
 import os
 import re
 import secrets
+import threading
+import time
+import urllib.request
 
 from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse
@@ -274,6 +277,108 @@ def files_for_export(c, login_id):
     return out
 
 
+# ------------------------------------------------------------------ MMS copies
+# Pictures that arrive by MMS are links to the provider's servers (voip.ms).
+# When those are down (e.g. a Cloudflare outage) the picture vanishes, so a
+# background pass downloads each one into MEDIA_DIR and rewrites the message
+# to point at the local copy. Failed downloads are retried with a growing
+# wait (1 min, 2, 4 ... up to 6 hours) for CACHE_GIVE_UP_DAYS.
+CACHE_SECS = 20
+CACHE_GIVE_UP_DAYS = 14
+CACHE_MAX_TRIES = 60
+
+
+def _fetch(url):
+    """(bytes, content-type) from the provider; raises on any failure."""
+    req = urllib.request.Request(url, headers={"User-Agent": "OwnPBX/1.0 (MMS copy)"})
+    with urllib.request.urlopen(req, timeout=25) as r:
+        data = r.read(MAX_FILE + 1)
+        return data, (r.headers.get("Content-Type") or "").lower()
+
+
+def _ext_for(data, ctype, url):
+    ext = _sniff(data)
+    if ext and ext != "heic":
+        return ext
+    if not data or len(data) > MAX_FILE or ctype.startswith("text/html") or data[:15].lstrip().lower().startswith(b"<!doctype"):
+        return ""          # an error page, not the picture: try again later
+    tail = url.split("?")[0].rsplit("/", 1)[-1]
+    guess = tail.rsplit(".", 1)[-1].lower() if "." in tail else ""
+    return guess if re.fullmatch(r"[a-z0-9]{2,4}", guess) else "bin"
+
+
+def _owner(c, msg):
+    """Whose copy it is (data download / account deletion): the extension on our side."""
+    for ext in (msg["to_ext"], msg["from_ext"]):
+        r = c.execute("SELECT id FROM logins WHERE exten=?", (ext,)).fetchone()
+        if r:
+            return r["id"]
+    return None
+
+
+def cache_pass(limit=200):
+    """Save local copies of MMS pictures that are still provider links. Returns how many were saved."""
+    saved = 0
+    with M.db() as c:
+        msgs = c.execute("SELECT id, from_ext, to_ext, body FROM messages WHERE body LIKE '%[MMS: http%'"
+                         " AND sent_at >= datetime('now', ?) ORDER BY id DESC LIMIT ?",
+                         (f"-{CACHE_GIVE_UP_DAYS} days", limit)).fetchall()
+    for msg in msgs:
+        for url in [r for r in refs_in(msg["body"]) if r.startswith(("https://", "http://"))]:
+            with M.db() as c:
+                row = c.execute("SELECT * FROM mms_cache WHERE url=?", (url,)).fetchone()
+                if row and row["token"]:
+                    _point_to_copy(c, url, row["token"])
+                    c.commit()
+                    continue
+                if row and (row["tries"] >= CACHE_MAX_TRIES or c.execute(
+                        "SELECT ? > datetime('now')", (row["next_try"],)).fetchone()[0]):
+                    continue
+                # Claim it (several workers may run this) by pushing next_try out first.
+                c.execute("INSERT INTO mms_cache (url, next_try) VALUES (?, datetime('now','+2 minutes'))"
+                          " ON CONFLICT(url) DO UPDATE SET next_try=datetime('now','+2 minutes')", (url,))
+                c.commit()
+            try:
+                data, ctype = _fetch(url)
+                ext = _ext_for(data, ctype, url)
+                if not ext:
+                    raise ValueError("the provider sent a page instead of the picture")
+                err = ""
+            except Exception as e:
+                ext, err = "", str(e)[:200] or e.__class__.__name__
+            with M.db() as c:
+                if ext:
+                    tok = store(c, {"id": _owner(c, msg)}, data, ext, url.rsplit("/", 1)[-1], False)[6:].split(".")[0]
+                    c.execute("UPDATE mms_cache SET token=?, last_error='' WHERE url=?", (tok, url))
+                    _point_to_copy(c, url, tok)
+                    saved += 1
+                else:
+                    tries = (row["tries"] if row else 0) + 1
+                    wait = min(2 ** (tries - 1), 360)
+                    c.execute("UPDATE mms_cache SET tries=?, last_error=?, next_try=datetime('now', ?) WHERE url=?",
+                              (tries, err, f"+{wait} minutes", url))
+                c.commit()
+    return saved
+
+
+def _point_to_copy(c, url, tok):
+    r = c.execute("SELECT ext FROM message_media WHERE token=?", (tok,)).fetchone()
+    if not r:
+        return
+    c.execute("UPDATE messages SET body=replace(body, ?, ?) WHERE body LIKE ?",
+              (f"[MMS: {url}]", f"[MMS: media:{tok}.{r['ext']}]", f"%[MMS: {url}]%"))
+
+
+def _cache_loop():
+    time.sleep(10)
+    while True:
+        try:
+            cache_pass()
+        except Exception:
+            pass
+        time.sleep(CACHE_SECS)
+
+
 def install(app_module):
     global M
     M = app_module
@@ -281,3 +386,5 @@ def install(app_module):
     app.get("/ucp/media/{fn}")(serve)
     app.get("/api/v1/me/media/{fn}")(serve)
     app.get("/mms/{fn}")(serve_public)
+    if os.environ.get("PBX_NO_BG") != "1":
+        threading.Thread(target=_cache_loop, daemon=True, name="mms-cache").start()

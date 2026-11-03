@@ -10,6 +10,7 @@ reply box), and account deletion.
     python3 dev/test-msg-media.py      # exits non-zero on failure
 """
 import io, os, re, sys, tempfile
+os.environ["PBX_NO_BG"] = "1"
 here = os.path.dirname(os.path.abspath(__file__))
 os.environ["PBX_MEDIA_DIR"] = tempfile.mkdtemp(prefix="media-")
 os.environ["PBX_EXPORT_DIR"] = tempfile.mkdtemp(prefix="exports-")
@@ -164,6 +165,38 @@ check("conversation downloads as text", r.status_code == 200 and "attachment" in
       and "look 😀" in r.text and "/ucp/media/" in r.text, r.text[:200])
 check("web has Download conversation", "/ucp/messages/export?with=8800" in w.get("/ucp/messages?with=8800").text)
 check("no conversation, 404", c.get("/api/v1/me/messages/export", headers=H1, params={"with": "999"}).status_code == 404)
+
+# --- MMS pictures get a local copy (provider links vanish when they're down)
+outage = {"down": True}
+pic = jpeg_with_gps()
+def fake_fetch(u):
+    if outage["down"]:
+        raise OSError("HTTP Error 522: Connection timed out")
+    return pic, "image/jpeg"
+msg_media._fetch = fake_fetch
+murl = "https://voip.ms/media/mms-xyz.jpg"
+d.execute("INSERT INTO messages (from_ext, to_ext, body, login_id) VALUES ('5551234567','8801',?,NULL)",
+          (f"new pic [MMS: {murl}]",)); d.commit()
+check("provider down: nothing saved", msg_media.cache_pass() == 0)
+row = d.execute("SELECT tries, last_error, next_try > datetime('now') AS later FROM mms_cache WHERE url=?", (murl,)).fetchone()
+check("failure noted, retried later", row and row["tries"] == 1 and "522" in row["last_error"] and row["later"], dict(row) if row else None)
+check("not retried before its time", msg_media.cache_pass() == 0 and
+      d.execute("SELECT tries FROM mms_cache WHERE url=?", (murl,)).fetchone()[0] == 1)
+d.execute("UPDATE mms_cache SET next_try=datetime('now','-1 minute') WHERE url=?", (murl,)); d.commit()
+outage["down"] = False
+check("provider back: copy saved", msg_media.cache_pass() == 1)
+m = last_msg(H1, "5551234567")
+check("message now points at the PBX copy", m["media"] and m["media"][0]["url"].startswith("/api/v1/me/media/") and "voip.ms" not in m["media"][0]["url"], m)
+check("copy opens for the recipient", c.get(m["media"][0]["url"], headers=H1).content == pic)
+check("copy is private", c.get(m["media"][0]["url"], headers=H2).status_code == 404)
+outage["down"] = True
+check("still there when the provider goes down again", c.get(m["media"][0]["url"], headers=H1).status_code == 200)
+msg_media._fetch = lambda u: (b"<!DOCTYPE html><html>error</html>", "text/html")
+d.execute("INSERT INTO messages (from_ext, to_ext, body, login_id) VALUES ('5551234567','8801',?,NULL)",
+          ("[MMS: https://voip.ms/media/err.jpg]",)); d.commit()
+check("an error page isn't saved as the picture", msg_media.cache_pass() == 0 and
+      d.execute("SELECT token FROM mms_cache WHERE url LIKE '%err.jpg'").fetchone()[0] is None)
+check("web shows a note when a provider picture won't load", "Picture not available right now" in w.get("/ucp/messages?with=8800").text)
 
 # --- account deletion removes their files
 path = os.path.join(msg_media.MEDIA_DIR, fn)
