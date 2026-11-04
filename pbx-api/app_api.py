@@ -336,6 +336,7 @@ def _msg(me, m):
     return {"id": m["id"], "peer": _peer(me, m), "mine": m["from_ext"] == me["exten"],
             "body": M.msg_media.display_body(m["body"]), "text": M.msg_media.strip_marks(m["body"]),
             "media": M.msg_media.items(m["body"], "/api/v1/me"),
+            "reply_to": M.msg_media.reply_ref(me, m.get("reply_to")),
             "sent_at": m["sent_at"], "via_did": m.get("via_did") or ""}
 
 

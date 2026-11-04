@@ -217,8 +217,11 @@ def build_export(login_id):
         with M.db() as c2:
             for arc, src in M.people.photo_files(c2, login_id):
                 z.write(src, arc, compress_type=zipfile.ZIP_STORED)
-            for arc, src in M.msg_media.files_for_export(c2, login_id):
-                z.write(src, arc, compress_type=zipfile.ZIP_STORED)
+        # Messages as a phone-style page, with every photo/video in media/.
+        page, media = M.msg_export.bundle(me, msgs, f"Messages · {_brand()}")
+        z.writestr("messages.html", page)
+        for arc, src in media:
+            z.write(src, arc, compress_type=zipfile.ZIP_STORED)
         z.writestr("activity.csv", _csv(activity, ["at", "action", "detail"]))
         z.writestr("contacts.csv", _csv(contacts, ["name", "number", "org", "email", "created_at", "updated_at"]))
         z.writestr("contact_notes.csv", _csv(notes, ["contact_id", "item_type", "item_at", "body", "created_at"]))
@@ -275,8 +278,9 @@ Exported {stamp} UTC for {me['username']} (extension {me['exten'] or 'none'}).
 
 account.json         your account details, settings, plan and call filtering
 calls.csv            call history ({counts['calls']} calls)
-messages.csv         text messages, SMS/MMS and internal ({counts['messages']}); picture
-                     messages show their media links in the body
+messages.html        your messages as they look on a phone: every conversation, by date and
+                     time, with photos, GIFs and videos (open it in any web browser)
+messages.csv         the same messages as a spreadsheet ({counts['messages']}); media/ holds the files
 voicemail.csv        voicemail list; audio files in voicemail/ ({counts['voicemail']})
 recordings.csv       call recordings you made; audio in recordings/ ({counts['recordings']})
 faxes_received.csv   faxes you received, faxes_sent.csv faxes you sent; files in faxes/

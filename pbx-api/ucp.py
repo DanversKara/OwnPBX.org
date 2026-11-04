@@ -944,12 +944,16 @@ def _media_html(items):
     return f'<div class="mm-list">{"".join(out)}</div>' if out else ""
 
 
-def _bubble(m, ex, csrf, back):
-    """One message: text, photos/videos/GIFs, and Download / Forward / Report."""
+def _bubble(m, ex, csrf, back, me=None):
+    """One message: the message it replies to, text, photos/videos/GIFs, and
+    Reply / Download / Forward / Report."""
     mine = m["from_ext"] == ex
     items = M.msg_media.items(m["body"], "/ucp")
     text = M.msg_media.strip_marks(m["body"])
     acts = [_ago(m["sent_at"])]
+    snip = M.msg_media.display_body(m["body"]).replace("\n", " ")[:80]
+    acts.append(f'<a href="#" class="reply-btn" data-id="{int(m["id"])}" data-who="{"You" if mine else esc(m.get("peer_name") or m["from_ext"])}" '
+                f'data-snip="{esc(snip)}">Reply</a>')
     for i, it in enumerate(items):
         local = it["url"].startswith("/ucp/")
         dl = it["url"] + ("?dl=1" if local else "")
@@ -963,9 +967,12 @@ def _bubble(m, ex, csrf, back):
                 f'<button class="btn">Send</button></form></details>')
     if not mine:
         acts.append(M.safety_ui.report_button(csrf, "message", m["id"], back))
-    return (f'<div class="bubble {"mine" if mine else ""}">'
+    ref = M.msg_media.reply_ref(me, m.get("reply_to")) if me and m.get("reply_to") else None
+    quote = (f'<a class="rq {"rq-mine" if ref["mine"] else ""}" href="#m{ref["id"]}" title="Show the message this replies to">'
+             f'<span class="rq-who">↩ {esc(ref["who"])}</span><span class="rq-body">{esc(ref["body"])}</span></a>') if ref else ""
+    return (f'<div class="bubble {"mine" if mine else ""}" id="m{int(m["id"])}">'
             f'<input type="checkbox" class="sel" name="ids" value="{int(m["id"])}" form="msgdel" aria-label="Select message">'
-            f'<span class="mtext">{esc(text)}</span>{_media_html(items)}'
+            f'{quote}<span class="mtext">{esc(text)}</span>{_media_html(items)}'
             f'<span class="muted">{" · ".join(acts)}</span></div>')
 
 
@@ -993,6 +1000,30 @@ MSG_JS = """<script>
     });
     if (form.classList.contains('msg-reply') && ta) ta.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); form.requestSubmit(); }
+    });
+  });
+  // Reply to one message: its text shows above the box, and the reply carries its id.
+  var rform = document.querySelector('.msg-reply');
+  if (rform) {
+    var bar = rform.querySelector('.reply-bar'), rid = rform.querySelector('input[name=reply_to]');
+    document.querySelectorAll('.reply-btn').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        rid.value = a.dataset.id;
+        bar.querySelector('.rq-who').textContent = '↩ Replying to ' + a.dataset.who;
+        bar.querySelector('.rq-body').textContent = a.dataset.snip;
+        bar.hidden = false;
+        var ta = rform.querySelector('textarea'); if (ta) ta.focus();
+      });
+    });
+    bar.querySelector('.reply-x').addEventListener('click', function () { rid.value = ''; bar.hidden = true; });
+  }
+  // Tapping a quote jumps to the message it replies to and flashes it.
+  document.querySelectorAll('a.rq').forEach(function (q) {
+    q.addEventListener('click', function (e) {
+      var t = document.querySelector(q.getAttribute('href')); if (!t) return;
+      e.preventDefault(); t.scrollIntoView({behavior: 'smooth', block: 'center'});
+      t.classList.add('flash-msg'); setTimeout(function () { t.classList.remove('flash-msg'); }, 1600);
     });
   });
   // A picture still on the provider's server (not copied to the PBX yet) that won't load.
@@ -1031,7 +1062,7 @@ def messages_page(request: Request):
         for o, ms in convs.items()) or '<p class="muted">No messages yet.</p>'
     csrf_m = M._csrf_field(s)
     back_m = "messages:" + sel
-    thread = "".join(_bubble(m, ex, csrf_m, back_m) for m in reversed(convs.get(sel, [])))
+    thread = "".join(_bubble(m, ex, csrf_m, back_m, me) for m in reversed(convs.get(sel, [])))
     if sel:
         sel_name = (convs.get(sel) or [{}])[0].get("peer_name") or ""
         thread = (f'<div class="muted" style="margin-bottom:8px">Conversation with <b>{_who(sel_name, sel)}</b> · '
@@ -1066,7 +1097,9 @@ def messages_page(request: Request):
     reply = ""
     if sel:
         reply = f"""<form method="post" action="/ucp/messages/send" enctype="multipart/form-data" class="msg-compose msg-reply">{csrf}
-<input type="hidden" name="to" value="{esc(sel)}">
+<input type="hidden" name="to" value="{esc(sel)}"><input type="hidden" name="reply_to" value="">
+<div class="reply-bar" hidden><span class="rq-who"></span><span class="rq-body"></span>
+<button type="button" class="reply-x" title="Don't reply to this message" aria-label="Cancel reply">✕</button></div>
 <div class="muted" style="font-size:12px">Reply to <b>{_who((convs.get(sel) or [{}])[0].get("peer_name") or "", sel)}</b>
  · {status_txt}{from_html}</div>
 {_compose_box(dis, "Reply… (Enter sends, Shift+Enter for a new line)")}</form>"""
@@ -1181,6 +1214,22 @@ async def msg_send(request: Request):
             return RedirectResponse(back + "msg=msgmediaerr&merr=" + urllib.parse.quote(str(e)), status_code=303)
     if not body and not prepared and not fwd:
         return RedirectResponse(back + "msg=msgempty", status_code=303)
+    # Reply to a message in this same conversation (shown quoted above the reply).
+    try:
+        rid = int(f.get("reply_to") or 0)
+    except ValueError:
+        rid = 0
+    ref = M.msg_media.reply_ref(me, rid) if rid else None
+    if ref:
+        with M.db() as c:
+            r = c.execute("SELECT from_ext, to_ext FROM messages WHERE id=?", (rid,)).fetchone()
+        peer = r["to_ext"] if r["from_ext"] == me["exten"] else r["from_ext"]
+        same = peer == to or (is_external and voipms_sms.normalize_digits(peer)[-10:] == voipms_sms.normalize_digits(to)[-10:])
+        if not same:
+            ref, rid = None, 0
+    else:
+        rid = 0
+    wire = M.msg_media.quote_line(ref) + body     # plain SMS / desk phones can't show the quote box
     if is_external and fwd:
         # Forwarded files must also fit an MMS, and voip.ms must be able to fetch them.
         for r in fwd:
@@ -1235,17 +1284,17 @@ async def msg_send(request: Request):
                 return RedirectResponse(back + "msg=msgrate", status_code=303)
             _send_times[me["id"]] = recent + [now]
             full, urls = attach(c)
-            c.execute("INSERT INTO messages (from_ext, to_ext, body, login_id, via_did) VALUES (?,?,?,?,?)",
-                      (me["exten"], dest_e164, full, me["id"], voipms_sms.normalize_did(sender_did)))
+            c.execute("INSERT INTO messages (from_ext, to_ext, body, login_id, via_did, reply_to) VALUES (?,?,?,?,?,?)",
+                      (me["exten"], dest_e164, full, me["id"], voipms_sms.normalize_did(sender_did), rid or None))
             c.commit()
             # Send via voip.ms API (outside DB lock)
             try:
                 if urls:
                     voipms_sms.send_mms_via_voipms(cfg["voipms_api_username"], cfg["voipms_api_password"],
-                                                   sender_did, dest_e164, body, urls)
+                                                   sender_did, dest_e164, wire, urls)
                 else:
                     voipms_sms.send_sms_via_voipms(cfg["voipms_api_username"], cfg["voipms_api_password"],
-                                                   sender_did, dest_e164, body)
+                                                   sender_did, dest_e164, wire)
             except Exception:
                 pass
             return RedirectResponse(back + "msg=msgsent", status_code=303)
@@ -1275,11 +1324,11 @@ async def msg_send(request: Request):
             return RedirectResponse(back + "msg=msgrate", status_code=303)
         _send_times[me["id"]] = recent + [now]
         full, urls = attach(c)
-        c.execute("INSERT INTO messages (from_ext, to_ext, body, login_id) VALUES (?,?,?,?)",
-                  (me["exten"], to, full, me["id"]))
+        c.execute("INSERT INTO messages (from_ext, to_ext, body, login_id, reply_to) VALUES (?,?,?,?,?)",
+                  (me["exten"], to, full, me["id"], rid or None))
         c.commit()
     # Desk phones get the text plus a note (they can't show the files).
-    phone_body = (body + (f" [{M.msg_media.label(urls)} - open My Phone to view]" if urls else "")).strip()
+    phone_body = (wire + (f" [{M.msg_media.label(urls)} - open My Phone to view]" if urls else "")).strip()
     # Push to the recipient's phone (best effort; it's stored either way).
     M.app_api.push_notify(dest["id"], "message")
     try:
@@ -1295,8 +1344,11 @@ async def msg_send(request: Request):
 
 
 def msg_export(request: Request):
-    """One conversation as a text file (oldest first). Photos/videos are listed
-    as links to open in My Phone (signed in)."""
+    """One conversation as a zip: conversation.html (looks like a phone's
+    messages app, photos and videos included), the media files, and a plain
+    text copy."""
+    import io as _io
+    import zipfile as _zip
     from fastapi.responses import Response
     s, me = _me(request)
     if not s:
@@ -1307,17 +1359,22 @@ def msg_export(request: Request):
     if not rows:
         raise HTTPException(404)
     name = rows[0].get("peer_name") or ""
-    base = M.public_base(request)
     lines = [f"Conversation with {name + ' ' if name else ''}({peer})", ""]
     for m in reversed(rows):
         who = "Me" if m["from_ext"] == ex else (name or peer)
-        text = M.msg_media.strip_marks(m["body"])
-        lines.append(f"[{_ago(m['sent_at'])}] {who}: {text}".rstrip())
-        for it in M.msg_media.items(m["body"], "/ucp"):
-            u = it["url"] if it["url"].startswith("http") else base + it["url"]
-            lines.append(f"    ({it['kind']}) {u}")
-    fn = "conversation-" + re.sub(r"[^0-9A-Za-z+]", "", peer)[:20] + ".txt"
-    return Response("\n".join(lines) + "\n", media_type="text/plain; charset=utf-8",
+        lines.append(f"[{_ago(m['sent_at'])}] {who}: {M.msg_media.strip_marks(m['body'])}".rstrip())
+        for it in M.msg_media.items(m["body"], ""):
+            lm = M.msg_media.LOCAL.match(it["ref"])
+            lines.append(f"    ({it['kind']}) " + (f"media/{lm.group(1)}.{lm.group(2)}" if lm else it["ref"]))
+    page, media = M.msg_export.bundle(me, rows, f"Conversation with {name or peer}")
+    buf = _io.BytesIO()
+    with _zip.ZipFile(buf, "w", _zip.ZIP_DEFLATED) as z:
+        z.writestr("conversation.html", page)
+        z.writestr("conversation.txt", "\n".join(lines) + "\n")
+        for arc, src in media:
+            z.write(src, arc, compress_type=_zip.ZIP_STORED)
+    fn = "conversation-" + re.sub(r"[^0-9A-Za-z+]", "", peer)[:20] + ".zip"
+    return Response(buf.getvalue(), media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="{fn}"'})
 
 
