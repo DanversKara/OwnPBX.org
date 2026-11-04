@@ -1408,11 +1408,11 @@ async def msg_delete(request: Request):
         want_convs = set(form.getlist("convs"))
         ids = [m["id"] for m in mine
                if m["id"] in want_ids or (m["to_ext"] if m["from_ext"] == ex else m["from_ext"]) in want_convs]
+    # A view-hide is not a deletion: the rows stay in messages and the other
+    # party keeps theirs, so it must not go through the deletion-copy
+    # pipeline (that mislabels it a "Deleted records" email). The hide is
+    # still recorded in the change log below.
     with M.db() as c:
-        idset = set(ids)
-        M.deletion_log.capture(c, f'{me["username"]} (ext {ex})', "user_hidden", "messages",
-                               [{k: m[k] for k in ("id", "sent_at", "from_ext", "to_ext", "via_did", "body")}
-                                for m in mine if m["id"] in idset])
         c.executemany("INSERT OR IGNORE INTO message_hidden (message_id, login_id) VALUES (?,?)",
                       [(i, me["id"]) for i in ids])
         c.commit()

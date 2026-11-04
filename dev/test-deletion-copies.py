@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
 """The admin gets a copy of anything deleted or cleared (deletion_log.py):
-direct database deletes (SSH), panel deletes, "clear from view", users
-deleting their messages/calls; retention and account deletion are not
-copied; nothing is lost while email fails; pbx-clear-logs emails first.
+direct database deletes (SSH), panel deletes, "clear from view"; users
+hiding their own messages/calls are NOT copies (nothing is deleted);
+retention and account deletion are not copied; nothing is lost while
+email fails; pbx-clear-logs emails first.
 
     export PBX_DB=/tmp/apptest.db && rm -f $PBX_DB && python3 dev/seed-test-db.py
     python3 dev/test-deletion-copies.py      # exits non-zero on failure
@@ -113,10 +114,16 @@ d.execute("INSERT INTO cdr (call_id, started_at, src, dst, direction, duration_s
           " VALUES ('cx2', datetime('now','localtime'), '8800', '8801', 'internal', 5, 'ANSWERED')"); d.commit()
 cid = d.execute("SELECT id FROM cdr WHERE call_id='cx2'").fetchone()[0]
 r = c.post("/api/v1/me/calls/hide", headers=H0, data={"ids": str(cid)})
-deletion_log.send_pending(); z = last_zip()
-check("user's deletes emailed to admin", "deleted from the user's own view" in sent[-1][2] and
-      any(r.get("body") == "delete me later" for rows in z.values() for r in rows) and
-      any(r.get("call_id") == "cx2" for rows in z.values() for r in rows), (sent[-1][2], list(z)))
+check("user hides a call", r.status_code == 200, r.text)
+check("a view-hide is not a deletion copy", pending() == 0, pending())
+check("hidden rows stay in the database",
+      d.execute("SELECT 1 FROM messages WHERE id=?", (mid,)).fetchone() and
+      d.execute("SELECT 1 FROM cdr WHERE id=?", (cid,)).fetchone() and
+      d.execute("SELECT 1 FROM message_hidden WHERE message_id=?", (mid,)).fetchone() and
+      d.execute("SELECT 1 FROM call_hidden WHERE cdr_id=?", (cid,)).fetchone())
+check("hides are still in the change log",
+      d.execute("SELECT 1 FROM audit WHERE action='ucp.messages.delete'").fetchone() and
+      d.execute("SELECT 1 FROM audit WHERE action='app.calls.hide'").fetchone())
 
 # --- account deletion is not copied
 uid = d.execute("SELECT id FROM logins WHERE exten='8801'").fetchone()[0]

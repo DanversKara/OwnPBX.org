@@ -462,15 +462,14 @@ async def me_calls_hide(request: Request):
         if f.get("unhide") == "1":
             c.executemany("DELETE FROM call_hidden WHERE cdr_id=? AND login_id=?", [(i, me["id"]) for i in ids])
         else:
-            q = ",".join("?" * len(ids))
-            if ids:
-                M.deletion_log.capture(c, f'{me["username"]} (ext {me["exten"]})', "user_hidden", "cdr",
-                                       c.execute(f"SELECT * FROM cdr WHERE id IN ({q}) AND id NOT IN "
-                                                 "(SELECT cdr_id FROM call_hidden WHERE login_id=?)",
-                                                 (*ids, me["id"])).fetchall())
+            # A view-hide is not a deletion (rows stay in cdr), so it must
+            # not go through the deletion-copy pipeline; the change log
+            # below is the record of it.
             c.executemany("INSERT OR IGNORE INTO call_hidden (cdr_id, login_id) VALUES (?,?)",
                           [(i, me["id"]) for i in ids])
         c.commit()
+    if f.get("unhide") != "1":
+        M.ucp._audit(me, "app.calls.hide", f"{len(ids)} rows")
     return {"ok": True, "code": "ok", "message": f"{len(ids)} call(s) updated.", "count": len(ids)}
 
 

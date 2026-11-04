@@ -10,7 +10,10 @@ in a zip, after which the copy's contents are dropped):
   - Call history (cdr) and messages, deleted by the admin in the panel or
     straight in the database.
   - "Clear selected / all from view" on the sign-ins list (rows only hidden).
-  - A user deleting messages or calls from their own view.
+
+A user hiding messages or calls from their own view is NOT a deletion
+(the rows stay, the other party keeps theirs), so it never enters this
+pipeline; the change log records the hide instead.
 
 Not copied: rows the normal 90-day / 2-year retention removes, and an
 account or extension being wiped on purpose (account deletion requests,
@@ -103,7 +106,6 @@ def admin_to():
 ACTION_TEXT = {
     "deleted": "deleted",
     "hidden": "cleared from the admin's view (still in the database)",
-    "user_hidden": "deleted from the user's own view (still in the database)",
 }
 TABLE_TEXT = {"audit": "change log", "security_events": "security events", "signins": "sign-ins",
               "cdr": "call history", "messages": "messages"}
