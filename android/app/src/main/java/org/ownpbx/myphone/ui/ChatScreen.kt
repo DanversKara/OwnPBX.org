@@ -117,7 +117,7 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                     val one = if (selected.size == 1) msgs.firstOrNull { it.id in selected } else null
                     if (one != null) {
                         IconButton({ replyTo = one; selected = emptySet() }) {
-                            Icon(Icons.AutoMirrored.Filled.Reply, "Reply")
+                            Icon(Icons.Filled.Reply, "Reply")
                         }
                         IconButton({ forwarding = one; selected = emptySet() }) {
                             Icon(Icons.Filled.Forward, "Forward")
