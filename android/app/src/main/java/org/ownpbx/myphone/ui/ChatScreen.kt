@@ -31,6 +31,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.platform.LocalContext
 
@@ -57,6 +60,7 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
     var emojiOpen by remember { mutableStateOf(false) }
     var viewer by remember { mutableStateOf<Pair<java.io.File, org.ownpbx.myphone.data.MediaItem>?>(null) }
     var forwarding by remember { mutableStateOf<Msg?>(null) }
+    var replyTo by remember { mutableStateOf<Msg?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(MAX_ATTACH)) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         model.bg.launch {
@@ -96,8 +100,8 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
         sending = true
         scope.launch {
             val from = if (fromNumbers.size > 1) fromDid else ""
-            if (model.change { it.send(peer, body, from, attachments) }) {
-                text = ""; attachments = emptyList(); emojiOpen = false; refresh(); list.animateScrollToItem(0)
+            if (model.change { it.send(peer, body, from, attachments, replyTo = replyTo?.id ?: 0) }) {
+                text = ""; attachments = emptyList(); emojiOpen = false; replyTo = null; refresh(); list.animateScrollToItem(0)
             }
             sending = false
         }
@@ -112,6 +116,9 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                 actions = {
                     val one = if (selected.size == 1) msgs.firstOrNull { it.id in selected } else null
                     if (one != null) {
+                        IconButton({ replyTo = one; selected = emptySet() }) {
+                            Icon(Icons.Filled.Reply, "Reply")
+                        }
                         IconButton({ forwarding = one; selected = emptySet() }) {
                             Icon(Icons.Filled.Forward, "Forward")
                         }
@@ -150,9 +157,9 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                         DropdownMenuItem({ Text("Download conversation") }, leadingIcon = { Icon(Icons.Filled.Download, null) }, onClick = {
                             menu = false
                             model.bg.launch {
-                                val f = java.io.File(ctx.cacheDir, "conversation-" + peer.filter { it.isLetterOrDigit() }.take(20) + ".txt")
+                                val f = java.io.File(ctx.cacheDir, "conversation-" + peer.filter { it.isLetterOrDigit() }.take(20) + ".zip")
                                 model.guard { it.exportConversation(peer, f) }?.let {
-                                    try { model.notice = "Saved to " + saveToDownloads(ctx, it, "text/plain") }
+                                    try { model.notice = "Saved to " + saveToDownloads(ctx, it, "application/zip") }
                                     catch (e: Exception) { model.notice = "Couldn't save: ${e.message}" }
                                 }
                             }
@@ -182,6 +189,22 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                                 trailingIcon = { if (d == fromDid) Icon(Icons.Filled.Check, null) },
                             )
                         }
+                    }
+                }
+            }
+            replyTo?.let { r ->
+                Surface(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 6.dp),
+                    shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.width(4.dp).height(44.dp).background(MaterialTheme.colorScheme.primary))
+                        Column(Modifier.weight(1f).padding(horizontal = 10.dp, vertical = 6.dp)) {
+                            Text("Replying to " + if (r.mine) "yourself" else prettyNumber(peer),
+                                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                            Text((r.text ?: r.body).ifBlank { r.body }, maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodySmall)
+                        }
+                        IconButton({ replyTo = null }) { Icon(Icons.Filled.Close, "Cancel reply") }
                     }
                 }
             }
@@ -235,6 +258,22 @@ fun ChatScreen(model: AppModel, peer: String, snack: SnackbarHostState, back: ()
                             onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); selected = selected + m.id }),
                     ) {
                         Column(Modifier.padding(horizontal = 14.dp, vertical = 8.dp)) {
+                            m.reply_to?.let { q ->
+                                val onBubble = if (m.mine) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                Row(Modifier.padding(bottom = 6.dp).clip(RoundedCornerShape(8.dp))
+                                    .background(onBubble.copy(alpha = 0.12f))
+                                    .clickable {
+                                        val i = msgs.indexOfFirst { it.id == q.id }
+                                        if (i >= 0) scope.launch { list.animateScrollToItem(i) }
+                                    }.height(IntrinsicSize.Min)) {
+                                    Box(Modifier.width(3.dp).fillMaxHeight().background(onBubble.copy(alpha = 0.7f)))
+                                    Column(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
+                                        Text("↩ " + q.who, style = MaterialTheme.typography.labelMedium, color = onBubble)
+                                        Text(q.body, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                            style = MaterialTheme.typography.bodySmall, color = onBubble.copy(alpha = 0.85f))
+                                    }
+                                }
+                            }
                             val t = m.text ?: m.body
                             if (t.isNotBlank() || m.media.isEmpty()) Text(t)
                             m.media.forEach { item ->

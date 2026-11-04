@@ -37,7 +37,13 @@ data class Msg(
     /** The text alone (empty for media-only); older PBXes don't send it. */
     val text: String? = null,
     val media: List<MediaItem> = emptyList(),
+    /** The message this one replies to (shown quoted above it). */
+    val reply_to: ReplyRef? = null,
 )
+
+/** A quoted message: who wrote it and a short piece of it. */
+@Serializable
+data class ReplyRef(val id: Long, val mine: Boolean = false, val who: String = "", val body: String = "")
 
 /** A photo, GIF or video in a message. [url] is a PBX path or, for MMS, a web address; [ref] forwards it. */
 @Serializable
@@ -730,9 +736,11 @@ class Api(base: String, private val token: String?) {
         fromDid: String = "",
         files: List<Attachment> = emptyList(),
         fwd: List<String> = emptyList(),
+        replyTo: Long = 0,
     ): Result {
         val fields = listOf("to" to to, "body" to body) +
-            (if (fromDid.isNotEmpty()) listOf("from_did" to fromDid) else emptyList()) + fwd.map { "fwd" to it }
+            (if (fromDid.isNotEmpty()) listOf("from_did" to fromDid) else emptyList()) + fwd.map { "fwd" to it } +
+            (if (replyTo > 0) listOf("reply_to" to replyTo.toString()) else emptyList())
         if (files.isEmpty()) return form("/me/messages/send", fields)
         return withContext(Dispatchers.IO) {
             val mb = okhttp3.MultipartBody.Builder().setType(okhttp3.MultipartBody.FORM)
@@ -771,7 +779,7 @@ class Api(base: String, private val token: String?) {
             f
         }
 
-    /** One conversation as a text file in [dest]. */
+    /** One conversation as a zip (a phone-style page, its photos/videos, and a text copy) in [dest]. */
     suspend fun exportConversation(peer: String, dest: java.io.File): java.io.File =
         withContext(Dispatchers.IO) {
             val u = url("/me/messages/export").toHttpUrl().newBuilder().addQueryParameter("with", peer).build()

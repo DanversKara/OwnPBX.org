@@ -90,6 +90,8 @@ check("zip has the parts", all(n in names for n in ("account.json", "calls.csv",
                                                     "voicemail.csv", "README.txt")), names)
 check("voicemail audio included", any(n.startswith("voicemail/") and n.endswith(".wav") for n in names), names)
 check("texts and MMS links included", "hello there" in z.read("messages.csv").decode())
+check("messages.html: phone-style page included", "messages.html" in names and "hello there" in z.read("messages.html").decode()
+      and 'class="row in"' in z.read("messages.html").decode())
 check("calls included", "5551234567" in z.read("calls.csv").decode())
 check("contacts included", "Bob" in z.read("contacts.csv").decode())
 acct = z.read("account.json").decode()

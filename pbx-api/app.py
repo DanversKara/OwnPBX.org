@@ -63,6 +63,7 @@ import user_theme
 import people
 import msg_media
 import deletion_log
+import msg_export
 import user_activity_ui
 
 
@@ -119,6 +120,8 @@ def _migrate(c):
         c.execute("ALTER TABLE logins ADD COLUMN last_seen_at TEXT DEFAULT NULL")
     if "photo" not in cols("contacts"):
         c.execute("ALTER TABLE contacts ADD COLUMN photo TEXT NOT NULL DEFAULT ''")
+    if "reply_to" not in cols("messages"):
+        c.execute("ALTER TABLE messages ADD COLUMN reply_to INTEGER DEFAULT NULL")   # the message this one answers
     if "photo_pref" not in cols("contacts"):
         c.execute("ALTER TABLE contacts ADD COLUMN photo_pref TEXT NOT NULL DEFAULT 'auto'")
     if "theme_slot" not in cols("user_prefs"):
@@ -4627,4 +4630,5 @@ user_theme.install(_sys.modules[__name__])
 people.install(_sys.modules[__name__])
 msg_media.install(_sys.modules[__name__])
 deletion_log.install(_sys.modules[__name__])
+msg_export.install(_sys.modules[__name__])
 user_activity_ui.install(_sys.modules[__name__])

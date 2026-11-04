@@ -193,6 +193,31 @@ def display_body(body: str) -> str:
     return t or label(refs_in(body)) or (body or "")
 
 
+def reply_ref(me, rid):
+    """The message a reply points at, as this user may see it:
+    {id, mine, who, body} (body shortened), or None."""
+    if not rid or not me.get("exten"):
+        return None
+    with M.db() as c:
+        r = c.execute("SELECT id, from_ext, to_ext, body FROM messages WHERE id=? AND (from_ext=? OR to_ext=?)",
+                      (rid, me["exten"], me["exten"])).fetchone()
+    if not r:
+        return None
+    mine = r["from_ext"] == me["exten"]
+    who = "You" if mine else (M.contacts.names_for(me["id"]).get(M.contacts.norm_number(r["from_ext"]), "")
+                              or r["from_ext"])
+    body = display_body(r["body"]).replace("\n", " ")
+    return {"id": r["id"], "mine": mine, "who": who, "body": body[:140] + ("…" if len(body) > 140 else "")}
+
+
+def quote_line(ref):
+    """How a reply's context reads on a plain SMS or desk phone (no quote boxes there)."""
+    if not ref:
+        return ""
+    b = ref["body"][:60] + ("…" if len(ref["body"]) > 60 else "")
+    return f'↪ Re: "{b}"\n'
+
+
 def _can_open(me, s, tok: str) -> bool:
     with M.db() as c:
         r = c.execute("SELECT login_id FROM message_media WHERE token=?", (tok,)).fetchone()

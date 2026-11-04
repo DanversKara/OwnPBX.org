@@ -128,10 +128,20 @@ table.kv td:first-child{color:var(--muted-fg);width:110px}
 .msg-files{font-size:12px;overflow:hidden;text-overflow:ellipsis;max-width:40ch;white-space:nowrap}
 .emo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(36px,1fr));gap:2px;max-height:180px;overflow-y:auto;
   margin-top:6px;padding:6px;border:1px solid var(--border);border-radius:10px}
+.emo-grid[hidden]{display:none}
 .emo-grid .emo{font-size:22px;background:none;border:0;cursor:pointer;padding:4px;border-radius:6px;line-height:1}
 .emo-grid .emo:hover{background:var(--pill-bg)}
 .msg-reply{border-top:1px solid var(--border);padding-top:8px}
 details.msg-new summary{cursor:pointer}
+.rq,.reply-bar{display:block;border-left:3px solid var(--accent);background:rgba(127,127,127,.16);border-radius:8px;
+  padding:4px 8px;margin:2px 0 6px;text-decoration:none;color:inherit;font-size:12px;max-width:100%}
+.bubble.mine .rq{border-left-color:#fff;background:rgba(255,255,255,.18)}
+.rq-who{display:block;font-weight:700;opacity:.9}
+.rq-body{display:block;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reply-bar{position:relative;padding-right:28px;margin-top:6px}
+.reply-bar[hidden]{display:none}
+.reply-x{position:absolute;right:4px;top:4px;background:none;border:0;color:inherit;cursor:pointer;font-size:14px}
+.bubble.flash-msg{outline:3px solid var(--accent);outline-offset:2px;transition:outline .3s}
 .msg-tools label.btn{display:inline-block;margin:0}
 table.keys td{padding:5px 6px}
 table.keys td.key{font-weight:700;font-size:18px;width:34px;text-align:center}

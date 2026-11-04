@@ -140,6 +140,8 @@ w.post("/login", data={"username": "phone8801", "password": "pw-web-12345"})
 t = w.get("/ucp/messages?with=8800").text
 check("web shows the photo", f'src="/ucp/media/{fn}"' in t, "")
 check("web has reply box under the conversation", 'class="msg-compose msg-reply"' in t and 'name="to" value="8800"' in t)
+import panel_templates
+check("emoji grid starts closed", ".emo-grid[hidden]{display:none}" in open(panel_templates.__file__).read())
 check("web has emoji picker and attach button", 'class="emo-grid"' in t and 'name="media"' in t and "😂" in t)
 check("web has download and forward", f"/ucp/media/{fn}?dl=1" in t and 'name="fwd"' in t)
 check("web forms send files", t.count('enctype="multipart/form-data"') >= 2)
@@ -159,12 +161,43 @@ r = c.post("/api/v1/me/report", headers=H1, data={"kind": "message", "ref": str(
 check("report a photo", r.json().get("ok"), r.text)
 check("report keeps the file", fn in d.execute("SELECT detail FROM reports ORDER BY id DESC LIMIT 1").fetchone()[0])
 
-# --- download a whole conversation
+# --- download a whole conversation: a zip with a phone-style page and the media
+import zipfile
 r = c.get("/api/v1/me/messages/export", headers=H1, params={"with": "8800"})
-check("conversation downloads as text", r.status_code == 200 and "attachment" in r.headers["content-disposition"]
-      and "look 😀" in r.text and "/ucp/media/" in r.text, r.text[:200])
+zf = zipfile.ZipFile(io.BytesIO(r.content)) if r.status_code == 200 else None
+names = zf.namelist() if zf else []
+check("conversation downloads as a zip", r.headers.get("content-type") == "application/zip" and
+      "conversation.html" in names and "conversation.txt" in names, (r.status_code, names))
+page = zf.read("conversation.html").decode() if zf else ""
+check("page shows the text and the photo from media/", "look 😀" in page and 'src="media/' in page, page[:300])
+check("media files are in the zip", any(n.startswith("media/") and n.endswith(".jpg") for n in names) and
+      any(n.endswith(".gif") for n in names), names)
+check("page has incoming and outgoing bubbles with dates", 'class="row in"' in page and 'class="row out"' in page
+      and 'class="day"' in page)
 check("web has Download conversation", "/ucp/messages/export?with=8800" in w.get("/ucp/messages?with=8800").text)
 check("no conversation, 404", c.get("/api/v1/me/messages/export", headers=H1, params={"with": "999"}).status_code == 404)
+
+# --- reply to a specific message
+first = last_msg(H1, "8800")["id"]
+for t in ("one", "two", "three"):
+    c.post("/api/v1/me/messages/send", headers=H0, data={"to": "8801", "body": t})
+r = c.post("/api/v1/me/messages/send", headers=H1, data={"to": "8800", "body": "about that", "reply_to": str(first)})
+check("reply sent", r.json()["ok"], r.text)
+m = last_msg(H0, "8801")
+check("reply carries the quoted message", m["reply_to"] and m["reply_to"]["id"] == first and m["reply_to"]["mine"] is False, m)
+m1 = last_msg(H1, "8800")
+check("sender sees it as their own quote", m1["reply_to"]["id"] == first, m1)
+t = w.get("/ucp/messages?with=8800").text
+check("web shows the quote linked to the original", f'href="#m{first}"' in t and f'id="m{first}"' in t and 'class="rq' in t)
+check("web has Reply buttons and the reply bar", 'class="reply-btn"' in t and 'name="reply_to"' in t and 'class="reply-bar"' in t)
+other = d.execute("SELECT id FROM messages WHERE to_ext='8802' OR from_ext='8802' ORDER BY id DESC LIMIT 1").fetchone()[0]
+c.post("/api/v1/me/messages/send", headers=H1, data={"to": "8800", "body": "sneaky", "reply_to": str(other)})
+check("can't quote a message from another conversation", last_msg(H0, "8801")["reply_to"] is None)
+sent.clear()
+mid = d.execute("SELECT id FROM messages WHERE to_ext LIKE '%5557654321' ORDER BY id DESC LIMIT 1").fetchone()[0]
+c.post("/api/v1/me/messages/send", headers=H0, data={"to": "5557654321", "body": "yes", "reply_to": str(mid)})
+check("SMS gets a plain Re: line for context", sent and sent[-1][2].startswith('↪ Re: "plain"') and sent[-1][2].endswith("yes"), sent)
+check("but the stored text stays clean", last_msg(H0, "+15557654321")["text"] == "yes")
 
 # --- MMS pictures get a local copy (provider links vanish when they're down)
 outage = {"down": True}
