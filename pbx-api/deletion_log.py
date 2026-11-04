@@ -140,11 +140,16 @@ def build_email(entries):
             safe = "".join(ch if ch.isalnum() else "-" for ch in actor)[:30].strip("-") or "unknown"
             zf.writestr(f"{n:02d}-{tbl}-{action}-by-{safe}.csv", _csv(rows))
     lines += ["", "Rows removed by the normal 90-day (2-year for privacy records) retention, and accounts",
-              "deleted on request, are not copied.",
-              "",
-              "If you didn't expect a deletion by \"" + WHO_SSH + "\", someone with access to the server",
-              "itself changed the database: check who can sign in to it over SSH."]
+              "deleted on request, are not copied."]
     ssh = any(a == WHO_SSH for a, _, _ in groups)
+    # The SSH warning used to ride along on EVERY deletion email, so a
+    # routine delete from a user's own view arrived warning about SSH
+    # access — and read as if someone had used SSH when nobody had. It
+    # belongs only on emails that actually contain a direct-database group.
+    if ssh:
+        lines += ["",
+                  "If you didn't expect a deletion by \"" + WHO_SSH + "\", someone with access to the server",
+                  "itself changed the database: check who can sign in to it over SSH."]
     subj = ("Security alert: logs deleted on the server" if ssh else "Deleted records") + f" ({total} rows)"
     return subj, "\n".join(lines), z.getvalue()
 
