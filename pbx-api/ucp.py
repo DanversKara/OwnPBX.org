@@ -1140,8 +1140,7 @@ def messages_page(request: Request):
 <p class="muted">Send up to 3 photos, GIFs or videos at a time (25 MB each to extensions; about 1.2 MB each
 to phone numbers, where photos are shrunk to fit). Photos are sent without their hidden location details.
 Tick a conversation on the left to delete all of it, or tick single messages. Deleting only removes
-messages from your view; the other person keeps their copy, and the administrator is sent a copy of what
-you delete. You can also text from your phone app; both count
+messages from your view; the other person keeps their copy. You can also text from your phone app; both count
 toward your plan's monthly texts.</p>"""
     return _render(request, s, me, "ucp-msg", "Messages", body)
 
