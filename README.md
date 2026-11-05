@@ -731,7 +731,7 @@ see section 16) with their panel username and password.
 | **Calls** | 90-day history (can't be deleted), recordings, **Block** and **Report** for each call |
 | **Voicemail** | listen, download, move, delete; greeting upload or record by phone (`*98`) |
 | **Recordings** | the user's own recordings |
-| **Messages** | conversations with a reply box underneath, **emoji**, **photos / GIFs / videos** (Download, Forward, Report), send a text to any extension (including Zoiper and other SIP apps), **Block**, **Report**; updates by itself. ESP32 devices can make calls too, see the [ESP32-S3-Box-3 project](https://github.com/DanversKara/ESP32-S3-Box-3) |
+| **Messages** | conversations with a reply box underneath, **reply to a specific message** (quoted with ↩), **emoji**, **photos / GIFs / videos** (Download, Forward, Report), **Download conversation** (zip with a phone-style page and its media), send a text to any extension (including Zoiper and other SIP apps), **Block**, **Report**; updates by itself. ESP32 devices can make calls too, see the [ESP32-S3-Box-3 project](https://github.com/DanversKara/ESP32-S3-Box-3) |
 | **IVR** | personal menus (if their plan allows) |
 | **Billing** | choose, switch or cancel a plan (Stripe) |
 | **App** | pair the Android app: **Get a pairing code** shows a QR code, tap-to-copy code and server, and an *Open in the My Phone app* button; **Show phone login QR** gives the app its phone login; see and sign out signed-in phones |
@@ -785,7 +785,7 @@ the Notifications and Calling settings.*
 
 | Screen | What it does |
 |---|---|
-| **Messages** | inbox with search and unread dots, swipe or multi-select delete with Undo, Start chat to any extension or number, copy, block, call; **emoji**, attach **photos and videos**, **animated GIFs**, forward, save to Downloads, report; **From** chip to pick the sending number when you have several |
+| **Messages** | inbox with search and unread dots, swipe or multi-select delete with Undo, Start chat to any extension or number, copy, block, call; **reply to a message** (quoted with ↩), **emoji**, attach **photos and videos**, **animated GIFs**, forward, save to Downloads, report, download the conversation; **From** chip to pick the sending number when you have several |
 | **Contacts** | other extensions show a **presence ring** (solid green Online, dotted green + phone On a call, red slash Do Not Disturb, dotted red Recently online (30 min), solid red Offline; none if they hide their status), their **profile photo** or your own photo for them (tap the picture to choose) |
 | **Calls** | All / Missed / **Hidden** (hide calls instead of deleting; they go after 90 days with the rest), call back, text, block, **dial pad**; the missed-call badge clears when you look |
 | **Voicemail** | New / Old, player with seek bar and 1x / 1.5x / 2x, call back, text, move, block, delete |
@@ -1060,7 +1060,7 @@ often need the matching PBX side.
 
 | Data | Kept for |
 |---|---|
-| Sign-in log, security events, change log | shown for 24 hours on the dashboard; kept **90 days** in the database, then deleted. **Logins → Activity** shows a user's full 90 days (sign-ins with IPs, changes, security events; or 30 / 7 days / 24 hours) and downloads a report. "Clear from view" on the dashboard only hides rows |
+| Sign-in log, security events, change log | shown for 24 hours on the dashboard; kept **90 days** in the database, then deleted. **Logins → Activity** shows a user's full 90 days (sign-ins with IPs, changes, security events; or 30 / 7 days / 24 hours) and downloads a report. "Clear from view" on the dashboard only hides rows. Anything deleted or cleared (including logs deleted straight in the database over SSH) is emailed to the Security alerts address first; `sudo pbx-clear-logs` is the SSH way to delete logs (emails a copy, then deletes) |
 | Privacy-request and recording-consent records | 24 months |
 | Call history | 90 days (users can't delete it) |
 | Voicemail, recordings, texts | until deleted |
