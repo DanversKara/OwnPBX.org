@@ -162,7 +162,11 @@ asterisk -rx "module reload res_pjsip.so" || true
 systemctl enable --now asterisk >/dev/null 2>&1 || true
 
 # First install: no admin login yet -> create one.
-if [ "$(sqlite3 /var/lib/pbx/pbx.db "SELECT COUNT(*) FROM logins WHERE role='admin' AND enabled=1;" 2>/dev/null || echo 0)" = "0" ]; then
+# NB: only prompt when the query itself succeeds and finds zero admins.
+# An sqlite3 error (tool missing, DB locked) must NOT look like "no admin",
+# or every update prompts on a box that already has one.
+ADMIN_COUNT=$(sqlite3 /var/lib/pbx/pbx.db "SELECT COUNT(*) FROM logins WHERE role='admin' AND enabled=1;" 2>/dev/null) || ADMIN_COUNT=""
+if [ "$ADMIN_COUNT" = "0" ]; then
     if [ -t 0 ]; then
         echo ""; echo "== No admin login yet: create one now =="
         /opt/pbx/api-venv/bin/python "$SRC_DIR/scripts/create-admin.py"
