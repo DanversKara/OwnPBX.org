@@ -306,7 +306,7 @@ def me_overview(request: Request):
               if x.get("started_at", "") >= time.strftime("%Y-%m-%d", time.localtime(time.time() - 86400))]
     devs = U._device_status(me)
     msgs = U._my_messages(me, limit=1)
-    return {"me": _who(me), "dnd": bool(p["dnd"]), "new_voicemail": new_vm,
+    return {"me": _who(me), "dnd": bool(p["dnd"]), "dnd_until": p.get("dnd_until"), "new_voicemail": new_vm,
             "missed_24h": len(missed), "missed_new": len(missed_new),
             "texts_left": None if hidden else U._left(me, "messages"),
             # App store mode: no plan / usage / billing anywhere in the app.
@@ -617,7 +617,7 @@ def me_settings(request: Request):
             "SELECT exten FROM ptt_trusted WHERE login_id=? ORDER BY exten",
             (me["id"],)).fetchall()]
     return {
-        "dnd": bool(p["dnd"]), "forward_always": p["forward_always"] or "",
+        "dnd": bool(p["dnd"]), "dnd_until": p.get("dnd_until"), "forward_always": p["forward_always"] or "",
         "forward_noanswer": p["forward_noanswer"] or "",
         "ring_seconds": p["ring_seconds"] or U.DEFAULT_RING, "ring_choices": list(U.RING_CHOICES),
         "answer_ivr_id": p.get("answer_ivr_id"), "ivr_menus": ivrs,

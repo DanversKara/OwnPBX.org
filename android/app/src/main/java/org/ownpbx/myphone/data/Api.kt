@@ -85,6 +85,8 @@ data class ThreadResp(
 data class Overview(
     val me: Who,
     val dnd: Boolean = false,
+    /** Epoch seconds (UTC) when a timed DND ends; null = permanent/off. */
+    val dnd_until: Long? = null,
     val new_voicemail: Int = 0,
     val missed_24h: Int = 0,
     /** Missed calls this phone hasn't looked at yet (cleared by callsSeen). */
@@ -202,6 +204,10 @@ data class Settings(
     val msg_in: Boolean = true,
     val msg_out: Boolean = true,
     val blocked: List<BlockRule> = emptyList(),
+    /** Epoch seconds (UTC) when a timed DND ends; null = permanent/off. */
+    val dnd_until: Long? = null,
+    /** Send-only: the duration (minutes) the user just picked; the server never sends this. */
+    val dnd_minutes: Int? = null,
 )
 
 @Serializable
@@ -821,13 +827,32 @@ class Api(base: String, private val token: String?) {
     suspend fun moveVoicemail(id: Long, to: String) =
         form("/me/voicemail/$id/move", listOf("to" to to))
 
-    suspend fun setDnd(on: Boolean) = form("/me/dnd", listOf("on" to if (on) "1" else "0"))
+    suspend fun setDnd(on: Boolean, minutes: Int? = null) =
+        form(
+            "/me/dnd",
+            buildList {
+                add("on" to if (on) "1" else "0")
+                if (on && minutes != null) add("minutes" to minutes.toString())
+            },
+        )
 
     suspend fun saveCalls(s: Settings) =
         form(
             "/me/settings/calls",
             buildList {
                 add("dnd" to if (s.dnd) "1" else "0")
+                // DND mode: off / permanent / keep a stored timer / minutes.
+                // Computed from the local copy so an unrelated save never
+                // silently converts a timed DND.
+                add(
+                    "dnd_mode" to
+                        when {
+                            !s.dnd -> "off"
+                            s.dnd_minutes != null -> s.dnd_minutes.toString()
+                            s.dnd_until != null -> "keep"
+                            else -> "perm"
+                        },
+                )
                 add("forward_always" to s.forward_always)
                 add("forward_noanswer" to s.forward_noanswer)
                 add("ring_seconds" to s.ring_seconds.toString())

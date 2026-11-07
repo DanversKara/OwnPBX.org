@@ -132,12 +132,54 @@ def _me(request: Request):
     return (s, dict(row)) if row else (None, None)
 
 
+DND_DURATIONS = (30, 60, 120, 240, 480)   # minutes offered for a timed Do Not Disturb
+
+
+def _clock(epoch):
+    """'10:30 PM' for an epoch-seconds timestamp (server local time)."""
+    try:
+        return time.strftime("%I:%M %p", time.localtime(int(epoch))).lstrip("0")
+    except (TypeError, ValueError, OverflowError):
+        return ""
+
+
+def _dnd_until(minutes):
+    """Epoch seconds when a timed DND ends, or None for permanent/invalid."""
+    try:
+        m = int(minutes)
+    except (TypeError, ValueError):
+        return None
+    if m < 1 or m > 1440:
+        return None
+    return int(time.time()) + m * 60
+
+
 def _prefs(login_id):
     with M.db() as c:
         r = c.execute("SELECT * FROM user_prefs WHERE login_id=?",
                       (login_id,)).fetchone()
     d = dict(r) if r else {}
     d.setdefault("dnd", 0)
+    d.setdefault("dnd_until", None)
+    # A timed DND that ran out is off. Clear the stale row here so the panel,
+    # the app and presence all agree without needing a sweep job. (An old DB
+    # without the column simply has no dnd_until key, so this is a no-op.)
+    until = d.get("dnd_until")
+    if d.get("dnd") and until:
+        try:
+            expired = int(until) <= int(time.time())
+        except (TypeError, ValueError):
+            expired = False
+        if expired:
+            d["dnd"] = 0
+            d["dnd_until"] = None
+            try:
+                with M.db() as c:
+                    c.execute("UPDATE user_prefs SET dnd=0, dnd_until=NULL WHERE login_id=?",
+                              (login_id,))
+                    c.commit()
+            except Exception:
+                pass
     d.setdefault("forward_always", "")
     d.setdefault("forward_noanswer", "")
     d["ring_seconds"] = d.get("ring_seconds") or 0
@@ -531,7 +573,9 @@ def overview(request: Request):
     n_contacts = M.contacts.count_contacts(me["id"])
     csrf = M._csrf_field(s)
     if p["dnd"]:
-        status = '<span class="pill bad">Do not disturb</span> <span class="muted">Calls and push-to-talk go straight to voicemail</span>'
+        until_txt = _clock(p.get("dnd_until")) if p.get("dnd_until") else ""
+        status = ('<span class="pill bad">Do not disturb</span> <span class="muted">Calls and push-to-talk go straight to voicemail'
+                  + (f' until {until_txt}' if until_txt else ' until you turn it off') + '</span>')
     elif p["forward_always"]:
         status = f'<span class="pill warn">Forwarding</span> <span class="muted">All calls go to {esc(p["forward_always"])}</span>'
     else:
@@ -1470,6 +1514,24 @@ def _settings_body(request, s, me, extra_top=""):
     ring_opts = "".join(
         f'<option value="{v}" {"selected" if v == cur_ring else ""}>{v} seconds{" (default)" if v == DEFAULT_RING else ""}</option>'
         for v in RING_CHOICES)
+    # Do not disturb: off / permanent / timed. A live timed DND gets a "keep"
+    # option so saving unrelated settings here doesn't silently convert it
+    # to permanent (or off).
+    if not p["dnd"]:
+        dnd_sel = "off"
+    elif p.get("dnd_until"):
+        dnd_sel = "keep"
+    else:
+        dnd_sel = "perm"
+    dnd_choices = [("off", "Off"), ("perm", "On until I turn it off")]
+    if dnd_sel == "keep":
+        dnd_choices.append(("keep", f"On until {_clock(p['dnd_until'])} (keep as-is)"))
+    for m in DND_DURATIONS:
+        label = f"On for {m // 60} hour{'s' if m // 60 > 1 else ''}" if m >= 60 else f"On for {m} minutes"
+        dnd_choices.append((str(m), label))
+    dnd_opts = "".join(
+        f'<option value="{v}" {"selected" if v == dnd_sel else ""}>{label}</option>'
+        for v, label in dnd_choices)
     with M.db() as c:
         my_menus = [dict(r) for r in c.execute(
             "SELECT id, name FROM ivr_menus WHERE owner_login_id=? ORDER BY id", (me["id"],))]
@@ -1531,8 +1593,8 @@ def _settings_body(request, s, me, extra_top=""):
 <section class="panel">
 <h3>Call handling</h3>
 <form method="post" action="/ucp/settings/calls">{csrf}
-<label class="switch"><input type="checkbox" name="dnd" value="1" {chk(p["dnd"])}> <span>Do not disturb</span></label>
-<p class="muted">Every call goes straight to your voicemail.</p>
+<label>Do not disturb<br><select name="dnd_mode">{dnd_opts}</select></label>
+<p class="muted">Every call goes straight to your voicemail. Pick a time and it switches itself off — or leave it on until you turn it off.</p>
 <label>Forward all calls to<br><input name="forward_always" value="{esc(p["forward_always"])}" placeholder="extension or number — leave empty for off" inputmode="tel"></label>
 <label>Ring my phone for<br><select name="ring_seconds">{ring_opts}</select></label>
 <p class="muted">How long your phone rings before the call goes to voicemail (or your no-answer forward).</p>
@@ -1625,7 +1687,29 @@ async def settings_calls(request: Request):
     if not me["exten"]:
         return _back("/ucp/settings", "noext")
     f = await request.form()
-    dnd = 1 if f.get("dnd") == "1" else 0
+    # Do not disturb: the web form sends one dnd_mode select; the app (and old
+    # clients) send the dnd flag, optionally with dnd_minutes. "keep" leaves
+    # a live timed DND exactly as stored, so saving other settings here never
+    # silently converts it. A save with no duration info also keeps a stored
+    # timer; only an explicit choice changes it.
+    cur = _prefs(me["id"])
+    mode = (f.get("dnd_mode") or "").strip()
+    if mode == "off":
+        dnd, dnd_until = 0, None
+    elif mode == "perm":
+        dnd, dnd_until = 1, None
+    elif mode == "keep":
+        dnd, dnd_until = (1 if cur.get("dnd") else 0), cur.get("dnd_until")
+    elif mode:
+        dnd, dnd_until = 1, _dnd_until(mode)
+    else:
+        dnd = 1 if f.get("dnd") == "1" else 0
+        if dnd:
+            dnd_until = _dnd_until(f.get("dnd_minutes"))
+            if dnd_until is None:
+                dnd_until = cur.get("dnd_until")
+        else:
+            dnd_until = None
     fa = (f.get("forward_always") or "").strip().replace(" ", "").replace("-", "")
     fn = (f.get("forward_noanswer") or "").strip().replace(" ", "").replace("-", "")
     for v in (fa, fn):
@@ -1694,17 +1778,17 @@ async def settings_calls(request: Request):
             return _back("/ucp/settings", "ivrbad")
         ivr_id = int(ivr_raw)
     with M.db() as c:
-        c.execute("INSERT INTO user_prefs (login_id, dnd, forward_always, forward_noanswer,"
+        c.execute("INSERT INTO user_prefs (login_id, dnd, dnd_until, forward_always, forward_noanswer,"
                   " ring_seconds, answer_ivr_id, cell_number, ring_cell, cell_delay, updated_at)"
-                  " VALUES (?,?,?,?,?,?,?,?,?,datetime('now'))"
-                  " ON CONFLICT(login_id) DO UPDATE SET dnd=excluded.dnd,"
+                  " VALUES (?,?,?,?,?,?,?,?,?,?,datetime('now'))"
+                  " ON CONFLICT(login_id) DO UPDATE SET dnd=excluded.dnd, dnd_until=excluded.dnd_until,"
                   " forward_always=excluded.forward_always,"
                   " forward_noanswer=excluded.forward_noanswer,"
                   " ring_seconds=excluded.ring_seconds, answer_ivr_id=excluded.answer_ivr_id,"
                   " cell_number=excluded.cell_number, ring_cell=excluded.ring_cell,"
                   " cell_delay=excluded.cell_delay,"
                   " updated_at=excluded.updated_at",
-                  (me["id"], dnd, fa, fn, ring_store, ivr_id, cell, ring_cell, cell_delay))
+                  (me["id"], dnd, dnd_until, fa, fn, ring_store, ivr_id, cell, ring_cell, cell_delay))
         if ptt_enabled is not None:
             c.execute("UPDATE logins SET ptt_enabled=? WHERE id=?", (ptt_enabled, me["id"]))
         if ptt_missed is not None:
@@ -1714,7 +1798,8 @@ async def settings_calls(request: Request):
             c.executemany("INSERT INTO ptt_trusted (login_id, exten) VALUES (?,?)",
                           [(me["id"], t) for t in ptt_trusted])
         c.commit()
-    _audit(me, "ucp.calls", f"dnd={dnd} fwd_always={fa} fwd_noanswer={fn} ring={ring} ivr={ivr_id}"
+    dnd_txt = "0" if not dnd else (f"1 until {_clock(dnd_until)}" if dnd_until else "1 permanent")
+    _audit(me, "ucp.calls", f"dnd={dnd_txt} fwd_always={fa} fwd_noanswer={fn} ring={ring} ivr={ivr_id}"
                             f" cell={cell} ring_cell={ring_cell} cell_delay={cell_delay}"
                             f" ptt={'keep' if ptt_enabled is None else ptt_enabled}"
                             f" ptt_missed={'keep' if ptt_missed is None else ptt_missed}"
@@ -1733,12 +1818,16 @@ async def dnd_toggle(request: Request):
         return _back("/ucp", "noext")
     f = await request.form()
     on = 1 if f.get("on") == "1" else 0
+    # The quick toggle is an explicit on/off: turning on here means permanent
+    # (until you turn it off). A timed DND comes from the settings form or
+    # the app, which pass minutes.
+    until = _dnd_until(f.get("minutes")) if on else None
     with M.db() as c:
-        c.execute("INSERT INTO user_prefs (login_id, dnd) VALUES (?,?)"
-                  " ON CONFLICT(login_id) DO UPDATE SET dnd=excluded.dnd, updated_at=datetime('now')",
-                  (me["id"], on))
+        c.execute("INSERT INTO user_prefs (login_id, dnd, dnd_until) VALUES (?,?,?)"
+                  " ON CONFLICT(login_id) DO UPDATE SET dnd=excluded.dnd, dnd_until=excluded.dnd_until, updated_at=datetime('now')",
+                  (me["id"], on, until))
         c.commit()
-    _audit(me, "ucp.dnd", str(on))
+    _audit(me, "ucp.dnd", "0" if not on else (f"1 until {_clock(until)}" if until else "1 permanent"))
     return _back("/ucp", "saved")
 
 

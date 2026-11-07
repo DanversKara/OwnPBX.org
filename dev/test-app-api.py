@@ -69,6 +69,34 @@ cons = c.get("/api/v1/me/contacts", headers=H).json()["contacts"]
 pal = [x for x in cons if x.get("number") == "8801"]
 _ptt_check("contact ptt false when login wish off", bool(pal) and pal[0].get("ptt") is False, pal)
 if _ptt_fails: raise SystemExit("PTT CHECKS FAILED: %s" % _ptt_fails)
+# --- timed DND: minutes -> dnd_until, expiry -> off, no minutes -> permanent ---
+_dnd_fails = []
+def _dnd_check(name, ok, extra=""):
+    print(("PASS " if ok else "FAIL ") + "dnd: " + name, extra)
+    if not ok: _dnd_fails.append(name)
+import time as _time
+_now = int(_time.time())
+j(c.post("/api/v1/me/dnd", headers=H, data={"on":"1","minutes":"120"}))
+st = _settings(H)
+_dnd_check("timed DND on with until ~2h out", st.get("dnd") is True and st.get("dnd_until") and abs(st["dnd_until"] - (_now + 7200)) < 120, st)
+j(c.post("/api/v1/me/settings/calls", headers=H, data={**_full, "dnd":"1","dnd_mode":"30"}))
+st = _settings(H)
+_dnd_check("settings/calls dnd_mode 30m ~30m out", st.get("dnd") is True and st.get("dnd_until") and abs(st["dnd_until"] - (_now + 1800)) < 120, st)
+j(c.post("/api/v1/me/settings/calls", headers=H, data={**_full, "dnd":"1"}))
+st = _settings(H)
+_dnd_check("settings/calls without mode keeps the timer", st.get("dnd") is True and st.get("dnd_until") and abs(st["dnd_until"] - (_now + 1800)) < 120, st)
+_db = _sq.connect(os.environ["PBX_DB"])
+_db.execute("UPDATE user_prefs SET dnd_until=? WHERE login_id=(SELECT id FROM logins WHERE exten='8800')", (_now - 60,)); _db.commit(); _db.close()
+st = _settings(H)
+_dnd_check("expired timed DND reads off", st.get("dnd") is False, st)
+_db = _sq.connect(os.environ["PBX_DB"])
+_row = _db.execute("SELECT dnd, dnd_until FROM user_prefs WHERE login_id=(SELECT id FROM logins WHERE exten='8800')").fetchone(); _db.close()
+_dnd_check("expired timed DND cleared in DB", _row[0] == 0 and _row[1] is None, _row)
+j(c.post("/api/v1/me/dnd", headers=H, data={"on":"1"}))
+st = _settings(H)
+_dnd_check("DND on without minutes is permanent", st.get("dnd") is True and st.get("dnd_until") is None, st)
+j(c.post("/api/v1/me/dnd", headers=H, data={"on":"0"}))
+if _dnd_fails: raise SystemExit("DND CHECKS FAILED: %s" % _dnd_fails)
 # --- plan & usage (/api/v1/me/usage must agree with the portal's usage_panel) ---
 _usage_fails = []
 def _usage_check(name, ok, extra=""):

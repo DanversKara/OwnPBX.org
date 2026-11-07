@@ -356,7 +356,26 @@ def get_prefs(login_id):
         r = q1("SELECT * FROM user_prefs WHERE login_id=?", (login_id,))
     except sqlite3.OperationalError:
         return {}
-    return dict(r) if r else {}
+    d = dict(r) if r else {}
+    # A timed DND that ran out is off. Normalize here so every call route
+    # (inbound, PTT, forward) agrees, and clear the stale row. An old DB
+    # without the column simply has no dnd_until key, so this is a no-op.
+    until = d.get("dnd_until")
+    if d.get("dnd") and until:
+        try:
+            expired = int(until) <= int(time.time())
+        except (TypeError, ValueError):
+            expired = False
+        if expired:
+            d["dnd"] = 0
+            d["dnd_until"] = None
+            try:
+                with db() as c:
+                    c.execute("UPDATE user_prefs SET dnd=0, dnd_until=NULL WHERE login_id=?",
+                              (login_id,))
+            except sqlite3.OperationalError:
+                pass
+    return d
 
 
 RING_CHOICES = (10, 15, 20, 25, 30, 45, 60, 90, 120)

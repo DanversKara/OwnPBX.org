@@ -215,6 +215,7 @@ CREATE TABLE IF NOT EXISTS ptt_trusted (
 CREATE TABLE IF NOT EXISTS user_prefs (
   login_id INTEGER PRIMARY KEY REFERENCES logins(id) ON DELETE CASCADE,
   dnd INTEGER NOT NULL DEFAULT 0,            -- 1 = do not disturb: straight to voicemail
+  dnd_until INTEGER DEFAULT NULL,          -- epoch seconds (UTC): DND ends here; NULL = until turned off
   forward_always TEXT NOT NULL DEFAULT '',   -- exten or outside number; '' = off
   forward_noanswer TEXT NOT NULL DEFAULT '', -- used instead of voicemail on no answer
   ring_seconds INTEGER NOT NULL DEFAULT 0,   -- ring time before voicemail; 0 = default (30s)

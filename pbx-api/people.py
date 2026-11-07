@@ -106,7 +106,8 @@ def presence_map():
     call_ids, call_exts = _on_call()
     out = {}
     with M.db() as c:
-        for r in c.execute("SELECT l.id, l.exten, l.sip_username, l.show_status, COALESCE(p.dnd, 0) AS dnd,"
+        for r in c.execute("SELECT l.id, l.exten, l.sip_username, l.show_status,"
+                           " CASE WHEN COALESCE(p.dnd,0)=1 AND (p.dnd_until IS NULL OR p.dnd_until > CAST(strftime('%s','now') AS INTEGER)) THEN 1 ELSE 0 END AS dnd,"
                            " CAST(strftime('%s','now') - strftime('%s', l.last_seen_at) AS INTEGER) AS ago"
                            " FROM logins l LEFT JOIN user_prefs p ON p.login_id=l.id"
                            " WHERE l.enabled=1 AND l.exten!=''"):

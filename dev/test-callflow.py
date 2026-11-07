@@ -162,6 +162,19 @@ call("5550002222", "3105550100", "c8")
 check("…other callers still get DND (voicemail)", not rung() and VM, (LOG, VM))
 db.execute("UPDATE user_prefs SET dnd=0 WHERE login_id=?", (u8800["id"],)); db.execute("DELETE FROM blocked_numbers"); db.commit()
 
+# Timed DND: expired -> rings, live -> voicemail, permanent -> voicemail
+_now = int(datetime.datetime.now().timestamp())
+db.execute("UPDATE user_prefs SET dnd=1, dnd_until=? WHERE login_id=?", (_now - 60, u8800["id"])); db.commit()
+call("5550002222", "3105550100", "c9")
+check("expired timed DND: rings again", any(u8800["sip_username"] in e for e in rung()), LOG)
+db.execute("UPDATE user_prefs SET dnd=1, dnd_until=? WHERE login_id=?", (_now + 3600, u8800["id"])); db.commit()
+call("5550002222", "3105550100", "c10")
+check("live timed DND: voicemail", not rung() and VM, (LOG, VM))
+db.execute("UPDATE user_prefs SET dnd=1, dnd_until=NULL WHERE login_id=?", (u8800["id"],)); db.commit()
+call("5550002222", "3105550100", "c11")
+check("permanent DND: voicemail", not rung() and VM, (LOG, VM))
+db.execute("UPDATE user_prefs SET dnd=0, dnd_until=NULL WHERE login_id=?", (u8800["id"],)); db.commit()
+
 # IVR: no key vs wrong key
 db.execute("INSERT INTO ivr_menus (name, timeout_sec, max_retries, options, fallback, invalid_retries, invalid_fallback)"
            " VALUES ('Main', 5, 2, ?, ?, 0, ?)", (json.dumps({"1": {"type": "ext", "target": "8801"}}),

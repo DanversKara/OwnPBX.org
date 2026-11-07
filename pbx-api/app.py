@@ -128,6 +128,9 @@ def _migrate(c):
         c.execute("ALTER TABLE user_prefs ADD COLUMN theme_slot INTEGER NOT NULL DEFAULT 0")
     if "ring_seconds" not in cols("user_prefs"):
         c.execute("ALTER TABLE user_prefs ADD COLUMN ring_seconds INTEGER NOT NULL DEFAULT 0")
+    # Timed Do Not Disturb: epoch seconds (UTC) when DND ends; NULL = until turned off.
+    if "dnd_until" not in cols("user_prefs"):
+        c.execute("ALTER TABLE user_prefs ADD COLUMN dnd_until INTEGER DEFAULT NULL")
     if "answer_ivr_id" not in cols("user_prefs"):
         c.execute("ALTER TABLE user_prefs ADD COLUMN answer_ivr_id INTEGER DEFAULT NULL")
     for col, ddl in (("call_minutes", "INTEGER NOT NULL DEFAULT 0"), ("voicemail", "INTEGER NOT NULL DEFAULT 0"),

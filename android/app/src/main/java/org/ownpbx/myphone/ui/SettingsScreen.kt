@@ -98,11 +98,63 @@ private fun EditDialog(
 }
 
 @Composable
+private fun DndDialog(
+    dnd: Boolean,
+    dndUntil: Long?,
+    onDismiss: () -> Unit,
+    onPick: (Boolean, Int?) -> Unit,
+) {
+    val options =
+        listOf(
+            Triple(false, null, "Off"),
+            Triple(true, null, "Until I turn it off"),
+            Triple(true, 30, "30 minutes"),
+            Triple(true, 60, "1 hour"),
+            Triple(true, 120, "2 hours"),
+            Triple(true, 240, "4 hours"),
+            Triple(true, 480, "8 hours"),
+        )
+    // A live timer matches no preset, so nothing is pre-checked then.
+    val current =
+        when {
+            !dnd -> 0
+            dndUntil != null -> -1
+            else -> 1
+        }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Do not disturb") },
+        text = {
+            Column {
+                Text(
+                    "Calls go straight to voicemail. Pick a time and it switches itself off.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(8.dp))
+                options.forEachIndexed { i, (on, minutes, label) ->
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(on, minutes); onDismiss() }.padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = i == current, onClick = { onPick(on, minutes); onDismiss() })
+                        Spacer(Modifier.width(8.dp))
+                        Text(label)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
 fun SettingsScreen(model: AppModel, overview: Overview?, modifier: Modifier) {
     val store = model.store
     var s by remember { mutableStateOf<Settings?>(null) }
     var devices by remember { mutableStateOf<List<Device>>(emptyList()) }
     var edit by model::settingsDialog // survives the PIN lock
+    var dndDialog by remember { mutableStateOf(false) }
     var changingPin by remember { mutableStateOf(false) }
     var recordAsk by remember { mutableStateOf(false) }
     var bio by remember { mutableStateOf(store.biometric) }
@@ -240,13 +292,28 @@ fun SettingsScreen(model: AppModel, overview: Overview?, modifier: Modifier) {
             LinearProgressIndicator(Modifier.fillMaxWidth().padding(16.dp))
         } else {
             Section("Calls")
-            SwitchRow(
+            ClickRow(
                 Icons.Filled.DoNotDisturbOn,
                 "Do not disturb",
-                "Calls go straight to voicemail",
-                st.dnd,
+                when {
+                    !st.dnd -> "Off"
+                    st.dnd_until != null ->
+                        "On until " +
+                            android.text.format.DateFormat.getTimeFormat(ctx).format(java.util.Date(st.dnd_until * 1000))
+                    else -> "On until you turn it off"
+                },
             ) {
-                saveCalls(st.copy(dnd = it))
+                dndDialog = true
+            }
+            if (dndDialog) {
+                DndDialog(st.dnd, st.dnd_until, { dndDialog = false }) { on, minutes ->
+                    // Optimistic until-time so the row shows it at once; the
+                    // server's value replaces it on the reload after save.
+                    val until =
+                        if (on && minutes != null) System.currentTimeMillis() / 1000 + minutes * 60 else null
+                    saveCalls(st.copy(dnd = on, dnd_minutes = minutes, dnd_until = until))
+                    dndDialog = false
+                }
             }
             ClickRow(
                 Icons.Filled.PhoneForwarded,
