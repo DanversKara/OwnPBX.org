@@ -137,6 +137,7 @@ foreach (getDB()->query('SELECT user_id, feature, value FROM plg_billing_overrid
         <form method="post" class="u-flex-gap u-mt-10">
             <?php echo $csrf; ?><input type="hidden" name="billing_action" value="override">
             <select name="user_id" class="form-control" required>
+                <option value="" disabled selected>Pick a user (admins are never limited)</option>
                 <?php foreach ($users as $u): if ($u['role'] === 'admin') { continue; } ?>
                     <option value="<?php echo (int) $u['id']; ?>"><?php echo $h(($u['full_name'] ?: $u['username']) . ' ' . $u['extension']); ?></option>
                 <?php endforeach; ?>
@@ -157,7 +158,7 @@ foreach (getDB()->query('SELECT user_id, feature, value FROM plg_billing_overrid
         <form method="post" class="u-mb-20">
             <?php echo $csrf; ?><input type="hidden" name="billing_action" value="store_numbers">
             <label class="form-label">Numbers offered (one per line: <code>+15551234567, Fresno</code>). A number is offered only while nothing else answers it.</label>
-            <textarea name="numbers" class="form-control" rows="3"><?php
+            <textarea name="numbers" class="form-control" rows="3" placeholder="+15551234567, Fresno&#10;+15557654321, Austin"><?php
                 foreach (getDB()->query('SELECT number, label FROM plg_billing_store_numbers ORDER BY number')->fetchAll(PDO::FETCH_ASSOC) as $n) {
                     echo $h($n['number'] . ($n['label'] !== '' ? ', ' . $n['label'] : '')) . "\n";
                 } ?></textarea>
