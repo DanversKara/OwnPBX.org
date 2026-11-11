@@ -287,7 +287,6 @@ class FaxSendService {
         $dial_context = $out_grp > 1 ? "from-internal-desktop-{$out_grp}" : 'from-internal-desktop';
 
         $sender_name = trim(preg_replace('/[\r\n]+/', ' ', $sender_row['full_name'] ?? ''));
-        $sender_name_var = $sender_name !== '' ? "{$sender_name} ({$senderExt})" : $senderExt;
 
         // The call file used to specify NO CallerID: at all — the call went out
         // as "Anonymous" and was blocked by the trunk (2026-08-31).
@@ -298,6 +297,11 @@ class FaxSendService {
         $has_own_cid = $sender_cid !== '';
         if ($sender_cid === '') $sender_cid = $senderExt;
         $caller_id_line = "<$sender_cid>";
+
+        // Header name shows the DID the fax was sent from (the sender's own
+        // cid_external), never a hardcoded number — falls back to the extension
+        // when the sender has no external CID.
+        $sender_name_var = $sender_name !== '' ? "{$sender_name} ({$sender_cid})" : $sender_cid;
 
         // Fax calls NEVER send a display name — this is fixed ON PURPOSE and
         // does NOT look at the send_caller_name option in the trunk settings
@@ -328,6 +332,7 @@ class FaxSendService {
                              "SetVar: FAX_TIF_PATH=$tifPath\n" .
                              "SetVar: FAX_DEST=$safe_fax_dest\n" .
                              "SetVar: FAX_SENDER=$safe_fax_sender\n" .
+                             "SetVar: FAX_SENDER_DID=$sender_cid\n" .
                              "SetVar: FAX_SENDER_NAME=$safe_sender_name\n" .
                              "SetVar: FAX_ID=$faxId\n" .
                              // Inherited by the outbound leg: the route skips call recording

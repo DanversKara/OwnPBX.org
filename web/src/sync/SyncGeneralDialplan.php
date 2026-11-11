@@ -271,11 +271,14 @@ function __syncGeneralDialplanBody() {
     $conf .= "exten => s,1,NoOp(Sending Outbound FAX to \${FAX_DEST} from \${FAX_SENDER})\n";
     // The sender name arrives in the call file as SetVar: FAX_SENDER_NAME (fax_send.php);
     // when empty (e.g. an old/hand-made .call file) only the global header is used.
-    $conf .= " same => n,Set(FAXOPT(headerinfo)={$fax_header_info}\${IF(\$[\"\${FAX_SENDER_NAME}\" != \"\"]? - \${FAX_SENDER_NAME}:)})\n";
-    // TSID = global prefix + the sending fax user's extension (FAX_SENDER, already
-    // set in the .call file by fax_send.php) — e.g. prefix 0312555 + extension
-    // 1234 = 03125551234 (2026-08-31, user request).
-    $conf .= " same => n,Set(FAXOPT(localstationid)={$fax_station_id}\${FAX_SENDER})\n";
+    // The separator is wide (two spaces each side) so the header and the sender
+    // name do not run together on the fax page.
+    $conf .= " same => n,Set(FAXOPT(headerinfo)={$fax_header_info}\${IF(\$[\"\${FAX_SENDER_NAME}\" != \"\"]?  -  \${FAX_SENDER_NAME}:)})\n";
+    // TSID = global prefix + the DID the fax was sent from (FAX_SENDER_DID, the
+    // sender's own cid_external — never hardcoded), falling back to the sending
+    // fax user's extension (FAX_SENDER) when no DID is set — e.g. prefix
+    // 0312555 + DID 15551234567 = 031255515551234567 (2026-08-31, user request).
+    $conf .= " same => n,Set(FAXOPT(localstationid)={$fax_station_id}\${IF(\$[\"\${FAX_SENDER_DID}\" != \"\"]?\${FAX_SENDER_DID}:\${FAX_SENDER})})\n";
     $conf .= " same => n,SendFAX(\${FAX_TIF_PATH},df)\n";
     $conf .= " same => n,Hangup()\n\n";
     $conf .= "exten => h,1,NoOp(Outbound FAX Completed. Status=\${FAXOPT(status)})\n";
