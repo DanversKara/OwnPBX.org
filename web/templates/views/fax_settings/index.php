@@ -132,7 +132,7 @@
     <?php echo uiHelpBoxOpen('faxCoverHelpBox', t('fax_cover.title')); ?>
         <div class="u-mt-10"><strong><?php echo t('common.help_limits'); ?></strong><ul class="u-m-4-0-0-20"><li><?php echo t('fax_cover.limit_colour'); ?></li></ul></div>
 <?php echo uiHelpBoxClose(); ?>
-    <form method="POST" autocomplete="off" class="u-card-pad">
+    <form method="POST" autocomplete="off" class="u-card-pad" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?php echo getCSRFToken(); ?>">
         <input type="hidden" name="save_fax_cover" value="1">
         <div class="form-group">
@@ -148,8 +148,35 @@
             <input type="text" name="fax_cover_company" class="form-control" maxlength="120" value="<?php echo htmlspecialchars($cover['company'], ENT_QUOTES); ?>">
         </div>
         <div class="form-group">
+            <label class="form-label"><?php echo t('fax_cover.field_address'); ?></label>
+            <textarea name="fax_cover_address" class="form-control" rows="2" maxlength="200"><?php echo htmlspecialchars($cover['address'] ?? '', ENT_QUOTES); ?></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label"><?php echo t('fax_cover.field_phone'); ?></label>
+            <input type="text" name="fax_cover_phone" class="form-control" maxlength="30" value="<?php echo htmlspecialchars($cover['phone'] ?? '', ENT_QUOTES); ?>">
+        </div>
+        <div class="form-group">
+            <label class="form-label"><?php echo t('fax_cover.field_email'); ?></label>
+            <input type="text" name="fax_cover_email" class="form-control" maxlength="80" value="<?php echo htmlspecialchars($cover['email'] ?? '', ENT_QUOTES); ?>">
+        </div>
+        <div class="form-group">
+            <label class="form-label"><?php echo t('fax_cover.field_website'); ?></label>
+            <input type="text" name="fax_cover_website" class="form-control" maxlength="80" value="<?php echo htmlspecialchars($cover['website'] ?? '', ENT_QUOTES); ?>">
+        </div>
+        <div class="form-group">
             <label class="form-label"><?php echo t('fax_cover.field_notice'); ?></label>
             <textarea name="fax_cover_notice" class="form-control" rows="3" maxlength="1000"><?php echo htmlspecialchars($cover['notice'], ENT_QUOTES); ?></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label"><?php echo t('fax_cover.field_logo_file'); ?></label>
+            <?php if (!empty($coverLogoUrl)): ?>
+                <div class="u-mb-8"><img src="<?php echo htmlspecialchars($coverLogoUrl, ENT_QUOTES); ?>" alt="Fax logo" style="max-height: 60px; max-width: 200px; background: #fff; border: 1px solid #ccc; padding: 4px;"></div>
+                <label class="u-d-flex u-ai-center u-gap-6 u-mb-6 u-fs-13">
+                    <input type="checkbox" name="remove_fax_cover_logo" value="1"> <?php echo t('fax_cover.remove_logo'); ?>
+                </label>
+            <?php endif; ?>
+            <input type="file" name="fax_cover_logo_file" class="form-control" accept=".png,.jpg,.jpeg">
+            <small class="u-hint u-fs-11" style="display: block;"><?php echo t('fax_cover.logo_file_help'); ?></small>
         </div>
         <label class="u-d-flex u-ai-center u-gap-6 u-mb-6 u-fs-13">
             <input type="checkbox" name="fax_cover_logo" value="1" <?php echo $cover['logo'] ? 'checked' : ''; ?>> <?php echo t('fax_cover.field_logo'); ?>

@@ -20,6 +20,10 @@ class FaxSendController extends BaseController
             // The settings page previews what is in its form, before it is saved.
             if (isset($_POST['fax_cover_company']) && $user_role === 'admin') {
                 $settings['company'] = mb_substr(trim((string) $_POST['fax_cover_company']), 0, 120);
+                $settings['address'] = mb_substr(trim((string) ($_POST['fax_cover_address'] ?? '')), 0, 200);
+                $settings['phone'] = mb_substr(trim((string) ($_POST['fax_cover_phone'] ?? '')), 0, 30);
+                $settings['email'] = mb_substr(trim((string) ($_POST['fax_cover_email'] ?? '')), 0, 80);
+                $settings['website'] = mb_substr(trim((string) ($_POST['fax_cover_website'] ?? '')), 0, 80);
                 $settings['notice'] = mb_substr(trim((string) ($_POST['fax_cover_notice'] ?? '')), 0, 1000);
                 $settings['logo'] = !empty($_POST['fax_cover_logo']);
             }

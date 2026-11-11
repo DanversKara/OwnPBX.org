@@ -200,6 +200,22 @@
                     <input type="text" name="template_company" id="template_company" class="form-control" maxlength="120">
                 </div>
                 <div class="form-group">
+                    <label class="form-label"><?php echo t('fax_cover.field_address'); ?></label>
+                    <textarea name="template_address" id="template_address" class="form-control" rows="2" maxlength="200"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><?php echo t('fax_cover.field_phone'); ?></label>
+                    <input type="text" name="template_phone" id="template_phone" class="form-control" maxlength="30">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><?php echo t('fax_cover.field_email'); ?></label>
+                    <input type="text" name="template_email" id="template_email" class="form-control" maxlength="80">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><?php echo t('fax_cover.field_website'); ?></label>
+                    <input type="text" name="template_website" id="template_website" class="form-control" maxlength="80">
+                </div>
+                <div class="form-group">
                     <label class="form-label"><?php echo t('fax_cover.template_notice'); ?></label>
                     <textarea name="template_notice" id="template_notice" class="form-control" rows="3" maxlength="1000"></textarea>
                 </div>
@@ -214,6 +230,10 @@ function faxEditTemplate(t) {
     document.getElementById('template_id').value = t.id || 0;
     document.getElementById('template_name').value = t.name || '';
     document.getElementById('template_company').value = t.company || '';
+    document.getElementById('template_address').value = t.address || '';
+    document.getElementById('template_phone').value = t.phone || '';
+    document.getElementById('template_email').value = t.email || '';
+    document.getElementById('template_website').value = t.website || '';
     document.getElementById('template_notice').value = t.notice || '';
     document.getElementById('template_logo').checked = parseInt(t.logo || 0, 10) === 1;
     UIHelper.openOverlayModal('faxTemplateModal');

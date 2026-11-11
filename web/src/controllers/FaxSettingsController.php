@@ -19,7 +19,7 @@ class FaxSettingsController extends BaseController
         $notices = static::handlePost([
             'save_did' => fn() => FaxSettingsService::saveAccount($_POST),
             'toggle_status' => fn() => FaxSettingsService::toggleAccount($_POST),
-            'save_fax_cover' => fn() => FaxCoverService::saveSettings($_POST),
+            'save_fax_cover' => fn() => FaxCoverService::saveSettings($_POST, $_FILES),
             'delete_did' => fn() => FaxSettingsService::deleteAccount($_POST),
         ]);
 
@@ -33,6 +33,7 @@ class FaxSettingsController extends BaseController
             'linkableUsers' => FaxSettingsService::linkableUsers(),
             'cover' => FaxCoverService::settings(),
             'coverLogoFound' => FaxCoverService::logoPath() !== null,
+            'coverLogoUrl' => FaxCoverService::logoUrl(),
         ], ['title' => $page_title] + $notices);
     }
 }
