@@ -33,7 +33,7 @@
             </p>
 
             <?php
-            $openSection = function () use ($platform, $android_link, $app_link, $play_url) { ?>
+            $openSection = function () use ($platform, $android_link, $app_link, $app_url) { ?>
                 <div class="ml-section">
                     <h3><i class="fas fa-mobile-alt u-primary"></i> <?php echo t('mobile_login.phone_title'); ?></h3>
                     <a href="<?php echo htmlspecialchars($platform === 'ios' ? $app_link : $android_link); ?>" class="btn btn-primary ml-open">
@@ -44,20 +44,20 @@
                             <?php echo t('mobile_login.install_ios'); ?>
                         <?php else: ?>
                             <?php echo t('mobile_login.install_android'); ?>
-                            <a href="<?php echo htmlspecialchars($play_url); ?>" rel="noreferrer" target="_blank">Google Play</a>
+                            <a href="<?php echo htmlspecialchars($app_url); ?>" rel="noreferrer" target="_blank">GitHub</a>
                         <?php endif; ?>
                     </p>
                 </div>
             <?php };
 
-            $qrSection = function () use ($qr, $play_url) { ?>
+            $qrSection = function () use ($qr, $app_url) { ?>
                 <div class="ml-section">
                     <h3><i class="fas fa-qrcode u-primary"></i> <?php echo t('mobile_login.qr_title'); ?></h3>
                     <?php if ($qr !== ''): ?>
                         <img class="ml-qr" src="<?php echo htmlspecialchars($qr); ?>" alt="QR">
                     <?php endif; ?>
                     <ol class="ml-steps">
-                        <li><?php echo t('mobile_login.qr_step1'); ?> (<a href="<?php echo htmlspecialchars($play_url); ?>" rel="noreferrer" target="_blank">Google Play</a>)</li>
+                        <li><?php echo t('mobile_login.qr_step1'); ?> (<a href="<?php echo htmlspecialchars($app_url); ?>" rel="noreferrer" target="_blank">GitHub</a>)</li>
                         <li><?php echo t('mobile_login.qr_step2'); ?></li>
                         <li><?php echo t('mobile_login.qr_step3'); ?></li>
                     </ol>

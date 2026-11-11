@@ -1,7 +1,7 @@
 <?php /* Layout: templates/layouts/auth_header.php — BaseController::renderAuthPage() */ ?>
 <link rel="stylesheet" href="<?php echo asset('/assets/css/pages/login.css'); ?>">
 <?php
-// Phones get two cards (logo + Google Play, sign-in form), side by side in landscape — pages/login.css.
+// Phones get two cards (logo + GitHub app download, sign-in form), side by side in landscape — pages/login.css.
 $is_mobile_device = isMobileUserAgent();
 ob_start();
 require __DIR__ . '/_brand.php';
@@ -9,11 +9,11 @@ $brand_html = ob_get_clean();
 ?>
     <div class="auth-cards<?php echo $is_mobile_device ? ' is-mobile' : ''; ?>">
     <?php if ($is_mobile_device): ?>
-    <!-- Phones: logo + Google Play in their own card (side by side with the form in landscape) -->
+    <!-- Phones: logo + GitHub app download in their own card (side by side with the form in landscape) -->
     <div class="auth-card brand-card">
 <?php echo $brand_html; ?>
-        <a href="<?php echo htmlspecialchars(ANDROID_PLAY_URL); ?>" target="_blank" rel="noopener" class="btn btn-play" title="<?php echo htmlspecialchars(t('login.mobile_app_desc')); ?>">
-            <i class="fab fa-google-play"></i> <?php echo t('common.get_on_google_play'); ?>
+        <a href="<?php echo htmlspecialchars(ANDROID_APP_URL); ?>" target="_blank" rel="noopener" class="btn btn-play" title="<?php echo htmlspecialchars(t('login.mobile_app_desc')); ?>">
+            <i class="fab fa-github"></i> <?php echo t('common.get_on_github'); ?>
         </a>
         <button type="button" class="btn btn-outline-primary u-w-100 u-jc-center u-fw-700 u-gap-8 u-r-12" id="btnPasskeyLogin" onclick="loginWithPasskey()">
             <i class="fas fa-fingerprint u-fs-16"></i> <?php echo t('login.btn_passkey'); ?>
@@ -131,8 +131,8 @@ $brand_html = ob_get_clean();
 
     <?php if (!$is_mobile_device): ?>
     <div class="auth-card mobile-app-download">
-        <a href="<?php echo htmlspecialchars(ANDROID_PLAY_URL); ?>" target="_blank" rel="noopener" class="btn btn-play" title="<?php echo htmlspecialchars(t('login.mobile_app_desc')); ?>">
-            <i class="fab fa-google-play"></i> <?php echo t('common.get_on_google_play'); ?>
+        <a href="<?php echo htmlspecialchars(ANDROID_APP_URL); ?>" target="_blank" rel="noopener" class="btn btn-play" title="<?php echo htmlspecialchars(t('login.mobile_app_desc')); ?>">
+            <i class="fab fa-github"></i> <?php echo t('common.get_on_github'); ?>
         </a>
     </div>
     <?php endif; ?>

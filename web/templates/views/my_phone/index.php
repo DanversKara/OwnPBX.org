@@ -578,8 +578,8 @@ if ($isFaxUser && ($currentTab ?? '') === 'voicemail') {
                         <i class="fab fa-android u-c-3ddc84"></i> <?php echo t('my_phone.mobile_app_info'); ?>
                     </span>
                     <div class="u-flex-center">
-                        <a href="<?php echo htmlspecialchars(ANDROID_PLAY_URL); ?>" target="_blank" rel="noopener" class="btn btn-xs btn-primary">
-                            <i class="fab fa-google-play"></i> <?php echo t('common.get_on_google_play'); ?>
+                        <a href="<?php echo htmlspecialchars(ANDROID_APP_URL); ?>" target="_blank" rel="noopener" class="btn btn-xs btn-primary">
+                            <i class="fab fa-github"></i> <?php echo t('common.get_on_github'); ?>
                         </a>
                     </div>
                 </h3>
@@ -626,6 +626,16 @@ if ($isFaxUser && ($currentTab ?? '') === 'voicemail') {
                                 <div class="u-d-flex u-jc-space-between u-muted u-fs-11-5">
                                     <span><?php echo t('my_phone.last_sync'); ?>:</span>
                                     <span><?php echo htmlspecialchars($md['updated_at']); ?></span>
+                                </div>
+                                <div class="u-d-flex u-jc-flex-end">
+                                    <form method="POST" action="/my-phone" onsubmit="return confirm(<?php echo jsArg(t('my_phone.confirm_sign_out_device')); ?>);">
+                                        <input type="hidden" name="action" value="signout_device">
+                                        <input type="hidden" name="device_id" value="<?php echo (int) $md['id']; ?>">
+                                        <input type="hidden" name="csrf_token" value="<?php echo getCSRFToken(); ?>">
+                                        <button type="submit" class="btn btn-xs btn-danger">
+                                            <i class="fas fa-sign-out-alt"></i> <?php echo t('my_phone.sign_out_device'); ?>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         <?php endforeach; ?>

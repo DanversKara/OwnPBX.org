@@ -66,6 +66,32 @@ class MyPhoneController extends BaseController
             return;
         }
 
+        // Sign one of the user's own devices out (removes it from My Phone).
+        // No edit-permission gate: any signed-in user may sign out their own
+        // device; the user_id scope in deactivateDevice() enforces ownership.
+        if (static::isPost() && ($_POST['action'] ?? '') === 'signout_device') {
+            if (!static::verifyCsrf()) {
+                static::notifyError(t('my_phone.msg_csrf_error'));
+            } else {
+                $deviceId = (int)($_POST['device_id'] ?? 0);
+                $deviceName = '';
+                foreach (MyPhoneRepository::getUserMobileDevices($userId) as $d) {
+                    if ((int)($d['id'] ?? 0) === $deviceId) {
+                        $deviceName = (string)($d['device_name'] ?? '');
+                        break;
+                    }
+                }
+                if (MyPhoneRepository::deactivateDevice($userId, $deviceId)) {
+                    writeAuditLog(null, 'user_settings', 'mobile', "Signed out device: {$deviceName} (id {$deviceId})", 'update', $userId);
+                    static::notifySuccess(t('my_phone.msg_device_signed_out'));
+                } else {
+                    static::notifyError(t('my_phone.msg_device_signout_failed'));
+                }
+            }
+            static::redirect('/my-phone?tab=calls');
+            return;
+        }
+
         if (static::isPost() && ($_POST['action'] ?? '') === 'save_voicemail') {
             if (!static::verifyCsrf()) {
                 static::notifyError(t('my_phone.msg_csrf_error'));

@@ -510,4 +510,18 @@ class MyPhoneRepository extends BaseRepository
         $stmt->execute([$userId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
+
+    /**
+     * Sign a device out: deactivate it so it stops receiving calls and push
+     * until it signs in again. Scoped to the owner — one user can never sign
+     * out another user's device.
+     */
+    public static function deactivateDevice(int $userId, int $deviceId): bool
+    {
+        $stmt = static::db()->prepare(
+            "UPDATE sys_mobile_devices SET is_active = 0, updated_at = NOW() WHERE user_id = ? AND id = ?"
+        );
+        $stmt->execute([$userId, $deviceId]);
+        return $stmt->rowCount() > 0;
+    }
 }
