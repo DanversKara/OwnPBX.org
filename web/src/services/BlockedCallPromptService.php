@@ -176,6 +176,7 @@ class BlockedCallPromptService
             // The permissions dialplan reads this setting when it is
             // generated, so regenerate it now.
             markPendingSync(static::SYNC_DOMAIN, static::SETTING_KEY, static::FILE_NAME, static::LABEL, 'update', $_SESSION['user_id'] ?? null);
+            static::markAlsoUsedBy('update');
 
             return t(static::MSG_PREFIX . '.uploaded');
         });
@@ -193,8 +194,21 @@ class BlockedCallPromptService
             @unlink($target);
             setSystemSetting(static::SETTING_KEY, '');
             markPendingSync(static::SYNC_DOMAIN, static::SETTING_KEY, static::FILE_NAME, static::LABEL, 'delete', $_SESSION['user_id'] ?? null);
+            static::markAlsoUsedBy('delete');
             return t(static::MSG_PREFIX . '.removed');
         });
+    }
+
+    /**
+     * The blocked call prompt also plays in the outbound dialplan (Billing plugin: no outside
+     * minutes left), so that is rebuilt on Apply too. Prompts that live in one dialplan only
+     * (the guest prompt) override this.
+     */
+    protected static function markAlsoUsedBy(string $action): void
+    {
+        if (static::SYNC_DOMAIN !== 'outbound_dialplan') {
+            markPendingSync('outbound_dialplan', static::SETTING_KEY, static::FILE_NAME, static::LABEL, $action, $_SESSION['user_id'] ?? null);
+        }
     }
 
     /** Stream the current prompt file to the browser (admin-only page, for Listen). */
