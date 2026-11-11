@@ -266,27 +266,27 @@ function __syncFeatureCodesBody() {
 
             case 'spy':
                 $conf .= " same => n,Answer()\n";
-                // Direct dial (*555<ext>) pre-sets SPYTARGET via the pattern
-                // exten below; bare *555 prompts for the extension.
-                $conf .= " same => n,GotoIf(\$[\"\${SPYTARGET}\" != \"\"]?spy_go)\n";
-                $conf .= " same => n,Read(SPYTARGET,,10,,3,10)\n";
-                $conf .= " same => n,Set(SPYTARGET=\${FILTER(0123456789,\${SPYTARGET})})\n";
-                $conf .= " same => n,GotoIf(\$[\"\${SPYTARGET}\" = \"\"]?spy_empty)\n";
+                // <code><ext> (e.g. *901001) listens to that extension; the bare code scans every
+                // live call on the phones. While listening: * = next call, <ext># = that extension's
+                // call, # = louder/quieter. The extension is announced on each switch.
+                $conf .= " same => n,GotoIf(\$[\"\${SPYTARGET}\" = \"\"]?spy_scan)\n";
                 // Only spy on an active (bridged) call. The hint for the
                 // extension lives in from-internal-pbx-ortak; INUSE/BUSY
                 // (string or numeric) means it is on a call, anything else
                 // (idle, ringing, unavailable) means there is nothing to
                 // listen to — play a beep and hang up.
-                $conf .= " same => n(spy_go),Set(SPYSTATE=\${EXTENSION_STATE(\${SPYTARGET}@from-internal-pbx-ortak)})\n";
+                $conf .= " same => n,Set(SPYSTATE=\${EXTENSION_STATE(\${SPYTARGET}@from-internal-pbx-ortak)})\n";
                 $conf .= " same => n,GotoIf(\$[\"\${SPYSTATE}\" = \"INUSE\" | \"\${SPYSTATE}\" = \"BUSY\" | \"\${SPYSTATE}\" = \"1\" | \"\${SPYSTATE}\" = \"2\"]?spy_spy)\n";
                 $conf .= " same => n,Playback(beep)\n";
                 $conf .= " same => n,Hangup()\n";
-                $conf .= " same => n(spy_spy),ChanSpy(PJSIP/\${SPYTARGET}-,b)\n";
+                // Pressing * on the chosen extension (or its call ending) moves on to scanning.
+                $conf .= " same => n(spy_spy),ChanSpy(PJSIP/\${SPYTARGET}-,bsSE)\n";
+                $conf .= " same => n(spy_scan),ChanSpy(PJSIP/,bsSg(aipbxext))\n";
+                // S: nothing (more) to listen to.
+                $conf .= " same => n,Playback(beep)\n";
                 $conf .= " same => n,Hangup()\n";
-                $conf .= " same => n(spy_empty),Playback(beep)\n";
-                $conf .= " same => n,Hangup()\n";
-                // Direct dial: *555<ext> in one go (e.g. *5551000) — set the
-                // target and jump to the base code, skipping the prompt.
+                // Direct dial: *90<ext> in one go (e.g. *901000) — set the
+                // target and jump to the base code.
                 // The role gate on the base code still applies (the Goto
                 // re-runs it), so only admins reach the spy.
                 $codeLen = strlen($code);

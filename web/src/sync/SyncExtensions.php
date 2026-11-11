@@ -331,6 +331,9 @@ function __syncAllExtensionsBody() {
         // Whose call this is (billing counts outside minutes against it; forwards and
         // click-to-call set it too). Inherited through Local channels and ring groups.
         $set_vars .= "set_var=__AIPBX_USER_EXT={$ext}\n";
+        // Listen-in (*90 with no extension) cycles through phone calls only: ChanSpy's g() option
+        // matches this tag, so the trunk side of a call is never offered as a second "call".
+        $set_vars .= "set_var=SPYGROUP=aipbxext\n";
         if ($is_guest) {
             // Inherited by every channel this call creates (Local, ring groups,
             // another user's forward): [sub-guest-gate] recognises the guest.
