@@ -35,6 +35,11 @@ fi
 trap 'rm -f "${AIPBX_UPDATE_REEXEC:-}"' EXIT
 
 INSTALL_DIR="${AIPBX_INSTALL_DIR:-/opt/aipbx}"
+# Update source: this fork, not upstream. The portal's System Update button
+# fetches release tags from here, so pushing a fix to this fork and tagging it
+# is enough to offer it as an update — no manual file copies on the box.
+# (Upstream is mahirgul/AiPBX; this fork is DanversKara/OwnPBX.org.)
+UPDATE_REPO="https://github.com/DanversKara/OwnPBX.org.git"
 STATE_DIR=/var/lib/aipbx-system
 STATUS_FILE="$STATE_DIR/update-status.json"   # read by the portal (www-data)
 CHECK_FILE="$STATE_DIR/update-check.json"     # read by the portal (www-data)
@@ -96,10 +101,12 @@ CURRENT="v$(tr -d '[:space:]' < "$INSTALL_DIR/VERSION" 2>/dev/null || echo 0.0.0
 CURRENT_COMMIT="$(git_in rev-parse HEAD)"
 
 # ---------------------------------------------------------------- fetch releases
+# Fetched from UPDATE_REPO (this fork), not from the git remote 'origin',
+# so the portal's Update button offers this fork's releases.
 # --prune-tags: a release tag deleted on GitHub (e.g. when versioning was reset
 # to 1.0.0) must disappear here too; a stale local v2.2.2 was offered as an
 # "update" and would have moved the installation back to old code.
-if ! git_in fetch --quiet --tags --force --prune --prune-tags origin 2>>"$LOG_FILE"; then
+if ! git_in fetch --quiet --tags --force --prune --prune-tags "$UPDATE_REPO" 2>>"$LOG_FILE"; then
     log "ERROR: could not reach GitHub (git fetch)"
     [[ "$MODE" == check ]] && printf '{"ok":false,"error":"GitHub unreachable","current":%s,"checked_at":%s}\n' \
         "$(json_str "$CURRENT")" "$(json_str "$(date -Iseconds)")" | write_check_file
