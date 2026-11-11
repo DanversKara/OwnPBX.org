@@ -1,0 +1,45 @@
+# Auto Release — creates a tag + GitHub release from the VERSION file.
+#
+# The portal's System Update button only offers *tagged* releases
+# (vX.Y.Z), so a fix pushed to main is invisible to it until it is tagged.
+# This workflow closes that gap: whenever code is pushed to main, it reads
+# VERSION and, if no tag v<VERSION> exists yet, creates the tag and a
+# release for it (notes auto-generated from the commits since the last tag).
+#
+# That makes the flow: push a fix (bumping VERSION) -> a release appears
+# automatically -> the portal's Update button offers it. No manual release.
+#
+# It is idempotent: if the tag already exists it does nothing, so pushing
+# more commits without bumping VERSION never creates a duplicate release.
+name: Auto Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        run: echo "version=$(tr -d '[:space:]' < VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Create tag and release if missing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="v${{ steps.version.outputs.version }}"
+          if git ls-remote --tags origin "refs/tags/${TAG}" | grep -q .; then
+            echo "Tag ${TAG} already exists, nothing to do."
+            exit 0
+          fi
+          echo "Creating release ${TAG} from main."
+          gh release create "${TAG}" --target main --title "${TAG}" --generate-notes
