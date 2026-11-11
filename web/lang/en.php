@@ -3321,6 +3321,8 @@ return [
     'mobile_api.account_disabled' => 'The user account is disabled.',
     'mobile_api.settings_updated' => 'Settings updated.',
     'mobile_api.invalid_request' => 'Invalid request.',
+    'mobile_sms.err_plugin' => 'SMS is not available on this PBX (the SMS plugin is not installed or not enabled).',
+    'mobile_sms.err_media_upload' => 'A picture could not be uploaded (larger than the server allows?).',
     'mobile_api.qr_token_required' => 'The QR code key (qr_token) is required.',
     'mobile_api.login_failed' => 'Sign-in failed.',
     'mobile_api.credentials_required' => 'Username and password are required.',
