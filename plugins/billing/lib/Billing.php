@@ -627,8 +627,10 @@ final class Billing
         $c .= " same => n,ExecIf(\$[\"\${BILL_HH}\" = \"\"]?Set(CHANNEL(hangup_handler_push)=sub-billing-record,s,1(\${U},\${FILTER(0-9+,\${ARG1})})))\n";
         $c .= " same => n,Set(BILL_HH=1)\n";
         $c .= " same => n,Set(LOCAL(R)=\${CURL({$base}/gate/{$key}?ext=\${U})})\n";
-        $c .= " same => n,GotoIf(\$[\"\${R}\" = \"\" | \"\${R}\" = \"-1\"]?ok)\n";
-        $c .= " same => n,GotoIf(\$[\${R} <= 0]?deny)\n";
+        // Anything but a plain number (unlimited "-1", an error page, a redirect, no answer) lets the
+        // call through: a billing hiccup must never break outside calling.
+        $c .= " same => n,GotoIf(\$[\${REGEX(\"^[0-9]+\$\" \${R})}]?num:ok)\n";
+        $c .= " same => n(num),GotoIf(\$[\${R} <= 0]?deny)\n";
         // Dial(..., L(limit ms : warn 60 s before)) — the trunk Dial lines add ${BILL_OPT}.
         $c .= " same => n,Set(BILL_OPT=L(\${MATH(\${R}*1000,i)}))\n";
         // A beep one minute before the end, when there is more than two minutes to warn about.
