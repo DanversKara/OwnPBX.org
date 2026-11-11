@@ -170,7 +170,7 @@
         <div class="form-group">
             <label class="form-label"><?php echo t('fax_cover.field_logo_file'); ?></label>
             <?php if (!empty($coverLogoUrl)): ?>
-                <div class="u-mb-8"><img src="<?php echo htmlspecialchars($coverLogoUrl, ENT_QUOTES); ?>" alt="Fax logo" style="max-height: 60px; max-width: 200px; background: #fff; border: 1px solid #ccc; padding: 4px;"></div>
+                <div class="u-mb-8"><img src="<?php echo htmlspecialchars($coverLogoUrl, ENT_QUOTES); ?>" alt="Fax logo" class="fax-logo-preview"></div>
                 <label class="u-d-flex u-ai-center u-gap-6 u-mb-6 u-fs-13">
                     <input type="checkbox" name="remove_fax_cover_logo" value="1"> <?php echo t('fax_cover.remove_logo'); ?>
                 </label>

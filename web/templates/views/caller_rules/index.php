@@ -101,18 +101,17 @@ $dest_types = $destTypes ?? [];
 </div>
 
 <?php if ($can_edit): ?>
-<div class="modal fade" id="callerRuleModal" tabindex="-1" role="dialog" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
+<div class="modal-overlay" id="callerRuleModal">
+    <div class="modal-card u-maxw-520">
+        <div class="modal-header">
+            <h3 class="u-title" id="callerRuleModalTitle"><?php echo t('caller_rules.new_rule'); ?></h3>
+            <button type="button" class="btn btn-icon btn-secondary u-btn-pad" onclick="closeCallerRuleModal()"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
             <form method="POST" id="callerRuleForm">
                 <input type="hidden" name="csrf_token" value="<?php echo getCSRFToken(); ?>">
                 <input type="hidden" name="action" value="save_rule">
                 <input type="hidden" name="rule_id" id="cr_rule_id" value="0">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="callerRuleModalTitle"><?php echo t('caller_rules.new_rule'); ?></h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                </div>
-                <div class="modal-body">
                     <div class="form-group">
                         <label for="cr_did_number"><?php echo t('caller_rules.col_calls_to'); ?></label>
                         <input type="text" class="form-control" id="cr_did_number" name="did_number" placeholder="<?php echo t('caller_rules.any_number'); ?>">
@@ -146,11 +145,7 @@ $dest_types = $destTypes ?? [];
                         <input type="checkbox" class="form-check-input" id="cr_is_active" name="is_active" value="1" checked>
                         <label class="form-check-label" for="cr_is_active"><?php echo t('common.active'); ?></label>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal"><?php echo t('common.cancel'); ?></button>
-                    <button type="submit" class="btn btn-primary"><?php echo t('common.save'); ?></button>
-                </div>
+                <?php echo uiModalFooter('closeCallerRuleModal()'); ?>
             </form>
         </div>
     </div>
@@ -158,6 +153,9 @@ $dest_types = $destTypes ?? [];
 
 <script>
 var callerRulesData = <?php echo json_encode($rules ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+function closeCallerRuleModal() {
+    UIHelper.closeOverlayModal('callerRuleModal');
+}
 function openCreateCallerRuleModal() {
     document.getElementById('callerRuleModalTitle').textContent = <?php echo jsArg(t('caller_rules.new_rule')); ?>;
     document.getElementById('cr_rule_id').value = '0';
@@ -168,7 +166,7 @@ function openCreateCallerRuleModal() {
     document.getElementById('cr_owner_extension').value = '';
     document.getElementById('cr_sort_order').value = '0';
     document.getElementById('cr_is_active').checked = true;
-    jQuery('#callerRuleModal').modal('show');
+    UIHelper.openOverlayModal('callerRuleModal');
 }
 function openEditCallerRuleModal(id) {
     var r = null;
@@ -185,7 +183,7 @@ function openEditCallerRuleModal(id) {
     document.getElementById('cr_owner_extension').value = r.owner_extension || '';
     document.getElementById('cr_sort_order').value = r.sort_order || '0';
     document.getElementById('cr_is_active').checked = !!parseInt(r.is_active, 10);
-    jQuery('#callerRuleModal').modal('show');
+    UIHelper.openOverlayModal('callerRuleModal');
 }
 </script>
 <?php endif; ?>

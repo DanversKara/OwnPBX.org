@@ -433,3 +433,12 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Fax cover logo preview on the Fax settings page. */
+.fax-logo-preview {
+    max-height: 60px;
+    max-width: 200px;
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 4px;
+}
