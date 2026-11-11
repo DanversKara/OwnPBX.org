@@ -157,7 +157,7 @@ function closeCallerRuleModal() {
     UIHelper.closeOverlayModal('callerRuleModal');
 }
 function openCreateCallerRuleModal() {
-    document.getElementById('callerRuleModalTitle').textContent = <?php echo jsArg(t('caller_rules.new_rule')); ?>;
+    document.getElementById('callerRuleModalTitle').textContent = <?php echo jsValue(t('caller_rules.new_rule')); ?>;
     document.getElementById('cr_rule_id').value = '0';
     document.getElementById('cr_did_number').value = '';
     document.getElementById('cr_caller_number').value = '';
@@ -174,7 +174,7 @@ function openEditCallerRuleModal(id) {
         if (parseInt(callerRulesData[i].id, 10) === parseInt(id, 10)) { r = callerRulesData[i]; break; }
     }
     if (!r) return;
-    document.getElementById('callerRuleModalTitle').textContent = <?php echo jsArg(t('caller_rules.edit_rule')); ?>;
+    document.getElementById('callerRuleModalTitle').textContent = <?php echo jsValue(t('caller_rules.edit_rule')); ?>;
     document.getElementById('cr_rule_id').value = r.id;
     document.getElementById('cr_did_number').value = r.did_number || '';
     document.getElementById('cr_caller_number').value = r.caller_number || '';

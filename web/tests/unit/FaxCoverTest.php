@@ -37,10 +37,11 @@ final class FaxCoverTest extends TestCase
             ['company' => 'Our Company', 'notice' => 'Confidential'],
             ['name' => 'Sender', 'number' => '902125550000', 'to_number' => '02129990001', 'date' => '2026-11-02 10:00', 'pages' => 4]
         );
-        foreach (['Acme', 'Invoice', 'Our Company', 'Confidential', 'Sender', '902125550000', '02129990001', '2026-11-02 10:00', '>4<', 'Line one<br'] as $part) {
+        foreach (['Acme', 'Invoice', 'Our Company', 'Confidential', 'Sender', '902125550000', '02129990001', '2026-11-02 10:00', '>4 including this cover<', 'Line one<br'] as $part) {
             $this->assertStringContainsString($part, $html);
         }
         $this->assertStringNotContainsString('<img', $html, 'no logo unless asked');
+        $this->assertStringNotContainsString('Tel ', $html, 'no phone given, no Tel line');
         $this->assertStringContainsString('<img src="/x/logo.png"', FaxCoverService::html(
             ['to' => '', 'subject' => '', 'message' => ''],
             ['company' => '', 'notice' => ''],

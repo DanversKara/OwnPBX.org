@@ -245,6 +245,8 @@ final class FaxCoverService
      */
     public static function html(array $fields, array $settings, array $facts, ?string $logoPath = null): string
     {
+        // A detail not given is left off the cover (never an empty "Tel" line).
+        $settings += ['company' => '', 'address' => '', 'phone' => '', 'email' => '', 'website' => '', 'notice' => ''];
         $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
         $row = static fn(string $label, string $value): string => '<tr><td style="width: 120px; padding: 5px 10px 5px 0; font-weight: bold;">'
             . $e($label) . ':</td><td style="padding: 5px 0;">' . nl2br($e($value)) . '</td></tr>';
