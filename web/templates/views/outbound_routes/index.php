@@ -86,6 +86,40 @@
             <?php echo uiTableClose(); ?>
 </div>
 
+<!-- Blocked call prompt -->
+<div class="card u-mt-16">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-volume-up"></i> <?php echo t('blocked_prompt.title'); ?></h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted"><?php echo t('blocked_prompt.help'); ?></p>
+        <?php if (!empty($blocked_prompt)): ?>
+            <p>
+                <strong><?php echo t('blocked_prompt.current'); ?>:</strong>
+                <code><?php echo htmlspecialchars($blocked_prompt['file']); ?></code>
+                <a href="?listen_blocked_prompt=1" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-play"></i> <?php echo t('blocked_prompt.listen'); ?></a>
+            </p>
+            <form method="POST" style="display:inline;" onsubmit="return confirm(<?php echo htmlspecialchars(json_encode(t('blocked_prompt.confirm_remove'))); ?>)">
+                <input type="hidden" name="csrf_token" value="<?php echo getCSRFToken(); ?>">
+                <input type="hidden" name="delete_blocked_prompt" value="1">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> <?php echo t('blocked_prompt.remove'); ?></button>
+            </form>
+        <?php else: ?>
+            <p class="text-muted"><?php echo t('blocked_prompt.none'); ?></p>
+        <?php endif; ?>
+        <form method="POST" enctype="multipart/form-data" class="u-mt-12">
+            <input type="hidden" name="csrf_token" value="<?php echo getCSRFToken(); ?>">
+            <input type="hidden" name="upload_blocked_prompt" value="1">
+            <div class="form-group">
+                <label class="form-label"><?php echo t('blocked_prompt.file_label'); ?></label>
+                <input type="file" name="prompt_file" class="form-control" accept=".wav,.mp3,audio/wav,audio/mpeg" required>
+                <small class="u-hint"><?php echo t('blocked_prompt.format_help'); ?></small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-upload"></i> <?php echo t('blocked_prompt.upload'); ?></button>
+        </form>
+    </div>
+</div>
+
 <!-- Create / Edit Route Modal -->
 <div class="modal-overlay" id="routeModal">
     <div class="modal-card u-maxw-560">

@@ -76,7 +76,17 @@ function __syncPermissionsBody() {
     $conf .= "exten => s,1,NoOp(Dial permission restriction: destination not allowed!)\n";
     $conf .= " same => n,Set(CDR(userfield)=CALL_BARRED)\n";
     $conf .= " same => n,Answer()\n";
-    $conf .= " same => n,Playback(ss-noservice)\n";
+    // Blocked call prompt: when a custom prompt is set (Routes page), the
+    // blocked caller hears it instead of the generic not-in-service sound.
+    // Who is blocked is decided by the permission rules / minutes engine and
+    // is untouched here — this only swaps the audio. Empty = generic.
+    $blocked_prompt = trim((string) getSystemSetting('blocked_call_prompt', ''));
+    $blocked_prompt = preg_replace('/[^a-zA-Z0-9\/_-]/', '', $blocked_prompt);
+    if ($blocked_prompt !== '') {
+        $conf .= " same => n,Playback({$blocked_prompt})\n";
+    } else {
+        $conf .= " same => n,Playback(ss-noservice)\n";
+    }
     $conf .= " same => n,Congestion(10)\n";
     $conf .= " same => n,Hangup(21)\n\n";
 
