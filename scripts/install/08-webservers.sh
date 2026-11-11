@@ -390,10 +390,16 @@ cat > /etc/systemd/system/apache2.service.d/override.conf << 'APACHEOVERRIDE'
 ProcSubset=all
 ProtectProc=default
 InaccessiblePaths=
-InaccessiblePaths=/boot /root -/etc/ssh -/etc/apt -/etc/.git -/etc/.svn -/etc/ai-pbx-migrator.env
+InaccessiblePaths=/boot /root -/etc/ssh -/etc/apt -/etc/.git -/etc/.svn
 # ProtectSystem=full makes /etc read-only for Apache and for aipbx-priv run
 # through sudo inside it: "Apply" writes generated dialplan/endpoint files under /etc/asterisk/pbx and settings in /etc/asterisk;
 # phone regions write nginx's lists for SIP on 443.
+# /etc/ai-pbx-migrator.env is deliberately NOT in InaccessiblePaths: aipbx-priv
+# is spawned from Apache via sudo and inherits this mount namespace, so masking
+# the file here also hides it from the root broker — getSchemaDB() then silently
+# falls back to the portal user and every plugin schema apply fails with 1142
+# (proven 2026-11-11: broker works from a root shell, fails from the portal).
+# The file stays protected by its 0600 root:root mode, which www-data cannot read.
 ReadWritePaths=/etc/asterisk /etc/postfix /etc/fail2ban/jail.d -/etc/chrony/conf.d -/etc/nginx/aipbx-sip443 /etc/apache2/aipbx
 APACHEOVERRIDE
 systemctl daemon-reload
