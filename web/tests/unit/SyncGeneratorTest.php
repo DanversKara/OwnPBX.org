@@ -656,7 +656,7 @@ final class SyncGeneratorTest extends TestCase
         $conf = (string) file_get_contents(ASTERISK_PBX_DIR . '/extensions_outbound.conf');
 
         // D-1: Dial(...) must not have the 'r' option (so early media is not suppressed)
-        $this->assertMatchesRegularExpression('/Dial\(PJSIP\/[^,\)]+,\d+,Tb\(sub-callee-jb\^s\^1\)\)/', $conf,
+        $this->assertMatchesRegularExpression('/Dial\(PJSIP\/[^,\)]+,\d+,Tb\(sub-callee-jb\^s\^1\)\$\{BILL_OPT\}\)/', $conf,
             'the outbound dialplan Dial PJSIP option must be T');
         $this->assertDoesNotMatchRegularExpression('/Dial\([^,\)]+,\d+,[^\)]*r[^\)]*\)/', $conf,
             'the outbound dialplan must not have the r option, which fakes ringing and drowns early media (D-1)');
