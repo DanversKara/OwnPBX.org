@@ -155,6 +155,9 @@ function __syncInboundDialplanBody() {
             // Any DID: plain digits or +E.164 (see CATCH_ALL_EXTEN_PATTERNS).
             $same = " same => n,Set(CDR(direction)=inbound)\n";
             $same .= " same => n,Set(CDR(inbound_trunk)={$t_name})\n";
+            // Inherited through every hop (IVR, ring group, transfer): a guest with
+            // outside callers off is not rung for it (DialplanExtensionBuilder).
+            $same .= " same => n,Set(__AIPBX_FROM_TRUNK=1)\n";
             // The caller's number first, so the blacklist sees the same form as everything after it.
             $same .= inboundNormLines($normRules, $t_name, 'caller');
             $same .= " same => n,Gosub(sub-caller-rules,s,1)\n";
@@ -186,6 +189,7 @@ function __syncInboundDialplanBody() {
             $conf .= "exten => s,1,NoOp(Inbound call without DID [{$t_name}] - caller: \${CALLERID(num)})\n";
             $conf .= " same => n,Set(CDR(direction)=inbound)\n";
             $conf .= " same => n,Set(CDR(inbound_trunk)={$t_name})\n";
+            $conf .= " same => n,Set(__AIPBX_FROM_TRUNK=1)\n";
             $conf .= " same => n,Set(AIPBX_TO_USER=\${PJSIP_PARSE_URI(\${PJSIP_HEADER(read,To)},user)})\n";
             $conf .= " same => n,GotoIf(\$[\"\${AIPBX_TO_USER}\" != \"\" & \"\${AIPBX_TO_USER}\" != \"s\"]?from-trunk-{$t_name},\${AIPBX_TO_USER},1)\n";
             $conf .= inboundNormLines($normRules, $t_name, 'caller');

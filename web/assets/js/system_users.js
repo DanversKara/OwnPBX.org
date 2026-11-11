@@ -22,6 +22,7 @@ function openCreateUserModal() {
         const el = document.getElementById(id);
         if (el) el.checked = true;
     });
+    setGuestFields({});
     document.getElementById('modal_listen_recordings').checked = false;
     document.getElementById('modal_view_all_cdrs').checked = false;
     if (document.getElementById('modal_view_queue_monitor')) document.getElementById('modal_view_queue_monitor').checked = false;
@@ -75,6 +76,7 @@ function openEditUserModal(u) {
     const modeVidEl = document.getElementById('modal_mode_video');
     if (modeVidEl) modeVidEl.checked = modes.includes('video');
 
+    setGuestFields(u);
     document.getElementById('modal_listen_recordings').checked = parseInt(u.can_listen_recordings) === 1;
     document.getElementById('modal_view_all_cdrs').checked = parseInt(u.can_view_all_cdrs) === 1;
     if (document.getElementById('modal_view_queue_monitor')) document.getElementById('modal_view_queue_monitor').checked = parseInt(u.can_view_queue_monitor) === 1;
@@ -204,3 +206,35 @@ function openUserImportModal() {
 function closeUserImportModal() {
     UIHelper.closeOverlayModal('userImportModal');
 }
+
+/**
+ * Guest account fields (GuestService). A guest's rules are each off until ticked;
+ * emergency numbers are always blocked for guests (not a choice). Admins are never guests.
+ */
+function setGuestFields(u) {
+    const isGuest = document.getElementById('modal_is_guest');
+    if (!isGuest) return;
+    isGuest.checked = parseInt(u.is_guest || 0) === 1;
+    ['guest_outbound', 'guest_inbound', 'guest_sms', 'guest_fax'].forEach(function (rule) {
+        const el = document.getElementById('modal_' + rule);
+        if (el) el.checked = parseInt(u[rule] || 0) === 1;
+    });
+    toggleGuestRules();
+}
+
+function toggleGuestRules() {
+    const isGuest = document.getElementById('modal_is_guest');
+    const rules = document.getElementById('modal_guest_rules');
+    const box = document.getElementById('modal_guest_box');
+    const role = document.getElementById('modal_role');
+    if (!isGuest || !rules || !box) return;
+    const admin = role && role.value === 'admin';
+    box.style.display = admin ? 'none' : '';
+    if (admin) isGuest.checked = false;
+    rules.style.display = isGuest.checked ? '' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    const role = document.getElementById('modal_role');
+    if (role) role.addEventListener('change', toggleGuestRules);
+});

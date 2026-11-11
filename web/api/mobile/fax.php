@@ -54,6 +54,13 @@ $userExt = preg_replace('/[^0-9]/', '', (string) ($user['extension'] ?? ''));
 $userRole = (string) ($user['role'] ?? 'user');
 $isAdmin = $userRole === 'admin';
 
+// Guest accounts: fax is off unless the admin turned it on. 400, not 403: the
+// app treats 401/403 as a revoked session and would sign the guest out.
+require_once __DIR__ . '/../../src/services/GuestService.php';
+if (GuestService::denies($userId, 'guest_fax')) {
+    mobileError(t('guest.err_fax'), 400);
+}
+
 /**
  * Seeds the $_SESSION identity the fax services read (user_id / user_role,
  * used for the sender-number choice, the admin hourly-limit exemption and

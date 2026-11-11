@@ -43,6 +43,14 @@ class MyPhoneController extends BaseController
                     }
                 }
 
+                require_once dirname(__DIR__) . '/services/GuestService.php';
+                foreach ([$forwardAlways, $forwardBusy, $forwardNoAnswer] as $fwd) {
+                    if (!GuestService::forwardAllowed($userId, $fwd)) {
+                        static::notifyError(t('guest.err_forward'));
+                        static::redirect('/my-phone?tab=calls');
+                        return;
+                    }
+                }
                 MyPhoneRepository::updatePhoneSettings($userId, $dnd, $forwardAlways, $mode, $forwardBusy, $forwardNoAnswer, $noAnswerTimeout);
 
                 // Update session state for current user

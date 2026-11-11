@@ -228,6 +228,9 @@ function __syncOutboundDialplanBody() {
                     $header_sub = !empty($trunk_headers[$t['trunk_name']]) ? 'sub-trunk-headers-' . preg_replace('/[^a-zA-Z0-9_-]/', '', $t['trunk_name']) : '';
                     $conf .= " same => n,Set(__AIPBX_TRUNK_HEADERS={$header_sub})\n";
                 }
+                // Guest accounts: emergency numbers are never dialled, outside calls only when allowed.
+                // Checked here, on the number going to the carrier, so no route can bypass it.
+                $conf .= " same => n,Gosub(sub-guest-gate,s,1(\${AIPBX_TRUNK_DIAL},\${EXTEN}))\n";
                 $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$t['trunk_name']},{$external_dial_timeout},Tb(sub-callee-jb^s^1))\n";
                 if ($limited) {
                     $conf .= " same => n,Goto(afterdial{$step})\n";
@@ -281,6 +284,9 @@ function __syncOutboundDialplanBody() {
                 $conf .= " same => n,Set(AIPBX_DIAL_TARGET=\${EXTEN})\n";
                 $conf .= buildTrunkCarrierDialLine($trunk_carrier_norm[$fallback_trunk] ?? null);
                 $conf .= jitterBufferLine();
+                // Guest accounts: emergency numbers are never dialled, outside calls only when allowed.
+                // Checked here, on the number going to the carrier, so no route can bypass it.
+                $conf .= " same => n,Gosub(sub-guest-gate,s,1(\${AIPBX_TRUNK_DIAL},\${EXTEN}))\n";
                 $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$fallback_trunk},{$external_dial_timeout},T)\n";
                 $conf .= " same => n,Goto(sub-outbound-status,\${IF($[\"\${DIALSTATUS}\" != \"\"]?\${DIALSTATUS}:NOANSWER)},1)\n";
                 $conf .= " same => n(refused),Goto(sub-outbound-status,CONGESTION,1)\n\n";
@@ -353,6 +359,10 @@ function __syncOutboundDialplanBody() {
     $conf .= "exten => e,1,NoOp(Outbound Status: e)\n";
     $conf .= " same => n,Hangup(16)\n\n";
     $conf .= "exten => h,1,NoOp(Outbound Channel Hangup Complete)\n\n";
+
+    require_once dirname(__DIR__) . '/services/GuestService.php';
+    require_once dirname(__DIR__) . '/services/GuestPromptService.php';
+    $conf .= buildGuestGateDialplan(GuestService::guestExtensions(), GuestPromptService::soundForDialplan());
 
     return writeConfWithRollback('extensions_outbound.conf', $conf, function() {
         AsteriskHelper::assertReloadsOk([AsteriskHelper::reloadDialplan()], t('sync.ctx_outbound'));
@@ -430,5 +440,62 @@ function buildDialplanNormalizationRules(int $group_no, array $rules): string
         $conf .= "include => from-internal-outbound-{$group_no}\n\n";
     }
 
+    return $conf;
+}
+
+/**
+ * [sub-guest-gate]: runs immediately before every trunk Dial() (ARG1 = the
+ * number going to the carrier, ARG2 = the number dialled). A call is a
+ * guest's when it started on a guest's phone (AIPBX_GUEST_EXT, inherited
+ * through Local channels, ring groups, IVRs and other users' forwards) or was
+ * transferred by one (BLINDTRANSFER / ATTENDEDTRANSFER name the transferer's
+ * channel). For a guest: any number of GuestService::SHORT_MAX digits or fewer,
+ * or an emergency code behind an access prefix, is refused — always; any other
+ * outside number only when the guest may call out ([aipbx-guest-out]).
+ * A refused guest hears the guest prompt (GuestPromptService).
+ *
+ * @param array<string, bool> $guests extension => may call outside numbers
+ */
+function buildGuestGateDialplan(array $guests, string $sound): string
+{
+    $conf = "; ---- Guest accounts (GuestService) ----\n";
+    $conf .= "[aipbx-guest-list]\n";
+    foreach ($guests as $ext => $out) {
+        $conf .= "exten => {$ext},1,Return()\n";
+    }
+    $conf .= "\n[aipbx-guest-out]\n";
+    foreach ($guests as $ext => $out) {
+        if ($out) {
+            $conf .= "exten => {$ext},1,Return()\n";
+        }
+    }
+    $re = GuestService::emergencyRegex();
+    $short = GuestService::SHORT_MAX;
+    $conf .= "\n[sub-guest-gate]\n";
+    $conf .= "exten => s,1,Set(LOCAL(GG)=)\n";
+    // Candidates: this call's guest tag, then whoever transferred it here.
+    $conf .= " same => n,Set(LOCAL(C1)=\${FILTER(0-9,\${AIPBX_GUEST_EXT})})\n";
+    $conf .= " same => n,Set(LOCAL(C2)=\${FILTER(0-9,\${CUT(CUT(BLINDTRANSFER,/,2),-,1)})})\n";
+    $conf .= " same => n,Set(LOCAL(C3)=\${FILTER(0-9,\${CUT(CUT(ATTENDEDTRANSFER,/,2),-,1)})})\n";
+    foreach (['C1', 'C2', 'C3'] as $c) {
+        $conf .= " same => n,ExecIf(\$[\"\${GG}\" = \"\" & \"\${{$c}}\" != \"\"]?Set(LOCAL(GG)=\${IF(\${DIALPLAN_EXISTS(aipbx-guest-list,\${{$c}},1)}?\${{$c}}:)}))\n";
+    }
+    $conf .= " same => n,GotoIf(\$[\"\${GG}\" = \"\"]?ok)\n";
+    $conf .= " same => n,Set(LOCAL(N1)=\${FILTER(0-9,\${ARG1})})\n";
+    $conf .= " same => n,Set(LOCAL(N2)=\${FILTER(0-9,\${ARG2})})\n";
+    $conf .= " same => n,GotoIf(\$[\${LEN(\${N1})} <= {$short} | \${LEN(\${N2})} <= {$short}]?emergency)\n";
+    $conf .= " same => n,GotoIf(\$[\${REGEX(\"{$re}\" \${N1})} | \${REGEX(\"{$re}\" \${N2})}]?emergency)\n";
+    $conf .= " same => n,GotoIf(\${DIALPLAN_EXISTS(aipbx-guest-out,\${GG},1)}?ok)\n";
+    // A guest's fax (call file sets it only when the guest's fax is on): outside fax numbers are allowed.
+    $conf .= " same => n,GotoIf(\$[\"\${AIPBX_GUEST_FAX}\" = \"1\"]?ok)\n";
+    $conf .= " same => n,Log(NOTICE,Guest \${GG}: outside call to \${ARG2} blocked (outside calls are off))\n";
+    $conf .= " same => n,Set(CDR(userfield)=GUEST_OUTBOUND_BLOCKED)\n";
+    $conf .= " same => n,Goto(deny)\n";
+    $conf .= " same => n(emergency),Log(WARNING,Guest \${GG}: emergency/short-code number \${ARG2} (to carrier: \${ARG1}) blocked - guests can never reach emergency services)\n";
+    $conf .= " same => n,Set(CDR(userfield)=GUEST_EMERGENCY_BLOCKED)\n";
+    $conf .= " same => n(deny),Answer()\n";
+    $conf .= " same => n,Playback({$sound})\n";
+    $conf .= " same => n,Hangup(21)\n";
+    $conf .= " same => n(ok),Return()\n\n";
     return $conf;
 }

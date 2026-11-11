@@ -119,7 +119,7 @@ function __syncAllExtensionsBody() {
     // Fax users (extension_type='fax') never register over SIP (an incoming
     // fax lands directly in [from-trunk-fax], an outgoing fax is sent with a
     // call file) — so NO PJSIP endpoint/AOR/auth is generated for them.
-    $users = $db->query("SELECT id, extension, full_name, sip_password, sip_auth_digest, sip_send_pai, cid_internal, cid_external, pickup_group, role, outbound_group, permission_group_id, voicemail_enabled FROM sys_users WHERE extension IS NOT NULL AND extension != '' AND is_active = 1 AND extension_type = 'sip' ORDER BY extension ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $users = $db->query("SELECT id, extension, full_name, sip_password, sip_auth_digest, sip_send_pai, cid_internal, cid_external, pickup_group, role, outbound_group, permission_group_id, voicemail_enabled, allowed_phone_mode, is_guest FROM sys_users WHERE extension IS NOT NULL AND extension != '' AND is_active = 1 AND extension_type = 'sip' ORDER BY extension ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
 
     // Two `sys_users` rows can share one extension — an imported account plus one
     // re-created by hand, say. The loop below writes a full endpoint/auth/identify
@@ -264,6 +264,8 @@ function __syncAllExtensionsBody() {
         $ext = preg_replace('/[^0-9]/', '', (string)$u['extension']);
         if ($ext === '') continue;
         $name = toCleanAscii($u['full_name']);
+        $ext_start = strlen($conf);
+        $is_guest = !empty($u['is_guest']) && ($u['role'] ?? '') !== 'admin';
 
         // Fetch settings from `sip` table (or fallback to sync)
         $sip_map = SIPHelper::getSettingsMap($ext);
@@ -326,6 +328,11 @@ function __syncAllExtensionsBody() {
             $perm_group = 1;
         }
         $set_vars = "set_var=CID_INTERNAL={$cid_internal}\nset_var=CID_EXTERNAL={$cid_external}\nset_var=__CID_INTERNAL={$cid_internal}\nset_var=__CID_EXTERNAL={$cid_external}\nset_var=USER_ROLE={$role}\nset_var=PERMISSION_GROUP_ID={$perm_group}\n";
+        if ($is_guest) {
+            // Inherited by every channel this call creates (Local, ring groups,
+            // another user's forward): [sub-guest-gate] recognises the guest.
+            $set_vars .= "set_var=__AIPBX_GUEST_EXT={$ext}\n";
+        }
 
         // For group pickup: extensions in the same pickup_group can pick up
         // each other's ringing call with *20 (see SyncFeatureCodes.php).
@@ -437,6 +444,16 @@ function __syncAllExtensionsBody() {
         $qualify = ExtensionSipOptions::qualifyFrequency($sip_map);
         $conf .= "[{$ext}-sip](aor-dual)\nmax_contacts={$max_c}\n" . ($qualify !== '' ? "qualify_frequency={$qualify}\n" : '') . "\n";
         $conf .= "[{$ext}](aor-dual)\nmax_contacts={$max_c}\n\n";
+
+        if ($is_guest) {
+            $conf = substr($conf, 0, $ext_start) . guestEndpointFilter(
+                substr($conf, $ext_start),
+                (string) $ext,
+                parsePhoneModes($u['allowed_phone_mode'] ?? null),
+                implode(',', pbxAudioCodecs(getSystemSetting('pjsip_wired_codecs', 'opus,g722,alaw,ulaw'))),
+                implode(',', pbxAudioCodecs(getSystemSetting('pjsip_codecs', 'opus,ulaw,alaw,g722')))
+            );
+        }
     }
 
     // 3. Dedicated WebRTC endpoint for /meet/{token} browser conference participants.
@@ -484,3 +501,46 @@ function __syncAllExtensionsBody() {
     }, t('sync.ctx_extensions'));
 }
 
+
+/**
+ * A guest's devices are enforced, not just hidden: the PJSIP objects of a
+ * device the guest may not use are left out, so no client can register or
+ * call with it whatever credentials it has. sip = desk phone / softphone
+ * ({ext}-sip, its auth, identify and the {ext} AOR), web = browser phone
+ * ({ext}-webrtc), mobil = the app ({ext}-mob-webrtc). Without "video" the
+ * remaining endpoints carry audio codecs only.
+ *
+ * @param list<string> $modes parsePhoneModes() of the user
+ */
+function guestEndpointFilter(string $block, string $ext, array $modes, string $wiredAudio, string $webAudio): string
+{
+    $drop = [];
+    if (!in_array('sip', $modes, true)) {
+        array_push($drop, "{$ext}-sip", "auth{$ext}-sip", "{$ext}-sip-identify", $ext);
+    }
+    if (!in_array('web', $modes, true)) {
+        array_push($drop, "{$ext}-webrtc", "auth{$ext}-webrtc");
+    }
+    if (!in_array('mobil', $modes, true)) {
+        array_push($drop, "{$ext}-mob-webrtc", "auth{$ext}-mob-webrtc");
+    }
+    $video = in_array('video', $modes, true);
+    $out = '';
+    // Sections start at a line "[name]" or "[name](template)"; comments before one belong to it.
+    foreach (preg_split('/(?=^\[)/m', $block) ?: [] as $section) {
+        if (!preg_match('/^\[([^\]]+)\](\(([^)]*)\))?/', $section, $m)) {
+            $out .= $section;
+            continue;
+        }
+        if (in_array($m[1], $drop, true)) {
+            continue;
+        }
+        $template = $m[3] ?? '';
+        if (!$video && ($template === 'endpoint-sip' || $template === 'endpoint-wss')) {
+            $audio = $template === 'endpoint-sip' ? $wiredAudio : $webAudio;
+            $section = preg_replace('/^(\[[^\n]*\n)/', "\$1disallow=all\nallow={$audio}\n", $section, 1) ?? $section;
+        }
+        $out .= $section;
+    }
+    return $out;
+}

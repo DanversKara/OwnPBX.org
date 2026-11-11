@@ -41,6 +41,22 @@ class UserService {
             $can_view_cdrs = PBXHelper::boolFlag($data, 'can_view_all_cdrs', 0);
             $can_view_queue_monitor = PBXHelper::boolFlag($data, 'can_view_queue_monitor', 0);
             $is_active = PBXHelper::boolFlag($data, 'is_active', 1);
+            // Guest account (GuestService): never an admin; every rule off unless ticked.
+            $guest = ['is_guest' => PBXHelper::boolFlag($data, 'is_guest', 0)];
+            foreach (['guest_outbound', 'guest_inbound', 'guest_sms', 'guest_fax'] as $rule) {
+                $guest[$rule] = PBXHelper::boolFlag($data, $rule, 0);
+            }
+            if ($role === 'admin') {
+                $guest = array_map(static fn() => 0, $guest);
+            }
+            $old_guest = $user_id > 0
+                ? (DBHelper::fetchAll('SELECT is_guest, guest_outbound, guest_inbound, guest_sms, guest_fax FROM sys_users WHERE id = ?', [$user_id])[0] ?? [])
+                : [];
+            if (!array_key_exists('is_guest', $data) && $old_guest !== [] && $role !== 'admin') {
+                // An import or API update that does not mention guest rules keeps them.
+                $guest = array_map('intval', $old_guest);
+            }
+            $guest_changed = array_map('intval', $old_guest) != $guest && ($guest['is_guest'] || !empty($old_guest['is_guest']));
 
             if ($username === '') {
                 throw new \Exception(t('srv_user.err_username_required'));
@@ -131,7 +147,7 @@ class UserService {
                     'can_view_queue_monitor' => $can_view_queue_monitor,
                     'allowed_phone_mode' => $allowed_phone_mode,
                     'is_active' => $is_active
-                ];
+                ] + $guest;
                 if (!empty($password)) {
                     $save_data['password_hash'] = password_hash($password, PASSWORD_DEFAULT);
                 }
@@ -184,7 +200,7 @@ class UserService {
                     'allowed_phone_mode' => $allowed_phone_mode,
                     'is_active' => $is_active,
                     'must_reset_password' => $generated_password !== '' ? 1 : 0
-                ]);
+                ] + $guest);
                 $user_id = (int) getDB()->lastInsertId();
                 $msg = sprintf(t('srv_user.created'), $username);
                 writeAuditLog(null, 'user_account', $user_id, "User: {$username} ({$full_name}, role: {$role})", 'create', $_SESSION['user_id'] ?? null);
@@ -214,12 +230,22 @@ class UserService {
                 SIPHelper::syncExtensionToSIP($extension, $full_name, $effective_sip_pass);
                 markPendingSync('extensions', 'extension', $extension, "Extension: {$extension} ({$full_name})", 'update', $uid);
                 markPendingSync('general_dialplan', 'extension', $extension, "Extension dialplan: {$extension}", 'update', $uid);
+                if ($guest['is_guest'] || !empty($old_guest['is_guest'])) {
+                    // The guest lists [sub-guest-gate] checks live in the outbound dialplan.
+                    markPendingSync('outbound_dialplan', 'guest', $extension, "Guest rules: {$extension}", 'update', $uid);
+                }
                 $msg .= ' ' . t('common.apply_hint');
             } elseif (!empty($old_extension)) {
                 // The extension number was removed: regenerate so the old PJSIP endpoint drops out of the conf
                 markPendingSync('extensions', 'extension', $old_extension, "Extension: {$old_extension} (removed)", 'delete', $uid);
                 markPendingSync('general_dialplan', 'extension', $old_extension, "Extension dialplan: {$old_extension} (removed)", 'delete', $uid);
                 $msg .= ' ' . t('common.apply_hint');
+            }
+            if ($guest_changed) {
+                $rules = $guest['is_guest']
+                    ? 'guest: ' . implode(', ', array_map(static fn(string $k): string => substr($k, 6) . '=' . ($guest[$k] ? 'on' : 'off'), ['guest_outbound', 'guest_inbound', 'guest_sms', 'guest_fax']))
+                    : 'normal account (guest rules removed)';
+                writeAuditLog(null, 'user_guest', $user_id, "User {$username}: {$rules}", 'update', $_SESSION['user_id'] ?? null);
             }
             return $msg;
         });

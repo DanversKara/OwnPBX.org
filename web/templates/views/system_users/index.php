@@ -181,6 +181,9 @@
                                 <span class="role-badge <?php echo $role_class; ?>">
                                     <?php echo $role_label; ?>
                                 </span>
+                                <?php if (!empty($u['is_guest']) && $u['role'] !== 'admin'): ?>
+                                    <span class="badge badge-warning" title="<?php echo htmlspecialchars(t('guest.badge_title')); ?>"><i class="fas fa-user-lock"></i> <?php echo t('guest.badge'); ?></span>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <?php if (!empty($u['extension'])): ?>
@@ -250,6 +253,40 @@
                     <?php endforeach; ?>
                 <?php endif; ?>
             <?php echo uiTableClose(); ?>
+</div>
+
+<!-- Guest prompt: what a guest hears when they hit a blocked feature -->
+<div class="card u-mt-20">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-user-lock"></i> <?php echo t('guest_prompt.title'); ?></h3>
+    </div>
+    <div class="card-body">
+        <p class="text-muted"><?php echo t('guest_prompt.help'); ?></p>
+        <?php if (!empty($guest_prompt)): ?>
+            <p>
+                <strong><?php echo t('blocked_prompt.current'); ?>:</strong>
+                <code><?php echo htmlspecialchars($guest_prompt['file']); ?></code>
+                <a href="?listen_guest_prompt=1" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-play"></i> <?php echo t('blocked_prompt.listen'); ?></a>
+            </p>
+            <form method="POST" class="u-d-inline" onsubmit="return confirm(<?php echo jsArg(t('guest_prompt.confirm_remove')); ?>)">
+                <input type="hidden" name="csrf_token" value="<?php echo getCSRFToken(); ?>">
+                <input type="hidden" name="delete_guest_prompt" value="1">
+                <button type="submit" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i> <?php echo t('blocked_prompt.remove'); ?></button>
+            </form>
+        <?php else: ?>
+            <p class="text-muted"><?php echo t('guest_prompt.none'); ?></p>
+        <?php endif; ?>
+        <form method="POST" enctype="multipart/form-data" class="u-mt-12">
+            <input type="hidden" name="csrf_token" value="<?php echo getCSRFToken(); ?>">
+            <input type="hidden" name="upload_guest_prompt" value="1">
+            <div class="form-group">
+                <label class="form-label"><?php echo t('blocked_prompt.file_label'); ?></label>
+                <input type="file" name="prompt_file" class="form-control" accept=".wav,.mp3,audio/wav,audio/mpeg" required>
+                <small class="u-hint"><?php echo t('blocked_prompt.format_help'); ?></small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-upload"></i> <?php echo t('blocked_prompt.upload'); ?></button>
+        </form>
+    </div>
 </div>
 
 <!-- Create / Edit User Modal -->
@@ -354,6 +391,28 @@
                             <input type="checkbox" name="allowed_phone_modes[]" id="modal_mode_video" value="video">
                             <span><i class="fas fa-video u-c-8b5cf6"></i> <?php echo t('system_users.video'); ?></span>
                         </label>
+                    </div>
+                </div>
+
+                <div class="form-group u-bg-rgba-255-255-255-0-03 u-p-12 u-r-8 u-bd-1-solid-border-color u-mt-12" id="modal_guest_box">
+                    <input type="hidden" name="is_guest" value="0">
+                    <label class="u-d-flex u-ai-center u-gap-8 u-pointer u-fw-700 u-m-0">
+                        <input type="checkbox" name="is_guest" id="modal_is_guest" value="1" onchange="toggleGuestRules()">
+                        <span><i class="fas fa-user-lock u-c-secondary"></i> <?php echo t('guest.field_is_guest'); ?></span>
+                    </label>
+                    <small class="u-hint"><?php echo t('guest.help'); ?></small>
+                    <div id="modal_guest_rules" class="u-mt-8">
+                        <div class="u-d-grid u-gtc-repeat-2-1fr u-gap-8">
+                            <?php foreach (['guest_outbound' => 'fa-phone-volume', 'guest_inbound' => 'fa-phone-alt', 'guest_sms' => 'fa-comment-sms', 'guest_fax' => 'fa-fax'] as $rule => $icon): ?>
+                                <input type="hidden" name="<?php echo $rule; ?>" value="0">
+                                <label class="u-d-flex u-ai-center u-gap-8 u-pointer u-fs-13 u-m-0">
+                                    <input type="checkbox" name="<?php echo $rule; ?>" id="modal_<?php echo $rule; ?>" value="1">
+                                    <span><i class="fas <?php echo $icon; ?>"></i> <?php echo t('guest.rule_' . substr($rule, 6)); ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                        <div class="alert alert-danger u-mt-8 u-mb-0 u-fs-13"><i class="fas fa-ban"></i> <?php echo t('guest.emergency_note'); ?></div>
+                        <small class="u-hint"><?php echo t('guest.devices_note'); ?></small>
                     </div>
                 </div>
 

@@ -252,6 +252,27 @@ class FaxSendService {
      * TIFF, 2026-08-31). Kept in one place so the MaxRetries/header/TSID logic
      * does not drift apart in two places.
      */
+    /**
+     * A guest's fax leaves as the guest's call ([sub-guest-gate]): emergency numbers are never
+     * dialled; AIPBX_GUEST_FAX lets a guest whose fax is on reach outside fax numbers even with
+     * outside calls off. Read from the fax's requester, so retries from the worker keep it.
+     */
+    private static function guestCallFileLines(int $faxId): string
+    {
+        try {
+            $q = getDB()->prepare("SELECT u.extension, u.role, u.is_guest, u.guest_fax FROM fax_sent f JOIN sys_users u ON u.id = f.user_id WHERE f.id = ?");
+            $q->execute([$faxId]);
+            $u = $q->fetch(PDO::FETCH_ASSOC) ?: [];
+        } catch (\Throwable $e) {
+            return '';
+        }
+        if (empty($u['is_guest']) || ($u['role'] ?? '') === 'admin') {
+            return '';
+        }
+        $ext = preg_replace('/[^0-9]/', '', (string) ($u['extension'] ?? '')) ?: '0';
+        return "SetVar: __AIPBX_GUEST_EXT={$ext}\n" . (!empty($u['guest_fax']) ? "SetVar: __AIPBX_GUEST_FAX=1\n" : '');
+    }
+
     public static function submitCallFile(int $faxId, string $destNumber, string $senderExt, string $tifPath): void
     {
         $max_retries = intval(getSystemSetting('fax_max_retries', '2'));
@@ -326,6 +347,7 @@ class FaxSendService {
                              "Extension: s\n" .
                              "Priority: 1\n" .
                              ($perm_grp > 0 ? "SetVar: __PERMISSION_GROUP_ID=$perm_grp\n" : '') .
+                             self::guestCallFileLines($faxId) .
                              // The fax account's own outside number beats the trunk's, as on a phone call
                              // (the route reads CID_EXTERNAL; a Local channel has none of its own) (#157).
                              ($has_own_cid ? "SetVar: __CID_EXTERNAL=$sender_cid\n" : '') .

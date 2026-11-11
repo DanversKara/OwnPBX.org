@@ -28,7 +28,9 @@ if ($action === 'originate') {
         )->fetchColumn() ?: 1));
     }
 
-    $cmd = buildOriginateCommand($user_ext, $to, $outbound_context, $perm_grp);
+    require_once __DIR__ . '/../../src/services/GuestService.php';
+    $is_guest = !empty($user['id']) && GuestService::policy((int) $user['id'])['is_guest'];
+    $cmd = buildOriginateCommand($user_ext, $to, $outbound_context, $perm_grp, $is_guest);
 
     $res = sendAMICommand($cmd);
     if (!$res || strpos($res, 'Response: Success') === false) {

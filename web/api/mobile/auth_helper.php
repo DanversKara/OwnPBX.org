@@ -188,6 +188,9 @@ function buildMobileLoginResponse(array $user): array
         $user['allowed_phone_mode'] = $st->fetchColumn() ?: null;
     }
     $mobil_allowed = in_array('mobil', parsePhoneModes($user['allowed_phone_mode'] ?? null), true);
+    // A guest's mobile app is off unless the admin allows it (no SIP account either).
+    require_once dirname(__DIR__, 2) . '/src/services/GuestService.php';
+    $guest_policy = GuestService::policy((int) $user['id']);
 
     // Coturn TURNS (TLS/TCP)
     $turn = null;
@@ -227,7 +230,9 @@ function buildMobileLoginResponse(array $user): array
             'full_name' => $user['full_name'],
             'email' => $user['email'] ?? null,
             'extension' => $user['extension'],
-            'role' => $user['role']
+            'role' => $user['role'],
+            // Guest account rules (additive; older apps ignore them). Enforced by the server either way.
+            'guest' => $guest_policy,
         ],
         'sip' => [
             'extension' => $user['extension'],

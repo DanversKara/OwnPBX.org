@@ -311,6 +311,25 @@ function userIsOnFaxNumber(): bool
     return $cache[$userId];
 }
 
+/** Is the signed-in user a guest who may not use $rule (guest_fax, guest_sms ...)? Cached per request. */
+function sessionGuestDenies(string $rule): bool
+{
+    static $policy = null;
+    $uid = (int) ($_SESSION['user_id'] ?? 0);
+    if ($uid <= 0) {
+        return false;
+    }
+    if ($policy === null || ($policy['_uid'] ?? 0) !== $uid) {
+        require_once __DIR__ . '/src/services/GuestService.php';
+        try {
+            $policy = GuestService::policy($uid) + ['_uid' => $uid];
+        } catch (\Throwable $e) {
+            $policy = ['is_guest' => false, '_uid' => $uid]; // guest columns not migrated yet
+        }
+    }
+    return !empty($policy['is_guest']) && empty($policy[$rule]);
+}
+
 function hasModulePermission($module_key, $action = 'access') {
     $role = $_SESSION['user_role'] ?? '';
 
@@ -336,6 +355,11 @@ function hasModulePermission($module_key, $action = 'access') {
     // Keep in sync with RoleRepository::modulesDefinition() 'admin_only' (RbacTest checks it).
     if (in_array($module_key, ['advanced_config', 'roles', 'system_users', 'firewall', 'fail2ban', 'mail_settings', 'system_update', 'backup', 'scheduled_tasks', 'certificates', 'privacy', 'plugins', 'api_keys', 'webhooks', 'external_dbs', 'google_integration', 'phones', 'web_widgets', 'file_storage', 'ai_models', 'ai_cloud', 'ai_apps', 'assistant', 'health', 'call_quality', 'custom_dialplan'], true)) {
         return $role === 'admin';
+    }
+
+    // Guest accounts (GuestService): fax is off for a guest unless the admin turned it on.
+    if (in_array($module_key, ['fax_inbox', 'fax_send', 'fax_sent', 'fax_settings'], true) && sessionGuestDenies('guest_fax')) {
+        return false;
     }
 
     // Plugin-backed delegable modules ('ms_teams' -> 'ms-teams', 'ai_tts' -> 'ai-tts'):

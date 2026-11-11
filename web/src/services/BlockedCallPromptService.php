@@ -28,6 +28,15 @@ class BlockedCallPromptService
     public const SOUND_NAME = 'custom/blocked-call-prompt';
 
     public const MAX_SECONDS = 60;
+
+    /** Pending-sync domain to regenerate when the prompt changes (the dialplan that plays it). */
+    public const SYNC_DOMAIN = 'permissions';
+
+    /** Translation prefix of the uploaded/removed messages. */
+    public const MSG_PREFIX = 'blocked_prompt';
+
+    /** What the pending-changes list calls it. */
+    public const LABEL = 'Blocked call prompt';
     public const MAX_BYTES = 10 * 1024 * 1024;
 
     /**
@@ -36,11 +45,11 @@ class BlockedCallPromptService
      */
     public static function current(): ?array
     {
-        $sound = trim((string) getSystemSetting(self::SETTING_KEY, ''));
+        $sound = trim((string) getSystemSetting(static::SETTING_KEY, ''));
         if ($sound === '') return null;
-        $path = SOUNDS_CUSTOM_DIR . '/' . self::FILE_NAME;
+        $path = SOUNDS_CUSTOM_DIR . '/' . static::FILE_NAME;
         if (!is_file($path)) return null;
-        return ['file' => self::FILE_NAME, 'sound' => $sound];
+        return ['file' => static::FILE_NAME, 'sound' => $sound];
     }
 
     /** Is the 'sox' converter available on this server? */
@@ -126,12 +135,12 @@ class BlockedCallPromptService
             if (!in_array($ext, ['wav', 'mp3'], true)) {
                 throw new \Exception(t('blocked_prompt.err_type'));
             }
-            if (filesize($tmp) > self::MAX_BYTES) {
+            if (filesize($tmp) > static::MAX_BYTES) {
                 throw new \Exception(t('blocked_prompt.err_size'));
             }
 
-            $target = SOUNDS_CUSTOM_DIR . '/' . self::FILE_NAME;
-            $raw = SOUNDS_CUSTOM_DIR . '/.raw_blocked_' . uniqid();
+            $target = SOUNDS_CUSTOM_DIR . '/' . static::FILE_NAME;
+            $raw = SOUNDS_CUSTOM_DIR . '/.raw_' . pathinfo(static::FILE_NAME, PATHINFO_FILENAME) . '_' . uniqid();
             if (!move_uploaded_file($tmp, $raw)) {
                 throw new \Exception(t('blocked_prompt.err_upload'));
             }
@@ -154,7 +163,7 @@ class BlockedCallPromptService
             }
 
             $dur = self::wavDuration($target);
-            if ($dur === null || $dur <= 0 || $dur > self::MAX_SECONDS) {
+            if ($dur === null || $dur <= 0 || $dur > static::MAX_SECONDS) {
                 @unlink($target);
                 throw new \Exception(t('blocked_prompt.err_length'));
             }
@@ -163,12 +172,12 @@ class BlockedCallPromptService
             @chgrp($target, 'asterisk');
             @chmod($target, 0664);
 
-            setSystemSetting(self::SETTING_KEY, self::SOUND_NAME);
+            setSystemSetting(static::SETTING_KEY, static::SOUND_NAME);
             // The permissions dialplan reads this setting when it is
             // generated, so regenerate it now.
-            markPendingSync('permissions', 'blocked_call_prompt', self::FILE_NAME, 'Blocked call prompt', 'update', $_SESSION['user_id'] ?? null);
+            markPendingSync(static::SYNC_DOMAIN, static::SETTING_KEY, static::FILE_NAME, static::LABEL, 'update', $_SESSION['user_id'] ?? null);
 
-            return t('blocked_prompt.uploaded');
+            return t(static::MSG_PREFIX . '.uploaded');
         });
     }
 
@@ -180,26 +189,26 @@ class BlockedCallPromptService
     public static function delete(): array
     {
         return PBXHelper::handleAction($_POST['csrf_token'] ?? '', function() {
-            $target = SOUNDS_CUSTOM_DIR . '/' . self::FILE_NAME;
+            $target = SOUNDS_CUSTOM_DIR . '/' . static::FILE_NAME;
             @unlink($target);
-            setSystemSetting(self::SETTING_KEY, '');
-            markPendingSync('permissions', 'blocked_call_prompt', self::FILE_NAME, 'Blocked call prompt', 'delete', $_SESSION['user_id'] ?? null);
-            return t('blocked_prompt.removed');
+            setSystemSetting(static::SETTING_KEY, '');
+            markPendingSync(static::SYNC_DOMAIN, static::SETTING_KEY, static::FILE_NAME, static::LABEL, 'delete', $_SESSION['user_id'] ?? null);
+            return t(static::MSG_PREFIX . '.removed');
         });
     }
 
     /** Stream the current prompt file to the browser (admin-only page, for Listen). */
     public static function stream(): void
     {
-        $current = self::current();
+        $current = static::current();
         if ($current === null) {
             http_response_code(404);
             exit;
         }
-        $path = SOUNDS_CUSTOM_DIR . '/' . self::FILE_NAME;
+        $path = SOUNDS_CUSTOM_DIR . '/' . static::FILE_NAME;
         header('Content-Type: audio/wav');
         header('Content-Length: ' . filesize($path));
-        header('Content-Disposition: inline; filename="' . self::FILE_NAME . '"');
+        header('Content-Disposition: inline; filename="' . static::FILE_NAME . '"');
         readfile($path);
         exit;
     }

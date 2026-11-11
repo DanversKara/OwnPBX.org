@@ -74,11 +74,29 @@ final class Sms
         return $rows;
     }
 
-    /** The numbers this user reads: those given to them; an administrator reads all. */
+    /**
+     * The numbers this user reads: those given to them; an administrator reads all. A guest
+     * account with texting off (OwnPBX guest rules, sys_users.guest_sms) reads none.
+     */
     public static function numbersFor(array $user): array
     {
         $isAdmin = ($user['role'] ?? '') === 'admin';
+        if (!$isAdmin && self::guestTextingOff((int) ($user['id'] ?? 0))) {
+            return [];
+        }
         return array_values(array_filter(self::numbers(), static fn(array $n): bool => $isAdmin || in_array((int) ($user['id'] ?? 0), $n['user_ids'], true)));
+    }
+
+    private static function guestTextingOff(int $userId): bool
+    {
+        try {
+            $q = getDB()->prepare('SELECT is_guest, guest_sms FROM sys_users WHERE id = ?');
+            $q->execute([$userId]);
+            $row = $q->fetch(PDO::FETCH_ASSOC) ?: [];
+            return !empty($row['is_guest']) && empty($row['guest_sms']);
+        } catch (\Throwable $e) {
+            return false; // guest columns not there (older core)
+        }
     }
 
     public static function saveNumber(int $id, string $number, string $provider, string $label, array $userIds): void

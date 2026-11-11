@@ -72,6 +72,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    require_once dirname(__DIR__, 2) . '/src/services/GuestService.php';
+    foreach ([$forward, $forwardBusy, $forwardNoAnswer] as $fwd) {
+        if (!GuestService::forwardAllowed($userId, (string) $fwd)) {
+            mobileError(t('guest.err_forward'), 400);
+        }
+    }
     MyPhoneRepository::updatePhoneSettings($userId, $dnd, $forward, $mode, $forwardBusy, $forwardNoAnswer, $noAnswerTimeout);
 
     // Asterisk dialplan sync.

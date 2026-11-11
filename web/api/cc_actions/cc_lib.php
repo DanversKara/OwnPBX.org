@@ -10,10 +10,12 @@ if (!defined('CC_DISPATCH_ACTIVE')) { http_response_code(403); exit; }
  * without it sub-check-dial-permission saw an empty group and let every
  * restricted extension call barred destinations through this API.
  */
-function buildOriginateCommand(string $user_ext, string $to, string $outbound_context, int $perm_group): string
+function buildOriginateCommand(string $user_ext, string $to, string $outbound_context, int $perm_group, bool $guest = false): string
 {
     $perm_group = max(1, $perm_group);
-    return "Action: Originate\r\n" .
+    // A guest's click-to-call is the guest's call: [sub-guest-gate] checks it before any trunk.
+    $guest_var = $guest ? 'Variable: __AIPBX_GUEST_EXT=' . preg_replace('/[^0-9]/', '', $user_ext) . "\r\n" : '';
+    return "Action: Originate\r\n" . $guest_var .
            "Channel: Local/$user_ext@cc-internal\r\n" .
            "Context: $outbound_context\r\n" .
            "Exten: $to\r\n" .

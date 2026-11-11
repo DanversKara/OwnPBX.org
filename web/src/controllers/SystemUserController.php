@@ -4,13 +4,14 @@ require_once __DIR__ . '/../services/RoleService.php';
 require_once __DIR__ . '/../services/TwoFactorService.php';
 require_once __DIR__ . '/../services/UserInvitationService.php';
 require_once __DIR__ . '/../services/UserImportService.php';
+require_once __DIR__ . '/../services/GuestPromptService.php';
 
 /**
  * Users page (/system-users).
  * Renders templates/views/system_users/index.php with assets/js/system_users.js.
  * Logic: RoleRepository, RoleService, SystemUserRepository, TwoFactorService, UserImportService,
  * UserInvitationService, UserService.
- * POST actions: delete_user, reset_password, toggle_status.
+ * POST actions: delete_user, reset_password, toggle_status, upload/delete_guest_prompt.
  * Admins only.
  */
 class SystemUserController extends BaseController
@@ -32,6 +33,10 @@ class SystemUserController extends BaseController
             header('Content-Disposition: attachment; filename="user_import_template.csv"');
             echo UserImportService::templateCsv();
             exit;
+        }
+        // Listen to the guest prompt (streams the WAV).
+        if (isset($_GET['listen_guest_prompt'])) {
+            GuestPromptService::stream();
         }
         $modules_definition = RoleRepository::modulesDefinition();
 
@@ -126,6 +131,8 @@ class SystemUserController extends BaseController
                     'toggle_status' => fn() => PBXHelper::toggleStatus('sys_users', $_POST['user_id'] ?? 0, static::csrfToken()),
                     'reset_password' => fn() => UserService::resetPassword($_POST),
                     'delete_user' => fn() => UserService::deleteUser($_POST['user_id'] ?? 0, static::csrfToken()),
+                    'upload_guest_prompt' => fn() => GuestPromptService::upload($_POST, $_FILES),
+                    'delete_guest_prompt' => fn() => GuestPromptService::delete(),
                 ]);
             }
         }
@@ -143,6 +150,7 @@ class SystemUserController extends BaseController
             'generated_for' => $generated_for,
             'import_preview' => $import_preview,
             'import_result' => $import_result,
+            'guest_prompt' => GuestPromptService::current(),
         ], ['title' => $page_title, 'message' => $message ?? '', 'error' => $error ?? '']);
     }
 }
