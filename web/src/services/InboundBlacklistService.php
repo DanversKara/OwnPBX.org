@@ -68,7 +68,7 @@ class InboundBlacklistService
      *
      * @return array{success: bool, id?: int, error?: string}
      */
-    public static function add(string $number, ?string $title = null, string $action = 'busy', bool $isActive = true, bool $deferSync = false): array
+    public static function add(string $number, ?string $title = null, string $action = 'busy', bool $isActive = true, bool $deferSync = false, ?string $ownerExtension = null): array
     {
         $cleanNumber = self::normalizeNumber($number);
         if ($cleanNumber === '' || $cleanNumber === '_') {
@@ -88,6 +88,7 @@ class InboundBlacklistService
             'number' => $cleanNumber,
             'title' => $title !== null ? trim($title) : null,
             'block_action' => $action,
+            'owner_extension' => $ownerExtension !== null && $ownerExtension !== '' ? preg_replace('/[^0-9]/', '', $ownerExtension) : null,
             'is_active' => $isActive ? 1 : 0,
         ]);
 

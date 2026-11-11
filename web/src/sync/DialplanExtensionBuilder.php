@@ -204,6 +204,15 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
     $lines[] = " same => n,Set(DIAL_CONTACTS=\${C_SIP}\${IF(\$[\"\${C_SIP}\" != \"\" & \"\${C_WEB}\" != \"\"]?&)}\${C_WEB})";
     $lines[] = " same => n,Set(DIAL_CONTACTS=\${DIAL_CONTACTS}\${IF(\$[\"\${DIAL_CONTACTS}\" != \"\" & \"\${C_MOB}\" != \"\"]?&)}\${C_MOB})";
     $lines[] = " same => n,GotoIf(\$[\"\${DIAL_CONTACTS}\" = \"\"]?lbl_unavail_{$lbl})";
+    // Block caller (*86): arm the mid-call DTMF feature on the callee's leg.
+    // __DYNAMIC_FEATURES (inherited) activates the blockcaller feature from
+    // features.conf; __BLOCK_OWNER is the extension being called and
+    // __BLOCK_CALLER_CHAN is this (the caller's) channel, so the feature
+    // Gosub can add the caller to the blacklist and redirect their channel
+    // to the not-in-service announcement. Only the callee can trigger it.
+    $lines[] = " same => n,Set(__DYNAMIC_FEATURES=blockcaller)";
+    $lines[] = " same => n,Set(__BLOCK_OWNER={$ext})";
+    $lines[] = " same => n,Set(__BLOCK_CALLER_CHAN=\${CHANNEL})";
     if (($jb = rtrim(jitterBufferLine())) !== '') {
         $lines[] = $jb;
     }

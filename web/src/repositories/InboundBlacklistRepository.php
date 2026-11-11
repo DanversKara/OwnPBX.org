@@ -41,13 +41,14 @@ class InboundBlacklistRepository extends BaseRepository
     public static function create(array $data): int
     {
         $stmt = static::db()->prepare(
-            'INSERT INTO pbx_inbound_blacklist (number, title, block_action, is_active, hit_count, created_at, updated_at) 
-             VALUES (?, ?, ?, ?, 0, NOW(), NOW())'
+            'INSERT INTO pbx_inbound_blacklist (number, title, block_action, owner_extension, is_active, hit_count, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())'
         );
         $stmt->execute([
             $data['number'],
             $data['title'] ?? null,
             $data['block_action'] ?? 'busy',
+            $data['owner_extension'] ?? null,
             isset($data['is_active']) ? (int)$data['is_active'] : 1,
         ]);
         return (int)static::db()->lastInsertId();

@@ -338,6 +338,30 @@ function __syncGeneralDialplanBody() {
     $conf .= " same => n(noans),Playback(number-not-answering&please-try-again,noanswer)\n";
     $conf .= " same => n(done),Return()\n\n";
 
+    // Block caller (*86): the CALLED party pressed *86 during a bridged call.
+    // Runs on the callee's channel (the bridge is broken by the feature).
+    // BLOCK_OWNER = the extension that pressed *86, BLOCK_CALLER_CHAN = the
+    // caller's channel name — both set (inherited) before the Dial.
+    // The script adds the caller's number to the inbound blacklist
+    // (action 'announcement' = not in service). The caller's channel is
+    // redirected to block-announce so they hear the not-in-service sound
+    // on THIS call, then the callee hangs up. If the redirect fails (the
+    // caller already hung up) the Hangup still ends the callee's leg, and
+    // the blacklist entry keeps the caller blocked on their next call.
+    $conf .= "[sub-block-caller]\n";
+    $conf .= "exten => s,1,NoOp(Block caller *86: \${BLOCK_OWNER} blocking \${CALLERID(num)})\n";
+    $conf .= " same => n,System(/usr/bin/php /opt/aipbx/web/bin/block_caller.php \${FILTER(0-9+,\${CALLERID(num)})} \${BLOCK_OWNER} &)\n";
+    $conf .= " same => n,GotoIf(\$[\"\${BLOCK_CALLER_CHAN}\" = \"\"]?done)\n";
+    $conf .= " same => n,ChannelRedirect(\${BLOCK_CALLER_CHAN},block-announce,s,1)\n";
+    $conf .= " same => n(done),Hangup()\n\n";
+
+    // What a blocked caller hears after *86: the not-in-service sound.
+    $conf .= "[block-announce]\n";
+    $conf .= "exten => s,1,NoOp(Playing not-in-service to blocked caller)\n";
+    $conf .= " same => n,Answer()\n";
+    $conf .= " same => n,Playback(ss-noservice)\n";
+    $conf .= " same => n,Hangup()\n\n";
+
     $ok = writeConfWithRollback('extensions_general.conf', $conf, function() {
         AsteriskHelper::assertReloadsOk([AsteriskHelper::reloadDialplan()], t('sync.ctx_general'));
     }, t('sync.ctx_general'));
