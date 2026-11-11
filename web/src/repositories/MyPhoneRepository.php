@@ -541,7 +541,7 @@ class MyPhoneRepository extends BaseRepository
         // signs out the moment the push arrives instead of waiting for its next request.
         try {
             require_once dirname(__DIR__) . '/services/push/PushService.php';
-            $provider = PushService::getProvider();
+            $provider = \App\Services\Push\PushService::getProvider();
             if ($provider->isConfigured()) {
                 $q = static::db()->prepare("SELECT fcm_token FROM sys_mobile_devices
                     WHERE user_id = ? AND is_active = 1 AND fcm_token IS NOT NULL AND fcm_token <> ''
