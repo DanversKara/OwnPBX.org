@@ -246,7 +246,7 @@ final class FaxCoverService
     public static function html(array $fields, array $settings, array $facts, ?string $logoPath = null): string
     {
         $e = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
-        $row = static fn(string $label, string $value): string => '<tr><td style="width: 90px; padding: 5px 0; font-weight: bold;">'
+        $row = static fn(string $label, string $value): string => '<tr><td style="width: 120px; padding: 5px 10px 5px 0; font-weight: bold;">'
             . $e($label) . ':</td><td style="padding: 5px 0;">' . nl2br($e($value)) . '</td></tr>';
 
         $html = '';
