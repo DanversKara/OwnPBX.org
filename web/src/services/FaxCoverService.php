@@ -260,7 +260,7 @@ final class FaxCoverService
             $html .= '<div style="font-size: ' . $size . '; font-weight: bold;">' . $e($settings['company']) . '</div>';
         }
         $info = [];
-        if (($settings['address'] ?? '') !== '') {
+        if ($settings['address'] !== '') {
             foreach (explode("\n", (string) $settings['address']) as $ln) {
                 $ln = trim($ln);
                 if ($ln !== '') {
@@ -270,13 +270,13 @@ final class FaxCoverService
             $info = array_slice($info, 0, 4);
         }
         $contact = [];
-        if (($settings['phone'] ?? '') !== '') {
+        if ($settings['phone'] !== '') {
             $contact[] = 'Tel ' . $settings['phone'];
         }
-        if (($settings['email'] ?? '') !== '') {
+        if ($settings['email'] !== '') {
             $contact[] = $settings['email'];
         }
-        if (($settings['website'] ?? '') !== '') {
+        if ($settings['website'] !== '') {
             $contact[] = $settings['website'];
         }
         if (!empty($contact)) {
@@ -300,7 +300,7 @@ final class FaxCoverService
         if ($facts['name'] !== '') {
             $html .= $row(t('fax_cover.label_from'), $facts['name']);
         }
-        if (($settings['company'] ?? '') !== '' && $settings['company'] !== $facts['name']) {
+        if ($settings['company'] !== '' && $settings['company'] !== $facts['name']) {
             $html .= $row(t('fax_cover.label_company'), $settings['company']);
         }
         if ($facts['number'] !== '') {
@@ -317,7 +317,7 @@ final class FaxCoverService
             $html .= '<hr style="border: none; border-top: 1px solid #000; margin: 8mm 0 4mm;">';
             $html .= '<div style="font-size: 12pt;">' . nl2br($e($fields['message'])) . '</div>';
         }
-        if (($settings['notice'] ?? '') !== '') {
+        if ($settings['notice'] !== '') {
             $html .= '<div style="font-size: 8.5pt; font-style: italic; border-top: 1px solid #000; padding-top: 2mm; margin-top: 14mm;">' . nl2br($e($settings['notice'])) . '</div>';
         }
         return $html;
@@ -400,7 +400,7 @@ final class FaxCoverService
     /**
      * The cover as the far end will receive it: black and white at fax resolution.
      *
-     * @param array{company: string, notice: string, logo: bool, logo_file?: string} $settings
+     * @param array{company: string, address: string, phone: string, email: string, website: string, notice: string, logo: bool, logo_file?: string} $settings
      */
     public static function previewPng(array $fields, array $settings, string $senderExt, string $toNumber): string
     {

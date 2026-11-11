@@ -311,7 +311,7 @@ if ($action === 'download') {
     if (!in_array($kind, ['received', 'sent'], true)) {
         mobileError(t('mobile_api.invalid_request'), 400);
     }
-    $isView = !empty($_GET['view']) && (string) $_GET['view'] !== '0';
+    $isView = !empty($_GET['view']); // empty() is also true for "0"
 
     $db = getDB();
     if ($kind === 'sent') {
@@ -385,12 +385,12 @@ if ($action === 'config') {
         $templates[] = [
             'id' => (int) $tpl['id'],
             'name' => (string) $tpl['name'],
-            'company' => (string) ($tpl['company'] ?? ''),
-            'address' => (string) ($tpl['address'] ?? ''),
-            'phone' => (string) ($tpl['phone'] ?? ''),
-            'email' => (string) ($tpl['email'] ?? ''),
-            'website' => (string) ($tpl['website'] ?? ''),
-            'notice' => (string) ($tpl['notice'] ?? ''),
+            'company' => (string) $tpl['company'],
+            'address' => (string) $tpl['address'],
+            'phone' => (string) $tpl['phone'],
+            'email' => (string) $tpl['email'],
+            'website' => (string) $tpl['website'],
+            'notice' => (string) $tpl['notice'],
             'logo' => (int) $tpl['logo'] === 1,
         ];
     }

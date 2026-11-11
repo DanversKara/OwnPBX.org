@@ -110,11 +110,13 @@ class BlockedCallPromptService
 
     /**
      * Upload a prompt (WAV or MP3, max 60 seconds). Replaces the old one.
-     * Returns a success message for the page notice.
+     * Returns the service result (success + message, or error) for the page notice.
+     *
+     * @return array{success: bool, message?: string, error?: string}
      */
-    public static function upload($data, $files): string
+    public static function upload($data, $files): array
     {
-        return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($data, $files) {
+        return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($files) {
             if (!isset($files['prompt_file']) || $files['prompt_file']['error'] !== UPLOAD_ERR_OK) {
                 throw new \Exception(t('blocked_prompt.err_file'));
             }
@@ -170,8 +172,12 @@ class BlockedCallPromptService
         });
     }
 
-    /** Remove the custom prompt; blocked callers hear the generic announcement again. */
-    public static function delete(): string
+    /**
+     * Remove the custom prompt; blocked callers hear the generic announcement again.
+     *
+     * @return array{success: bool, message?: string, error?: string}
+     */
+    public static function delete(): array
     {
         return PBXHelper::handleAction($_POST['csrf_token'] ?? '', function() {
             $target = SOUNDS_CUSTOM_DIR . '/' . self::FILE_NAME;
