@@ -2196,7 +2196,7 @@ return [
     'my_phone.msg_settings_saved' => 'Your phone settings have been saved successfully!',
     'my_phone.msg_csrf_error' => 'Invalid CSRF security token!',
     'my_phone.sign_out_device' => 'Sign out',
-    'my_phone.msg_device_signed_out' => 'Device signed out.',
+    'my_phone.msg_device_signed_out' => 'Signed out. The app on your phone is signed out the next time it connects (opening it is enough).',
     'my_phone.msg_device_signout_failed' => 'Could not sign out that device.',
     'my_phone.confirm_sign_out_device' => 'Sign out this device?',
     'my_phone.device_settings' => 'Audio & Device Settings',

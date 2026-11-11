@@ -524,4 +524,19 @@ class MyPhoneRepository extends BaseRepository
         $stmt->execute([$userId, $deviceId]);
         return $stmt->rowCount() > 0;
     }
+
+    /**
+     * Revokes the user's mobile app sessions. Deactivating the device row only
+     * stops pushes, and the app re-activates it the next time it sends its push
+     * token, so on its own "Sign out" never signed the app out. Bumping
+     * token_epoch invalidates every mobile Bearer token the user holds (the app
+     * API and the chat server both check it); the app gets 401 on its next
+     * request and signs itself out (SessionExpiry). Tokens carry no device id,
+     * so this signs out all of the user's phones, not just the one picked.
+     */
+    public static function revokeMobileSessions(int $userId): void
+    {
+        static::db()->prepare("UPDATE sys_users SET token_epoch = token_epoch + 1 WHERE id = ?")->execute([$userId]);
+        static::db()->prepare("UPDATE sys_mobile_devices SET is_active = 0, updated_at = NOW() WHERE user_id = ?")->execute([$userId]);
+    }
 }
