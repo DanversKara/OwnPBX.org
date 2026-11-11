@@ -512,6 +512,28 @@ class MyPhoneRepository extends BaseRepository
     }
 
     /**
+     * Find the device row for the client's stable device id, or create it.
+     * The device_id here is the app's per-install UUID string, NOT the row id.
+     * A found row is re-activated: sign-in is fresh auth, so a previously
+     * signed-out row belonging to this device is legitimately live again.
+     */
+    public static function findOrCreateDeviceRow(int $userId, string $extension, string $clientDeviceId, string $deviceName, string $platform, string $appVersion): int
+    {
+        $db = static::db();
+        $stmt = $db->prepare('SELECT id FROM sys_mobile_devices WHERE user_id = ? AND device_id = ? LIMIT 1');
+        $stmt->execute([$userId, $clientDeviceId]);
+        $rowId = $stmt->fetchColumn();
+        if ($rowId !== false) {
+            $upd = $db->prepare('UPDATE sys_mobile_devices SET device_name = ?, platform = ?, app_version = ?, is_active = 1, updated_at = NOW() WHERE id = ?');
+            $upd->execute([$deviceName, $platform, $appVersion, (int)$rowId]);
+            return (int)$rowId;
+        }
+        $ins = $db->prepare('INSERT INTO sys_mobile_devices (user_id, extension, device_id, device_name, platform, app_version, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())');
+        $ins->execute([$userId, $extension, $clientDeviceId, $deviceName, $platform, $appVersion]);
+        return (int)$db->lastInsertId();
+    }
+
+    /**
      * Sign a device out: deactivate it so it stops receiving calls and push
      * until it signs in again. Scoped to the owner — one user can never sign
      * out another user's device.
@@ -558,5 +580,44 @@ class MyPhoneRepository extends BaseRepository
         }
         static::db()->prepare("UPDATE sys_users SET token_epoch = token_epoch + 1 WHERE id = ?")->execute([$userId]);
         static::db()->prepare("UPDATE sys_mobile_devices SET is_active = 0, updated_at = NOW() WHERE user_id = ?")->execute([$userId]);
+    }
+
+    /**
+     * Sign out ONE device: deactivate only its row and push session_revoked
+     * to it alone. Unlike revokeMobileSessions() this does NOT bump
+     * token_epoch — the other devices' tokens stay valid because their rows
+     * are still active and validateMobileToken() checks the row.
+     *
+     * The row's existence is checked with the SELECT, not with the UPDATE's
+     * rowCount: the controller already deactivated the row a moment earlier
+     * (same second, so updated_at = NOW() is unchanged and the UPDATE reports
+     * 0 rows), and gating the push on rowCount would silently skip it.
+     */
+    public static function revokeDeviceSessions(int $userId, int $deviceId): bool
+    {
+        $db = static::db();
+        // Fetch the push token first: the row is deactivated below, and the
+        // push must go to this device only.
+        $stmt = $db->prepare('SELECT fcm_token, push_type FROM sys_mobile_devices WHERE user_id = ? AND id = ? LIMIT 1');
+        $stmt->execute([$userId, $deviceId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row === false) {
+            return false;
+        }
+
+        $deact = $db->prepare('UPDATE sys_mobile_devices SET is_active = 0, updated_at = NOW() WHERE user_id = ? AND id = ?');
+        $deact->execute([$userId, $deviceId]);
+
+        try {
+            require_once dirname(__DIR__) . '/services/push/PushService.php';
+            $provider = \App\Services\Push\PushService::getProvider();
+            $token = (string)($row['fcm_token'] ?? '');
+            if ($provider->isConfigured() && $token !== '' && ($row['push_type'] ?? null) !== 'apns' && !str_starts_with($token, 'revoked:')) {
+                $provider->sendToToken($token, ['action' => 'session_revoked']);
+            }
+        } catch (\Throwable $e) {
+            error_log('revokeDeviceSessions: push failed: ' . $e->getMessage());
+        }
+        return true;
     }
 }

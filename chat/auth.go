@@ -100,11 +100,24 @@ func ValidateBearerToken(tokenStr string, secretKey string) (*User, error) {
 	}
 
 	parts := strings.Split(string(decodedBytes), ":")
-	if len(parts) != 3 {
+	if len(parts) != 3 && len(parts) != 4 {
 		return nil, fmt.Errorf("invalid token format")
 	}
 
-	userIDStr, expiresAtStr, sig := parts[0], parts[1], parts[2]
+	// Device-bound tokens carry the sys_mobile_devices row id as the second
+	// part; a 4-part token with row 0 is malformed (row ids start at 1).
+	var userIDStr, deviceRowIDStr, expiresAtStr, sig string
+	var deviceRowID int
+	if len(parts) == 4 {
+		userIDStr, deviceRowIDStr, expiresAtStr, sig = parts[0], parts[1], parts[2], parts[3]
+		var err error
+		deviceRowID, err = strconv.Atoi(deviceRowIDStr)
+		if err != nil || deviceRowID <= 0 || strconv.Itoa(deviceRowID) != deviceRowIDStr {
+			return nil, fmt.Errorf("invalid device id")
+		}
+	} else {
+		userIDStr, expiresAtStr, sig = parts[0], parts[1], parts[2]
+	}
 	if len(sig) != sha256.Size*2 {
 		return nil, fmt.Errorf("invalid signature format")
 	}
@@ -136,12 +149,18 @@ func ValidateBearerToken(tokenStr string, secretKey string) (*User, error) {
 		return nil, fmt.Errorf("user not found or inactive: %w", err)
 	}
 
-	// The signed text is the same as mobileTokenPayload() in PHP: "id:exp"
-	// while token_epoch is 0, otherwise "id:exp:epoch". The epoch increments on
-	// a password reset and old tokens drop here (the cache lags at most 60 s).
-	payload := userIDStr + ":" + expiresAtStr
-	if user.TokenEpoch > 0 {
-		payload += ":" + strconv.FormatInt(user.TokenEpoch, 10)
+	// The signed text is the same as mobileTokenPayload() in PHP: device-bound
+	// tokens sign "id:rowId:exp:epoch" (epoch always included); legacy tokens
+	// sign "id:exp" while token_epoch is 0, otherwise "id:exp:epoch". The epoch
+	// increments on a password reset and old tokens drop here (the cache lags at most 60 s).
+	var payload string
+	if deviceRowID > 0 {
+		payload = userIDStr + ":" + deviceRowIDStr + ":" + expiresAtStr + ":" + strconv.FormatInt(user.TokenEpoch, 10)
+	} else {
+		payload = userIDStr + ":" + expiresAtStr
+		if user.TokenEpoch > 0 {
+			payload += ":" + strconv.FormatInt(user.TokenEpoch, 10)
+		}
 	}
 	mac := hmac.New(sha256.New, []byte(secretKey))
 	mac.Write([]byte(payload))
@@ -149,6 +168,18 @@ func ValidateBearerToken(tokenStr string, secretKey string) (*User, error) {
 
 	if !hmac.Equal([]byte(sig), []byte(expectedSig)) {
 		return nil, fmt.Errorf("invalid signature")
+	}
+
+	if deviceRowID > 0 {
+		// Device-bound token: the row must still be active for this user.
+		// Signing the device out deactivates its row, so the token fails
+		// here even though token_epoch is unchanged. (A token already in
+		// the 60-second auth cache is still honoured until it expires —
+		// the same lag the epoch path already accepts.)
+		active, err := IsDeviceRowActive(deviceRowID, userID)
+		if err != nil || !active {
+			return nil, fmt.Errorf("device signed out")
+		}
 	}
 
 	if user.Extension == "" || user.Role == "fax_user" {

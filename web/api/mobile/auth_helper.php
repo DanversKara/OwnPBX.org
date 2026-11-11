@@ -60,25 +60,36 @@ function getMobileTokenSecret(): string
 }
 
 /**
- * The signed text. With token_epoch 0 the old form ("id:exp") — so tokens
- * issued before the column was added stay valid. chat/auth.go does the same.
+ * The signed text. Device-bound tokens sign "id:rowId:exp:epoch" (epoch
+ * always included); legacy tokens keep the old form ("id:exp" while
+ * token_epoch is 0, otherwise "id:exp:epoch") so tokens issued before the
+ * column was added stay valid. chat/auth.go does the same.
  */
-function mobileTokenPayload(int $userId, int $expiresAt, int $epoch): string
+function mobileTokenPayload(int $userId, int $deviceRowId, int $expiresAt, int $epoch): string
 {
+    if ($deviceRowId > 0) {
+        return "{$userId}:{$deviceRowId}:{$expiresAt}:{$epoch}";
+    }
     return $epoch > 0 ? "{$userId}:{$expiresAt}:{$epoch}" : "{$userId}:{$expiresAt}";
 }
 
 /**
- * Generate HMAC Bearer token for given user array or user ID
+ * Generate HMAC Bearer token for given user array or user ID.
+ * Pass a sys_mobile_devices row id to mint a device-bound token: signing
+ * that device out later invalidates only its token. Without a row id the
+ * token is the legacy per-user form.
  */
-function generateMobileToken($user, int $ttl = 2592000): string
+function generateMobileToken($user, int $ttl = 2592000, int $deviceRowId = 0): string
 {
     $userId = is_array($user) ? (int)$user['id'] : (int)$user;
     $stmt = getDB()->prepare('SELECT token_epoch FROM sys_users WHERE id = ?');
     $stmt->execute([$userId]);
     $epoch = (int) $stmt->fetchColumn();
     $expiresAt = time() + $ttl;
-    $sig = hash_hmac('sha256', mobileTokenPayload($userId, $expiresAt, $epoch), getMobileTokenSecret());
+    $sig = hash_hmac('sha256', mobileTokenPayload($userId, $deviceRowId, $expiresAt, $epoch), getMobileTokenSecret());
+    if ($deviceRowId > 0) {
+        return base64_encode($userId . ':' . $deviceRowId . ':' . $expiresAt . ':' . $sig);
+    }
     return base64_encode($userId . ':' . $expiresAt . ':' . $sig);
 }
 
@@ -122,11 +133,22 @@ function validateMobileToken(?string $token): ?array
     }
 
     $parts = explode(':', $decoded);
-    if (count($parts) !== 3) {
+    if (count($parts) !== 3 && count($parts) !== 4) {
         return null;
     }
 
-    [$userId, $expiresAt, $sig] = $parts;
+    // Device-bound tokens carry the sys_mobile_devices row id as the second
+    // part; a 4-part token with row 0 is malformed (row ids start at 1).
+    $deviceRowId = 0;
+    if (count($parts) === 4) {
+        [$userId, $deviceRowIdStr, $expiresAt, $sig] = $parts;
+        $deviceRowId = (int)$deviceRowIdStr;
+        if ($deviceRowId <= 0 || (string)$deviceRowId !== $deviceRowIdStr) {
+            return null;
+        }
+    } else {
+        [$userId, $expiresAt, $sig] = $parts;
+    }
 
     // Expiry check
     if (time() > (int)$expiresAt) {
@@ -144,11 +166,26 @@ function validateMobileToken(?string $token): ?array
     }
 
     // HMAC verification (token_epoch included — old tokens drop when the password is reset)
-    $payload = mobileTokenPayload((int)$userId, (int)$expiresAt, (int)$user['token_epoch']);
+    $payload = mobileTokenPayload((int)$userId, $deviceRowId, (int)$expiresAt, (int)$user['token_epoch']);
     $expected_sig = hash_hmac('sha256', $payload, getMobileTokenSecret());
 
     if (!hash_equals($expected_sig, $sig) || $userId !== (string)(int)$userId) {
         return null;
+    }
+
+    if ($deviceRowId > 0) {
+        // Device-bound token: the row must still exist, belong to this user
+        // and be active. Signing the device out deactivates its row, which
+        // invalidates this token even though token_epoch is unchanged — the
+        // other devices' tokens keep working.
+        $rowStmt = $db->prepare('SELECT id FROM sys_mobile_devices WHERE id = ? AND user_id = ? AND is_active = 1');
+        $rowStmt->execute([$deviceRowId, (int)$userId]);
+        if ($rowStmt->fetchColumn() === false) {
+            return null;
+        }
+        $user['mobile_device_id'] = $deviceRowId;
+    } else {
+        $user['mobile_device_id'] = 0;
     }
 
     return $user;
@@ -172,10 +209,11 @@ function requireMobileAuth(): array
 
 /**
  * Builds the standard session response package (token, SIP, TURN, push) for mobile clients.
+ * Pass a sys_mobile_devices row id to mint a device-bound token; 0 keeps the legacy per-user token.
  */
-function buildMobileLoginResponse(array $user): array
+function buildMobileLoginResponse(array $user, int $deviceRowId = 0): array
 {
-    $token = generateMobileToken($user, 30 * 86400);
+    $token = generateMobileToken($user, 30 * 86400, $deviceRowId);
 
     $webrtc_suffix = getSystemSetting('webrtc_username_suffix', '-webrtc');
     $ws_path = getSystemSetting('pjsip_ws_path', '/ws');

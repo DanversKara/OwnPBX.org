@@ -90,7 +90,7 @@ class MyPhoneController extends BaseController
                     }
                 }
                 if (MyPhoneRepository::deactivateDevice($userId, $deviceId)) {
-                    MyPhoneRepository::revokeMobileSessions($userId);
+                    MyPhoneRepository::revokeDeviceSessions($userId, $deviceId);
                     writeAuditLog(null, 'user_settings', 'mobile', "Signed out device: {$deviceName} (id {$deviceId})", 'update', $userId);
                     static::notifySuccess(t('my_phone.msg_device_signed_out'));
                 } else {

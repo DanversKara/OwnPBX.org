@@ -15,5 +15,6 @@ if (empty($user['is_active'])) {
 
 // Exactly the same package as the sign-in response (new 30-day token, SIP, TURN, push).
 // There used to be a separate copy here, missing the native_sip_username/sip_port/email
-// fields.
-mobileJson(buildMobileLoginResponse($user));
+// fields. A device-bound token stays bound across refresh; a legacy token stays legacy.
+$deviceRowId = (int)($user['mobile_device_id'] ?? 0);
+mobileJson(buildMobileLoginResponse($user, $deviceRowId));

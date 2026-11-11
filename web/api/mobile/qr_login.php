@@ -14,12 +14,15 @@ $json = mobileInput();
 
 $qr_token = trim($json['qr_token'] ?? $_POST['qr_token'] ?? '');
 $device_name = trim($json['device_name'] ?? $_POST['device_name'] ?? 'Mobile Device');
+$client_device_id = trim($json['device_id'] ?? $_POST['device_id'] ?? '');
+$platform = trim($json['platform'] ?? $_POST['platform'] ?? 'android');
+$app_version = trim($json['app_version'] ?? $_POST['app_version'] ?? '');
 
 if (empty($qr_token)) {
     mobileError(t('mobile_api.qr_token_required'), 400);
 }
 
-$res = QrLoginService::authenticateMobile($qr_token, $device_name, $client_ip);
+$res = QrLoginService::authenticateMobile($qr_token, $device_name, $client_ip, $client_device_id, $platform, $app_version);
 
 if (!$res['success']) {
     mobileError($res['error'] ?? t('mobile_api.login_failed'), (int) ($res['code'] ?? 401));

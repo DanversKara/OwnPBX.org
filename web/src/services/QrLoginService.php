@@ -262,9 +262,12 @@ class QrLoginService
      * @param string $qrToken one-time token read from the QR code
      * @param string $deviceName mobile device name (e.g. "Samsung SM-S918B" or "iPhone 15 Pro")
      * @param string $clientIp client IP address
+     * @param string $clientDeviceId the app's stable per-install device id ('' for old apps: legacy token)
+     * @param string $platform client platform (e.g. "android")
+     * @param string $appVersion client app version (e.g. "1.60.21")
      * @return array{success: bool, response?: array, error?: string, code?: int}
      */
-    public static function authenticateMobile(string $qrToken, string $deviceName, string $clientIp): array
+    public static function authenticateMobile(string $qrToken, string $deviceName, string $clientIp, string $clientDeviceId = '', string $platform = 'android', string $appVersion = ''): array
     {
         $qrToken = trim($qrToken);
         if (empty($qrToken)) {
@@ -321,7 +324,24 @@ class QrLoginService
 
         writeAuditLog(null, 'user_account', $record['id'], "Mobile QR code sign-in: {$record['username']} ({$deviceName})", 'login', $record['id']);
 
-        $loginResponse = buildMobileLoginResponse($record);
+        // Device-bound token when the app sent its stable device id (see
+        // login.php): the token is minted against this device's row, so
+        // signing this device out later kills only its login.
+        $deviceRowId = 0;
+        if ($clientDeviceId !== '') {
+            require_once __DIR__ . '/../core/BaseRepository.php';
+            require_once __DIR__ . '/../repositories/MyPhoneRepository.php';
+            $deviceRowId = MyPhoneRepository::findOrCreateDeviceRow(
+                (int)$record['id'],
+                (string)$record['extension'],
+                $clientDeviceId,
+                $deviceName,
+                $platform,
+                $appVersion
+            );
+        }
+
+        $loginResponse = buildMobileLoginResponse($record, $deviceRowId);
 
         return ['success' => true, 'response' => $loginResponse];
     }

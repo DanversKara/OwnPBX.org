@@ -67,4 +67,22 @@ if (!in_array('mobil', parsePhoneModes($user['allowed_phone_mode'] ?? null), tru
 // Sign-in succeeded: log the attempt
 logLoginAttempt($client_ip, $username, 'SUCCESS');
 
-mobileJson(buildMobileLoginResponse($user));
+// Device-bound token: when the app sends its stable device id, mint the
+// token against this device's row, so signing this device out later kills
+// only its login. Without a device id the token stays legacy (per-user).
+$deviceRowId = 0;
+$clientDeviceId = trim($json['device_id'] ?? $_POST['device_id'] ?? '');
+if ($clientDeviceId !== '') {
+    require_once dirname(__DIR__, 2) . '/src/core/BaseRepository.php';
+    require_once dirname(__DIR__, 2) . '/src/repositories/MyPhoneRepository.php';
+    $deviceRowId = MyPhoneRepository::findOrCreateDeviceRow(
+        (int)$user['id'],
+        (string)$user['extension'],
+        $clientDeviceId,
+        $device_name,
+        trim($json['platform'] ?? $_POST['platform'] ?? 'android'),
+        trim($json['app_version'] ?? $_POST['app_version'] ?? '')
+    );
+}
+
+mobileJson(buildMobileLoginResponse($user, $deviceRowId));

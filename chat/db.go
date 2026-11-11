@@ -189,6 +189,24 @@ func GetUserByID(id int) (*User, error) {
 	return &u, nil
 }
 
+// IsDeviceRowActive reports whether the mobile device row is still active
+// for the user. A per-device sign-out deactivates the row, which invalidates
+// the device-bound token that references it.
+func IsDeviceRowActive(deviceRowID, userID int) (bool, error) {
+	if db == nil {
+		return false, fmt.Errorf("database not connected")
+	}
+	var active int
+	err := db.QueryRow("SELECT 1 FROM sys_mobile_devices WHERE id = ? AND user_id = ? AND is_active = 1 LIMIT 1", deviceRowID, userID).Scan(&active)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return active == 1, nil
+}
+
 func GetUserByExt(ext string) (*User, error) {
 	row := db.QueryRow("SELECT id, username, COALESCE(extension, ''), COALESCE(full_name, ''), role, is_active FROM sys_users WHERE extension = ? AND is_active = 1 LIMIT 1", ext)
 	var u User
