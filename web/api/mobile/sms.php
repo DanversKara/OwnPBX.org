@@ -17,6 +17,11 @@
  *        → {success, message_id}
  *   POST {"action": "contact", "number_id": ..., "peer": ..., "name": ...}
  *        → {success} (names a peer for everyone on that number)
+ *   POST {"action": "delete", "number_id": ..., "message_id": ...} → {success}
+ *   POST {"action": "delete_thread", "number_id": ..., "peer": ...} → {success, deleted}
+ *        (removes messages from the PBX only; a text the peer already has is not unsent)
+ *   GET  ?action=gifs&q= → {success, gifs: [{id, preview, url}]} (GIPHY; config says gif_search)
+ *   "send" also takes reply_to (message id it answers) and gif_url (a GIF from ?action=gifs).
  *
  * Authentication is the HMAC Bearer <redacted> (requireMobileAuth), exactly like
  * the other mobile endpoints — there is no web session and no CSRF token from
@@ -105,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     'provider' => (string) ($n['provider'] ?? ''),
                 ];
             }
-            mobileJson(['success' => true, 'numbers' => $numbers]);
+            mobileJson(['success' => true, 'numbers' => $numbers, 'gif_search' => Sms::gifSearchEnabled($plugin['settings'])]);
         }
 
         case 'threads': {
@@ -157,6 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                     'created_at' => (string) ($m['created_at'] ?? ''),
                     'is_read' => (int) ($m['is_read'] ?? 0) === 1,
                     'media' => $media,
+                    'reply_to' => $m['reply_to'] ?? null,
                 ];
             }
             mobileJson(['success' => true, 'messages' => $messages]);
@@ -165,6 +171,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         case 'poll': {
             $numbers = mobileSmsNumbers($userId, $userRole);
             mobileJson(['success' => true, 'last' => Sms::lastId(array_keys($numbers))]);
+        }
+
+        case 'gifs': {
+            try {
+                mobileJson(['success' => true, 'gifs' => Sms::gifSearch($plugin['settings'], (string) ($_GET['q'] ?? ''))]);
+            } catch (\Throwable $e) {
+                mobileError($e->getMessage(), 400);
+            }
         }
 
         default:
@@ -210,11 +224,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $files[] = ['name' => $up['name'][$i], 'tmp_name' => $up['tmp_name'][$i], 'size' => $up['size'][$i]];
             }
             try {
-                $messageId = Sms::send($number, $peer, $text, $files, $userId, $settings);
+                $extra = [];
+                $gifUrl = trim((string) ($in['gif_url'] ?? ''));
+                if ($gifUrl !== '') {
+                    $extra[] = Sms::fetchGif($gifUrl);
+                }
+                $messageId = Sms::send($number, $peer, $text, $files, $userId, $settings, (int) ($in['reply_to'] ?? 0), $extra);
             } catch (\Throwable $e) {
                 mobileError($e->getMessage(), 400);
             }
             mobileJson(['success' => true, 'message_id' => $messageId]);
+        }
+
+        case 'delete': {
+            $numbers = mobileSmsNumbers($userId, $userRole);
+            $numberId = (int) ($in['number_id'] ?? 0);
+            if (!isset($numbers[$numberId]) || !Sms::deleteMessage($numberId, (int) ($in['message_id'] ?? 0))) {
+                mobileError(t('mobile_api.invalid_request'), 400);
+            }
+            mobileJson(['success' => true]);
+        }
+
+        case 'delete_thread': {
+            $numbers = mobileSmsNumbers($userId, $userRole);
+            $numberId = (int) ($in['number_id'] ?? 0);
+            $peer = SmsProvider::e164(trim((string) ($in['peer'] ?? '')));
+            if (!isset($numbers[$numberId]) || $peer === '') {
+                mobileError(t('mobile_api.invalid_request'), 400);
+            }
+            mobileJson(['success' => true, 'deleted' => Sms::deleteThread($numberId, $peer)]);
         }
 
         case 'contact': {

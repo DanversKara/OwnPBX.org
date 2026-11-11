@@ -252,6 +252,17 @@ systemctl stop aipbx-webhook-worker.service 2>/dev/null || true
 install -d -o www-data -g www-data -m 0750 /var/lib/aipbx/plugins
 runuser -u www-data -- php "$INSTALL_DIR/web/bin/migrate-bundled-plugins.php" || error "Bundled plugin transition failed"
 
+# SMS/MMS is now built in (plugins/sms). A copy installed earlier from the community catalog
+# sits in /var/lib/aipbx/plugins/sms and, being a custom upload, would win over the built-in one
+# (and hide its new features). Move that old copy aside; its settings and messages stay in the
+# database, keyed by the slug, so nothing is lost.
+if [ -f /var/lib/aipbx/plugins/sms/plugin.json ] && grep -qi 'mahirgul' /var/lib/aipbx/plugins/sms/plugin.json; then
+    install -d -o www-data -g www-data -m 0750 /var/lib/aipbx/plugins/.retired
+    mv /var/lib/aipbx/plugins/sms "/var/lib/aipbx/plugins/.retired/sms-$(date +%Y%m%d%H%M%S)" \
+        && info "Replaced the community SMS plugin with the built-in one (old copy in /var/lib/aipbx/plugins/.retired)" \
+        || warn "Could not move the old community SMS plugin aside"
+fi
+
 # Ensure plg_* tables exist for all enabled plugins (schema.sql) on install/upgrade
 php -r "require '$INSTALL_DIR/web/config.php'; if (is_file('$INSTALL_DIR/web/src/core/PluginManager.php')) { require_once '$INSTALL_DIR/web/src/core/PluginManager.php'; PluginManager::syncAllEnabledPluginSchemas(); }" || warn "One or more plugin schema syncs reported an issue"
 

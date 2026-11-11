@@ -19,6 +19,10 @@ parameters:
         - index.php
     scanFiles:
         - config.php
+        # The SMS plugin's classes, used by api/mobile/sms.php (loaded at run time from the plugin).
+        - ../plugins/sms/lib/Provider.php
+        - ../plugins/sms/lib/Media.php
+        - ../plugins/sms/lib/Sms.php
     tmpDir: .phpstan-cache
     reportUnmatchedIgnoredErrors: false
     ignoreErrors:

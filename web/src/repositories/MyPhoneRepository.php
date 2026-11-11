@@ -531,11 +531,31 @@ class MyPhoneRepository extends BaseRepository
      * token, so on its own "Sign out" never signed the app out. Bumping
      * token_epoch invalidates every mobile Bearer token the user holds (the app
      * API and the chat server both check it); the app gets 401 on its next
-     * request and signs itself out (SessionExpiry). Tokens carry no device id,
+     * request and signs itself out (SessionExpiry); a "session_revoked" push makes
+     * that immediate when push is set up. Tokens carry no device id,
      * so this signs out all of the user's phones, not just the one picked.
      */
     public static function revokeMobileSessions(int $userId): void
     {
+        // Tell the phones first, while their push tokens are still listed as active: the app
+        // signs out the moment the push arrives instead of waiting for its next request.
+        try {
+            require_once dirname(__DIR__) . '/services/push/PushService.php';
+            $provider = PushService::getProvider();
+            if ($provider->isConfigured()) {
+                $q = static::db()->prepare("SELECT fcm_token FROM sys_mobile_devices
+                    WHERE user_id = ? AND is_active = 1 AND fcm_token IS NOT NULL AND fcm_token <> ''
+                      AND (push_type IS NULL OR push_type <> 'apns')");
+                $q->execute([$userId]);
+                foreach ($q->fetchAll(\PDO::FETCH_COLUMN) as $token) {
+                    if (!str_starts_with((string) $token, 'revoked:')) {
+                        $provider->sendToToken((string) $token, ['action' => 'session_revoked']);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            error_log('revokeMobileSessions: push failed: ' . $e->getMessage());
+        }
         static::db()->prepare("UPDATE sys_users SET token_epoch = token_epoch + 1 WHERE id = ?")->execute([$userId]);
         static::db()->prepare("UPDATE sys_mobile_devices SET is_active = 0, updated_at = NOW() WHERE user_id = ?")->execute([$userId]);
     }

@@ -19,6 +19,7 @@ This directory contains the **official plugins** bundled with AiPBX. Community p
 | [`ai-tts`](./ai-tts/plugin.json) | `ai` | AiPBX Official Team | AI Text-to-Speech studio for generating IVR and system announcements |
 | [`ai-apps`](./ai-apps/plugin.json) | `ai` | AiPBX Official Team | Conversational AI Voice Bots (`AudioSocket` / `ARI`) for inbound calls |
 | [`ai-models`](./ai-models/plugin.json) | `ai` | AiPBX Official Team | Lightweight local TTS & speech runtime manager |
+| [`sms`](./sms/plugin.json) | `integration` | OwnPBX | SMS/MMS on your numbers (Twilio, Vonage, Plivo, Telnyx, Bandwidth, Sinch, VoIP.ms, BulkVS): replies, delete, emoji and GIFs (GIPHY), in the portal and the app. Originally the AiPBX community plugin (MIT). |
 
 ## Community Plugins (`type: "community"`)
 
