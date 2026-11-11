@@ -142,6 +142,11 @@ chmod 0660 /var/lib/aipbx/sync-locks/*.lock 2>/dev/null || true
 # root, so without this folder the portal could not save an uploaded logo.
 mkdir -p "$INSTALL_DIR/web/assets/images/brand"
 chown www-data:www-data "$INSTALL_DIR/web/assets/images/brand"
+# Fax cover logo uploads (Fax → Cover page). Same root-owned checkout problem:
+# without this folder the portal cannot save an uploaded fax logo ("The logo
+# could not be uploaded") because www-data cannot mkdir under web/assets.
+mkdir -p "$INSTALL_DIR/web/assets/images/fax-brand"
+chown www-data:www-data "$INSTALL_DIR/web/assets/images/fax-brand"
 # TWO processes write to the fax directories: Asterisk (user asterisk; incoming
 # faxes, send results) and the portal (www-data, member of group asterisk;
 # outgoing fax archive and the .call file). Previously /var/www/faxes belonged to
