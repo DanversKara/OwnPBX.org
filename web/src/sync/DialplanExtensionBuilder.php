@@ -42,6 +42,7 @@ function buildDndCfCheckLines($ext, $db) {
         if ($perm_grp > 0) {
             $cf_lines[] = " same => n,Set(__PERMISSION_GROUP_ID={$perm_grp})";
         }
+        $cf_lines[] = " same => n,Set(__AIPBX_USER_EXT={$ext})";
         if (!empty($u['is_guest']) && ($u['role'] ?? '') !== 'admin') {
             $cf_lines[] = " same => n,Set(__AIPBX_GUEST_EXT={$ext})";
         }
@@ -84,7 +85,8 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
     $isGuest = !empty($u['is_guest']) && ($u['role'] ?? '') !== 'admin';
     // A guest's forward leaves as the guest's call: [sub-guest-gate] then
     // refuses emergency numbers (always) and outside numbers (when off).
-    $guestTag = $isGuest ? " same => n,Set(__AIPBX_GUEST_EXT={$ext})" : null;
+    // ...and is billed to the forwarding user (outside minutes), like the old OwnPBX.
+    $guestTag = " same => n,Set(__AIPBX_USER_EXT={$ext})" . ($isGuest ? "\n same => n,Set(__AIPBX_GUEST_EXT={$ext})" : '');
 
     $dnd = !empty($u['dnd_enabled']);
     $cfAlways = preg_replace('/[^0-9+]/', '', trim($u['call_forward_number'] ?? ''));
@@ -155,9 +157,7 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
         if ($permGrp > 0) {
             $lines[] = " same => n,Set(__PERMISSION_GROUP_ID={$permGrp})";
         }
-        if ($guestTag !== null) {
-            $lines[] = $guestTag;
-        }
+        $lines[] = $guestTag;
         $lines[] = " same => n,Goto({$cfContext},{$cfAlways},1)";
         $lines[] = " same => n(cf_loop_{$lbl}),NoOp(Call forwarding loop blocked - {$ext})";
         $lines[] = " same => n,Hangup(17)";
@@ -257,9 +257,7 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
         if ($permGrp > 0) {
             $lines[] = " same => n,Set(__PERMISSION_GROUP_ID={$permGrp})";
         }
-        if ($guestTag !== null) {
-            $lines[] = $guestTag;
-        }
+        $lines[] = $guestTag;
         $lines[] = " same => n,Goto({$cfContext},{$cfBusy},1)";
     } elseif (!empty($u['voicemail_enabled']) && !empty($u['vm_on_busy'])) {
         $lines[] = " same => n,NoOp(Voicemail on busy - {$ext})";
@@ -279,9 +277,7 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
         if ($permGrp > 0) {
             $lines[] = " same => n,Set(__PERMISSION_GROUP_ID={$permGrp})";
         }
-        if ($guestTag !== null) {
-            $lines[] = $guestTag;
-        }
+        $lines[] = $guestTag;
         $lines[] = " same => n,Goto({$cfContext},{$cfNoAnswer},1)";
     } elseif (!empty($u['voicemail_enabled']) && !empty($u['vm_on_noanswer'])) {
         $lines[] = " same => n,NoOp(Voicemail on no answer - {$ext})";
@@ -301,9 +297,7 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
         if ($permGrp > 0) {
             $lines[] = " same => n,Set(__PERMISSION_GROUP_ID={$permGrp})";
         }
-        if ($guestTag !== null) {
-            $lines[] = $guestTag;
-        }
+        $lines[] = $guestTag;
         $lines[] = " same => n,Goto({$cfContext},{$cfNoAnswer},1)";
     } elseif ($cfBusy !== '') {
         $lines[] = " same => n,NoOp(Unreachable -> forward on busy: {$ext} -> {$cfBusy})";
@@ -311,9 +305,7 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
         if ($permGrp > 0) {
             $lines[] = " same => n,Set(__PERMISSION_GROUP_ID={$permGrp})";
         }
-        if ($guestTag !== null) {
-            $lines[] = $guestTag;
-        }
+        $lines[] = $guestTag;
         $lines[] = " same => n,Goto({$cfContext},{$cfBusy},1)";
     } elseif (!empty($u['voicemail_enabled']) && (!empty($u['vm_on_unavail']) || !empty($u['vm_on_noanswer']))) {
         $lines[] = " same => n,NoOp(Unreachable -> voicemail - {$ext})";

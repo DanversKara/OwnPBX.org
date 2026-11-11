@@ -231,7 +231,9 @@ function __syncOutboundDialplanBody() {
                 // Guest accounts: emergency numbers are never dialled, outside calls only when allowed.
                 // Checked here, on the number going to the carrier, so no route can bypass it.
                 $conf .= " same => n,Gosub(sub-guest-gate,s,1(\${AIPBX_TRUNK_DIAL},\${EXTEN}))\n";
-                $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$t['trunk_name']},{$external_dial_timeout},Tb(sub-callee-jb^s^1))\n";
+                // Billing (plugin): minutes left; refuses at none, sets BILL_OPT=L(...) to cut the call off.
+                $conf .= " same => n,Gosub(sub-billing-gate,s,1(\${AIPBX_TRUNK_DIAL}))\n";
+                $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$t['trunk_name']},{$external_dial_timeout},Tb(sub-callee-jb^s^1)\${BILL_OPT})\n";
                 if ($limited) {
                     $conf .= " same => n,Goto(afterdial{$step})\n";
                     $conf .= " same => n(trunkfull{$step}),NoOp(Trunk {$t['trunk_name']} over its limit: \${TRUNK_LIMIT})\n";
@@ -287,7 +289,9 @@ function __syncOutboundDialplanBody() {
                 // Guest accounts: emergency numbers are never dialled, outside calls only when allowed.
                 // Checked here, on the number going to the carrier, so no route can bypass it.
                 $conf .= " same => n,Gosub(sub-guest-gate,s,1(\${AIPBX_TRUNK_DIAL},\${EXTEN}))\n";
-                $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$fallback_trunk},{$external_dial_timeout},T)\n";
+                // Billing (plugin): minutes left; refuses at none, sets BILL_OPT=L(...) to cut the call off.
+                $conf .= " same => n,Gosub(sub-billing-gate,s,1(\${AIPBX_TRUNK_DIAL}))\n";
+                $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$fallback_trunk},{$external_dial_timeout},T\${BILL_OPT})\n";
                 $conf .= " same => n,Goto(sub-outbound-status,\${IF($[\"\${DIALSTATUS}\" != \"\"]?\${DIALSTATUS}:NOANSWER)},1)\n";
                 $conf .= " same => n(refused),Goto(sub-outbound-status,CONGESTION,1)\n\n";
             }
@@ -363,6 +367,7 @@ function __syncOutboundDialplanBody() {
     require_once dirname(__DIR__) . '/services/GuestService.php';
     require_once dirname(__DIR__) . '/services/GuestPromptService.php';
     $conf .= buildGuestGateDialplan(GuestService::guestExtensions(), GuestPromptService::soundForDialplan());
+    $conf .= buildBillingGateDialplan();
 
     return writeConfWithRollback('extensions_outbound.conf', $conf, function() {
         AsteriskHelper::assertReloadsOk([AsteriskHelper::reloadDialplan()], t('sync.ctx_outbound'));
@@ -498,4 +503,23 @@ function buildGuestGateDialplan(array $guests, string $sound): string
     $conf .= " same => n,Hangup(21)\n";
     $conf .= " same => n(ok),Return()\n\n";
     return $conf;
+}
+
+/**
+ * [sub-billing-gate] / [sub-billing-record]: from the Billing plugin when it is enabled (outside
+ * minutes per plan, counted per call), otherwise contexts that only return, so the Gosub in every
+ * route works either way. A user out of minutes hears the blocked call prompt (Outbound Routes).
+ */
+function buildBillingGateDialplan(): string
+{
+    require_once dirname(__DIR__) . '/services/BillingBridge.php';
+    if (BillingBridge::load()) {
+        try {
+            $sound = preg_replace('/[^a-zA-Z0-9\/_-]/', '', trim((string) getSystemSetting('blocked_call_prompt', '')));
+            return Billing::dialplan($sound !== '' ? (string) $sound : 'ss-noservice');
+        } catch (\Throwable $e) {
+            error_log('billing dialplan: ' . $e->getMessage());
+        }
+    }
+    return "; ---- Billing plugin off ----\n[sub-billing-gate]\nexten => s,1,Return()\n\n[sub-billing-record]\nexten => s,1,Return()\n\n";
 }

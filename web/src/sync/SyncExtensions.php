@@ -328,6 +328,9 @@ function __syncAllExtensionsBody() {
             $perm_group = 1;
         }
         $set_vars = "set_var=CID_INTERNAL={$cid_internal}\nset_var=CID_EXTERNAL={$cid_external}\nset_var=__CID_INTERNAL={$cid_internal}\nset_var=__CID_EXTERNAL={$cid_external}\nset_var=USER_ROLE={$role}\nset_var=PERMISSION_GROUP_ID={$perm_group}\n";
+        // Whose call this is (billing counts outside minutes against it; forwards and
+        // click-to-call set it too). Inherited through Local channels and ring groups.
+        $set_vars .= "set_var=__AIPBX_USER_EXT={$ext}\n";
         if ($is_guest) {
             // Inherited by every channel this call creates (Local, ring groups,
             // another user's forward): [sub-guest-gate] recognises the guest.

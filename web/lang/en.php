@@ -373,6 +373,7 @@ return [
     'guest.devices_note' => 'Which devices a guest may use (web phone, mobile app, SIP desk phone, video) is set under Phone modes above. For a guest, a device that is off cannot sign in at all.',
     'guest.err_forward' => 'Your account can only forward calls to internal extensions.',
     'guest.err_fax' => 'Fax is not available on your account.',
+    'billing.err_no_faxes' => 'Fax is not in your plan, or this month\'s faxes are used up.',
     'guest_prompt.title' => 'Guest prompt',
     'guest_prompt.help' => 'What a guest hears when they try something their account does not allow — an outside call, any emergency number, and so on. For example: "Your account doesn\'t allow this feature at this time. Contact support to request it or upgrade your plan." One prompt is used for every blocked guest feature.',
     'guest_prompt.none' => 'No guest prompt set — guests hear the generic announcement.',

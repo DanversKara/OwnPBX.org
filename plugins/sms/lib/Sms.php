@@ -313,6 +313,11 @@ final class Sms
         if (count($files) + count($extraMedia) > self::MAX_MEDIA) {
             throw new \InvalidArgumentException('At most ' . self::MAX_MEDIA . ' pictures per message.');
         }
+        // Billing (plugin): texts left this month. Allowed when billing is off or not enforced.
+        $bridge = self::billingBridge();
+        if ($bridge && !BillingBridge::allows($userId, 'messages')) {
+            throw new \InvalidArgumentException('Your plan\'s texts for this month are used up.');
+        }
         $provider = self::provider((string) $number['provider'], $settings);
         if ($provider === null || !$provider->configured()) {
             throw new \InvalidArgumentException('The provider of this number is not set up on the plugin page.');
@@ -340,6 +345,9 @@ final class Sms
         try {
             $id = $provider->send((string) $number['number'], $peer, $text, array_map(static fn(array $m): string => self::mediaUrl($m, true), $media));
             $db->prepare("UPDATE plg_sms_messages SET status = 'sent', provider_id = ? WHERE id = ?")->execute([mb_substr($id, 0, 100), $messageId]);
+            if ($bridge) {
+                BillingBridge::record($userId, 'messages', 1, 'to ' . $peer);
+            }
         } catch (\Throwable $e) {
             $db->prepare("UPDATE plg_sms_messages SET status = 'failed', error = ? WHERE id = ?")->execute([mb_substr($e->getMessage(), 0, 255), $messageId]);
             throw new \RuntimeException('Not sent: ' . $e->getMessage());
@@ -523,6 +531,23 @@ final class Sms
             throw new \RuntimeException('The GIF could not be downloaded (or is larger than 5 MB).');
         }
         return ['type' => 'image/gif', 'name' => 'giphy.gif', 'data' => $data];
+    }
+
+    /** The core's Billing bridge (OwnPBX), when this core has it. */
+    private static function billingBridge(): bool
+    {
+        if (class_exists('BillingBridge')) {
+            return true;
+        }
+        try {
+            $file = dirname((string) (new \ReflectionClass('PluginManager'))->getFileName(), 2) . '/services/BillingBridge.php';
+            if (is_file($file)) {
+                require_once $file;
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+        return class_exists('BillingBridge');
     }
 
     // --- reading ---

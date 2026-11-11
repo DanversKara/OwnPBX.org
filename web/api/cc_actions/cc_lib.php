@@ -14,7 +14,9 @@ function buildOriginateCommand(string $user_ext, string $to, string $outbound_co
 {
     $perm_group = max(1, $perm_group);
     // A guest's click-to-call is the guest's call: [sub-guest-gate] checks it before any trunk.
-    $guest_var = $guest ? 'Variable: __AIPBX_GUEST_EXT=' . preg_replace('/[^0-9]/', '', $user_ext) . "\r\n" : '';
+    $guest_var = ($guest ? 'Variable: __AIPBX_GUEST_EXT=' . preg_replace('/[^0-9]/', '', $user_ext) . "\r\n" : '')
+        // Billed to the user who clicked (outside minutes).
+        . 'Variable: __AIPBX_USER_EXT=' . preg_replace('/[^0-9]/', '', $user_ext) . "\r\n";
     return "Action: Originate\r\n" . $guest_var .
            "Channel: Local/$user_ext@cc-internal\r\n" .
            "Context: $outbound_context\r\n" .

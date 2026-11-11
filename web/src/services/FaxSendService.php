@@ -32,6 +32,12 @@ class FaxSendService {
         // — this field says which tab is active; PDF is the default (backward compatible).
         $compose_mode = (($post['compose_mode'] ?? 'pdf') === 'text') ? 'text' : 'pdf';
 
+        // Billing (plugin): fax in the plan and faxes left this month. Allowed when billing is off.
+        require_once __DIR__ . '/BillingBridge.php';
+        if (!BillingBridge::allows($userId, 'faxes')) {
+            return ['success' => false, 'error' => t('billing.err_no_faxes')];
+        }
+
         // Sender identity: a regular fax user ALWAYS uses their own extension —
         // a different value in the POST (the field is read-only, but that is
         // not a server-side guarantee) is silently ignored. An admin can pick
@@ -175,6 +181,7 @@ class FaxSendService {
             return ['success' => false, 'error' => $e->getMessage()];
         }
 
+        BillingBridge::record($userId, 'faxes', 1, 'to ' . $dest_number);
         return ['success' => true, 'message' => sprintf(t('srv_fax.queued'), $fax_id, $page_count)];
     }
 
@@ -348,6 +355,8 @@ class FaxSendService {
                              "Priority: 1\n" .
                              ($perm_grp > 0 ? "SetVar: __PERMISSION_GROUP_ID=$perm_grp\n" : '') .
                              self::guestCallFileLines($faxId) .
+                             // Faxes are counted as faxes (Billing plugin), not as outside minutes.
+                             "SetVar: __AIPBX_BILL_SKIP=1\n" .
                              // The fax account's own outside number beats the trunk's, as on a phone call
                              // (the route reads CID_EXTERNAL; a Local channel has none of its own) (#157).
                              ($has_own_cid ? "SetVar: __CID_EXTERNAL=$sender_cid\n" : '') .
