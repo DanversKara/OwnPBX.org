@@ -157,6 +157,7 @@ function __syncInboundDialplanBody() {
             $same .= " same => n,Set(CDR(inbound_trunk)={$t_name})\n";
             // The caller's number first, so the blacklist sees the same form as everything after it.
             $same .= inboundNormLines($normRules, $t_name, 'caller');
+            $same .= " same => n,Gosub(sub-caller-rules,s,1)\n";
             $same .= " same => n,Gosub(sub-inbound-blacklist,s,1)\n";
             $same .= " same => n,GosubIf(\$[\${DIALPLAN_EXISTS(sub-cnam-lookup,s,1)}]?sub-cnam-lookup,s,1)\n";
 
@@ -188,6 +189,7 @@ function __syncInboundDialplanBody() {
             $conf .= " same => n,Set(AIPBX_TO_USER=\${PJSIP_PARSE_URI(\${PJSIP_HEADER(read,To)},user)})\n";
             $conf .= " same => n,GotoIf(\$[\"\${AIPBX_TO_USER}\" != \"\" & \"\${AIPBX_TO_USER}\" != \"s\"]?from-trunk-{$t_name},\${AIPBX_TO_USER},1)\n";
             $conf .= inboundNormLines($normRules, $t_name, 'caller');
+            $conf .= " same => n,Gosub(sub-caller-rules,s,1)\n";
             $conf .= " same => n,Gosub(sub-inbound-blacklist,s,1)\n";
             $conf .= " same => n,GosubIf(\$[\${DIALPLAN_EXISTS(sub-cnam-lookup,s,1)}]?sub-cnam-lookup,s,1)\n";
             if ($is_busy_tone_wrapper) {
@@ -244,6 +246,7 @@ function __syncInboundDialplanBody() {
     }
 
     $conf .= inboundBlacklistSubroutine();
+    $conf .= callerRulesSubroutine();
     $conf .= trunkLimitSubroutine();
     $conf .= faxDetectSubroutine();
     $conf .= "[from-trunk-inbound]\n\n";
@@ -326,6 +329,7 @@ function __syncInboundDialplanBody() {
     $conf .= "; --- Inbound route wrapper with hang-up tone detection ---\n";
     $conf .= "[from-trunk-kapanma-tonu]\n";
     $conf .= "exten => _X.,1,NoOp(Hangup tone detector active - DID \${EXTEN})\n";
+    $conf .= " same => n,Gosub(sub-caller-rules,s,1)\n";
     $conf .= " same => n,Gosub(sub-inbound-blacklist,s,1)\n";
     $conf .= " same => n,GosubIf(\$[\${DIALPLAN_EXISTS(sub-cnam-lookup,s,1)}]?sub-cnam-lookup,s,1)\n";
     $conf .= " same => n,Set(TONE_DETECT(0,,brg(kapanma-tonu,s,1))=)\n";
@@ -443,6 +447,75 @@ function inboundBlacklistSubroutine(): string
         $out .= "\n";
     }
 
+    return $out;
+}
+
+/**
+ * [sub-caller-rules]: first-match-wins inbound routing, checked FIRST on
+ * every incoming call (before the blacklist). A rule matches when the
+ * called number (did_number) and the caller number (caller_number) both
+ * match; NULL on either side means "any". Rules for one specific number
+ * are checked before rules for any number; within each group the lowest
+ * sort_order wins, then the oldest rule. The first match routes the call
+ * to its destination and the Gosub does not return; no match returns so
+ * the call continues to the blacklist and normal DID routing.
+ */
+function callerRulesSubroutine(): string
+{
+    $db = getDB();
+    $rules = [];
+    try {
+        $rules = $db->query("SELECT * FROM caller_rules WHERE is_active = 1 ORDER BY (did_number IS NULL) ASC, sort_order ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (\Exception $e) {
+        $rules = [];
+    }
+
+    $out = "; --- Caller Rules (first match wins) ---\n";
+    $out .= "[sub-caller-rules]\n";
+    $out .= "exten => s,1,NoOp(Caller Rules - DID: \${EXTEN} Caller: \${CALLERID(num)})\n";
+    $out .= " same => n,Set(LOCAL(did)=\${FILTER(0-9,\${EXTEN})})\n";
+    $out .= " same => n,Set(LOCAL(cid)=\${FILTER(0-9,\${CALLERID(num)})})\n";
+
+    foreach ($rules as $r) {
+        $id = (int)$r['id'];
+        $did = trim((string)($r['did_number'] ?? ''));
+        $caller = trim((string)($r['caller_number'] ?? ''));
+        $destType = preg_replace('/[^a-z_]/', '', (string)($r['dest_type'] ?? 'extension'));
+        $destId = trim((string)($r['dest_id'] ?? ''));
+
+        // Build the match condition: DID and/or caller, "any" when empty.
+        $conds = [];
+        if ($did !== '') {
+            $conds[] = "\"\${LOCAL(did)}\" = \"{$did}\"";
+        }
+        if ($caller !== '') {
+            $conds[] = "\"\${LOCAL(cid)}\" = \"{$caller}\"";
+        }
+        if (empty($conds)) {
+            $out .= " same => n,Goto(rule_{$id})\n";
+        } else {
+            $out .= " same => n,GotoIf(\$[" . implode(' & ', $conds) . "]?rule_{$id})\n";
+        }
+    }
+
+    $out .= " same => n,Return()\n\n";
+
+    foreach ($rules as $r) {
+        $id = (int)$r['id'];
+        $destType = preg_replace('/[^a-z_]/', '', (string)($r['dest_type'] ?? 'extension'));
+        $destId = trim((string)($r['dest_id'] ?? ''));
+        $out .= " same => n(rule_{$id}),NoOp(Caller rule #{$id} matched - DID: \${LOCAL(did)} Caller: \${LOCAL(cid)} -> {$destType} {$destId})\n";
+        $out .= " same => n,System(/usr/bin/php /opt/aipbx/web/bin/caller_rule_hit.php {$id} &)\n";
+        $destLines = buildDestinationLines($destType, $destId, '');
+        foreach ($destLines as $line) {
+            $out .= $line . "\n";
+        }
+        // A destination that returns instead of routing must not fall
+        // through to the blacklist / normal routing — end the call.
+        $out .= " same => n,Hangup()\n";
+    }
+
+    $out .= "\n";
     return $out;
 }
 
