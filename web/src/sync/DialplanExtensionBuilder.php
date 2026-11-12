@@ -104,8 +104,25 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
     $dialTimeout = ($cfNoAnswer !== '') ? $cfTimeout : $globalTimeout;
     $hasAnyCf = ($cfAlways !== '' || $cfBusy !== '' || $cfNoAnswer !== '');
 
-    // 1. DND on: straight to Busy
+    // 1. DND on: to voicemail when the user sends busy (busy greeting) or unreachable/unanswered
+    // calls there; otherwise busy. A transfer that asked to skip voicemail still ends busy.
     if ($dnd) {
+        $vmOn = !empty($u['voicemail_enabled']);
+        if ($vmOn && (!empty($u['vm_on_busy']) || !empty($u['vm_on_unavail']) || !empty($u['vm_on_noanswer']))) {
+            $greeting = !empty($u['vm_on_busy']) ? 'b' : 'u';
+            return [
+                'terminal' => true,
+                'lines' => [
+                    " same => n,NoOp(DND on - {$ext} -> voicemail)",
+                    " same => n,GotoIf(\$[\"\${SKIP_VM}\" = \"1\" & \"\${BLINDTRANSFER}\" = \"\"]?vm_skip_dnd_{$lbl})",
+                    " same => n,VoiceMail({$ext}@default,{$greeting})",
+                    " same => n,Hangup()",
+                    " same => n(vm_skip_dnd_{$lbl}),NoOp()",
+                    ...statusPromptLines('busy', $ext),
+                    " same => n,Hangup(17)"
+                ]
+            ];
+        }
         return [
             'terminal' => true,
             'lines' => [
