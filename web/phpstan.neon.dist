@@ -27,6 +27,7 @@ parameters:
         - ../plugins/billing/lib/Stripe.php
         - ../plugins/billing/lib/Billing.php
         - ../plugins/ha-texts/lib/HaTexts.php
+        - ../plugins/invites/lib/Invites.php
         - ../plugins/billing/lib/Store.php
     tmpDir: .phpstan-cache
     reportUnmatchedIgnoredErrors: false
