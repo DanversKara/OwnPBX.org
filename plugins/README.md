@@ -60,3 +60,11 @@ AI Voicemail is maintained in the [community plugin repository](https://github.c
 Auto-dialer is maintained in the [community plugin repository](https://github.com/mahirgul/aipbx-plugins/tree/main/plugins/community/auto-dialer); existing installations migrate on upgrade with their campaign data and enabled state preserved.
 
 AI Assistant by [Gregory Merriweather (shido6)](https://github.com/shido6) is maintained in the [community plugin repository](https://github.com/mahirgul/aipbx-plugins/tree/main/plugins/community/ai-assistant). Its console is `/plugins/ai-assistant`; the core `/assistant` dialplan editor remains a separate feature. Existing installations migrate with their settings, API token, drafts and history preserved.
+
+## OwnPBX's own plugins
+
+`ha-texts`, `invites`, `billing` and the modified `sms` are also kept in
+[DanversKara/plugins.OwnPBX.org](https://github.com/DanversKara/plugins.OwnPBX.org) under
+`plugins/custom/<slug>/`, apart from the upstream copies, so upstream updates can be compared and
+merged (its `UPSTREAM.md` and `scripts/upstream-check.sh`). A new plugin, or a change to one of these,
+goes there too, at the same version. That repository is public: no tokens or filled-in files.
