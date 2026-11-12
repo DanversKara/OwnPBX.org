@@ -46,6 +46,18 @@ final class CallerIdTest extends TestCase
         $this->assertSame(['+15551230001'], CallerIdService::assigned($this->bob));
     }
 
+    public function testTicksSurviveADidRewrittenWithItsCountryCode(): void
+    {
+        CallerIdService::assign($this->alice, ['15551230002']);
+        getDB()->exec("UPDATE pbx_dids SET did_number = '5551230002' WHERE did_number = '15551230002'");
+        $this->assertSame(['5551230002'], CallerIdService::assigned($this->alice));
+        // A default typed with the country code is still the same number: one choice, marked default.
+        getDB()->prepare('UPDATE sys_users SET cid_external = ? WHERE id = ?')->execute(['+15551230002', $this->alice]);
+        $choices = CallerIdService::choices($this->alice);
+        $this->assertCount(1, $choices);
+        $this->assertTrue($choices[0]['default']);
+    }
+
     public function testDefaultMustBeOneOfTheirNumbers(): void
     {
         CallerIdService::assign($this->alice, ['15551230002']);

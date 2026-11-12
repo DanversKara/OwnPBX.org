@@ -35,10 +35,20 @@ class CallerIdService
         try {
             $stmt = getDB()->prepare('SELECT number FROM pbx_user_caller_ids WHERE user_id = ? ORDER BY id');
             $stmt->execute([$userId]);
-            return array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
+            $stored = array_map('strval', $stmt->fetchAll(PDO::FETCH_COLUMN));
         } catch (\Throwable $e) {
             return []; // before the migration
         }
+        // As the DID is written today (it may have gained or lost its country code since).
+        $now = [];
+        foreach (self::allDids() as $d) {
+            $now[self::key($d['number'])] = $d['number'];
+        }
+        $out = [];
+        foreach ($stored as $n) {
+            $out[self::key($n)] = $now[self::key($n)] ?? $n;
+        }
+        return array_values($out);
     }
 
     /**
@@ -50,17 +60,17 @@ class CallerIdService
         $default = self::clean((string) DBHelper::fetchColumn('SELECT cid_external FROM sys_users WHERE id = ?', [$userId]));
         $titles = [];
         foreach (self::allDids() as $d) {
-            $titles[self::digits($d['number'])] = $d['title'];
+            $titles[self::key($d['number'])] = $d['title'];
         }
         $out = [];
         $seen = [];
         foreach (array_merge($default !== '' ? [$default] : [], self::assigned($userId)) as $n) {
-            $key = self::digits($n);
+            $key = self::key($n);
             if ($key === '' || isset($seen[$key])) {
                 continue;
             }
             $seen[$key] = true;
-            $out[] = ['number' => $n, 'title' => $titles[$key] ?? '', 'default' => $default !== '' && self::digits($default) === $key];
+            $out[] = ['number' => $n, 'title' => $titles[$key] ?? '', 'default' => $default !== '' && self::key($default) === $key];
         }
         return $out;
     }
@@ -73,11 +83,11 @@ class CallerIdService
         }
         $dids = [];
         foreach (self::allDids() as $d) {
-            $dids[self::digits($d['number'])] = $d['number'];
+            $dids[self::key($d['number'])] = $d['number'];
         }
         $keep = [];
         foreach ($numbers as $n) {
-            $key = self::digits((string) $n);
+            $key = self::key((string) $n);
             if (isset($dids[$key])) {
                 $keep[$key] = $dids[$key];
             }
@@ -100,7 +110,7 @@ class CallerIdService
         if ($number !== '') {
             $ok = false;
             foreach (self::choices($userId) as $c) {
-                if (self::digits($c['number']) === self::digits($number)) {
+                if (self::key($c['number']) === self::key($number)) {
                     $number = $c['number'];
                     $ok = true;
                     break;
@@ -128,6 +138,16 @@ class CallerIdService
             }
         }
         return $keys === [] ? '' : '-' . implode('-', array_keys($keys)) . '-';
+    }
+
+    /**
+     * For comparing two spellings of one number: 5595551234, 15595551234 and +15595551234 are
+     * the same line (the last 10 digits), so a DID rewritten with its country code keeps its ticks.
+     */
+    public static function key(string $n): string
+    {
+        $d = self::digits($n);
+        return strlen($d) > 10 ? substr($d, -10) : $d;
     }
 
     public static function digits(string $n): string

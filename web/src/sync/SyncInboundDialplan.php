@@ -82,6 +82,43 @@ function faxDetectLines(array $d, string $did): string
 }
 
 /**
+ * A carrier may send a North American number as 5595551234, 15595551234 or +15595551234, and
+ * the DID may be typed in any of the three. The other spellings of each plain DID go to it,
+ * so adding or dropping the "1" on a DID never makes its calls end as "no matching route".
+ * A spelling that is a DID of its own is left alone.
+ */
+function inboundDidAliases(array $dids): string
+{
+    $exact = [];
+    foreach ($dids as $d) {
+        $raw = ltrim(strtoupper(trim((string) $d['did_number'])), '_');
+        $num = (str_starts_with($raw, '+') ? '+' : '') . preg_replace('/[^0-9XZN.!]/', '', $raw);
+        if ($num !== '' && $num !== '+' && !preg_match('/[XZN.!]/', $num)) {
+            $exact[$num] = true;
+        }
+    }
+    $conf = '';
+    foreach (array_keys($exact) as $num) {
+        $num = (string) $num;
+        $digits = ltrim($num, '+');
+        if (strlen($digits) === 11 && $digits[0] === '1') {
+            $national = substr($digits, 1);
+        } elseif (strlen($digits) === 10 && $num[0] !== '+') {
+            $national = $digits;
+        } else {
+            continue;
+        }
+        foreach ([$national, '1' . $national, '+1' . $national] as $alias) {
+            if (!isset($exact[$alias])) {
+                $exact[$alias] = true;
+                $conf .= "exten => {$alias},1,Goto(from-trunk-inbound,{$num},1)\n";
+            }
+        }
+    }
+    return $conf === '' ? '' : "; Other spellings of the DIDs above (with or without the leading 1)\n{$conf}\n";
+}
+
+/**
  * Asterisk jumps to the extension "fax" of the channel's context when it hears the tone, so listening
  * has to happen in a context that has one: it cannot go on inside an IVR or a queue. It is its own
  * context because a trunk with fax_detect on would also jump to a "fax" extension in the inbound one,
@@ -299,6 +336,7 @@ function __syncInboundDialplanBody() {
             $orig_target = $is_pattern ? '${EXTEN}' : $num;
             $conf .= buildDestinationLines($d['dest_type'], $d['dest_id'], $orig_target) . "\n\n";
         }
+        $conf .= inboundDidAliases($dids);
     } else {
         $conf .= "; No specific DIDs configured yet\n\n";
     }
