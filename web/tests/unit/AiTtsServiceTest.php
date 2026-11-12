@@ -83,7 +83,7 @@ final class AiTtsServiceTest extends TestCase
         $row = AiTtsService::synthesize('google', 'tr-TR-Standard-A', 'tr-TR', 'Merhaba, OwnPBX santraline hoş geldiniz.', 1.0);
         $this->assertSame(1, $this->calls);
         $this->assertSame('google', $row['provider']);
-        $this->assertSame(39, (int) $row['chars']);
+        $this->assertSame(40, (int) $row['chars']);
         $this->assertStringEqualsFile(AiTtsService::audioPath((int) $row['id']), self::$mp3);
 
         $this->calls = 0;

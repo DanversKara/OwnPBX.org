@@ -99,7 +99,7 @@ final class TwoFactorAndPasskeyTest extends TestCase
         $secret = implode('', ['JBSWY3DP', 'EHPK3PXP']);
         $uri = TwoFactorService::getOtpAuthUri('testuser', $secret, 'OwnPBX');
 
-        $this->assertStringStartsWith('otpauth://totp/AiPBX:testuser', $uri);
+        $this->assertStringStartsWith('otpauth://totp/OwnPBX:testuser', $uri);
         $this->assertStringContainsString('secret=' . $secret, $uri);
         $this->assertStringContainsString('issuer=OwnPBX', $uri);
 
