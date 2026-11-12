@@ -43,9 +43,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Find the existing record: by device_id first, otherwise by fcm_token
     $existing = null;
     if ($deviceId !== '') {
-        $stmt = $db->prepare("SELECT id, fcm_token, push_type, voip_token FROM sys_mobile_devices WHERE user_id = ? AND device_id = ? LIMIT 1");
+        $stmt = $db->prepare("SELECT id, fcm_token, push_type, voip_token, is_active FROM sys_mobile_devices WHERE user_id = ? AND device_id = ? LIMIT 1");
         $stmt->execute([$userId, $deviceId]);
         $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+        // This phone was signed out (web portal: My Phone -> Sign out) and comes back with an
+        // older token that is not bound to it: it must not switch itself on again. Signing in
+        // again (login, QR, Google) makes the row active with a bound token, so this only
+        // stops the old session. A bound token of a signed-out phone never gets here.
+        if ($existing && empty($existing['is_active']) && (int) ($user['mobile_device_id'] ?? 0) === 0) {
+            mobileError(t('mobile_api.session_expired'), 401);
+        }
     }
 
     if (!$existing && $fcmToken !== null) {

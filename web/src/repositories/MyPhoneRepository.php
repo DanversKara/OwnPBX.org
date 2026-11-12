@@ -608,6 +608,14 @@ class MyPhoneRepository extends BaseRepository
         $deact = $db->prepare('UPDATE sys_mobile_devices SET is_active = 0, updated_at = NOW() WHERE user_id = ? AND id = ?');
         $deact->execute([$userId, $deviceId]);
 
+        // The user's last phone: end every mobile session too. Tokens from before per-device
+        // sign-out are not bound to a phone, so deactivating the row alone left them working.
+        $others = $db->prepare('SELECT COUNT(*) FROM sys_mobile_devices WHERE user_id = ? AND is_active = 1');
+        $others->execute([$userId]);
+        if ((int) $others->fetchColumn() === 0) {
+            $db->prepare('UPDATE sys_users SET token_epoch = token_epoch + 1 WHERE id = ?')->execute([$userId]);
+        }
+
         try {
             require_once dirname(__DIR__) . '/services/push/PushService.php';
             $provider = \App\Services\Push\PushService::getProvider();
