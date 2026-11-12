@@ -35,11 +35,11 @@
         <div class="u-d-grid u-gtc-1fr-1fr-1fr u-gap-16">
             <div class="form-group">
                 <label class="form-label"><?php echo t('brand_settings.field_site_title'); ?></label>
-                <input type="text" name="site_title" class="form-control" value="<?php echo htmlspecialchars($s['site_title']); ?>" required placeholder="AiPBX">
+                <input type="text" name="site_title" class="form-control" value="<?php echo htmlspecialchars($s['site_title']); ?>" required placeholder="OwnPBX">
             </div>
             <div class="form-group">
                 <label class="form-label"><?php echo t('brand_settings.field_brand_title'); ?></label>
-                <input type="text" name="brand_title" class="form-control" value="<?php echo htmlspecialchars($s['brand_title']); ?>" required placeholder="AiPBX">
+                <input type="text" name="brand_title" class="form-control" value="<?php echo htmlspecialchars($s['brand_title']); ?>" required placeholder="OwnPBX">
             </div>
             <div class="form-group">
                 <label class="form-label"><?php echo t('brand_settings.field_brand_sub'); ?></label>

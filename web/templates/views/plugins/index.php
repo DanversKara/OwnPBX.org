@@ -46,7 +46,7 @@ foreach ($plugins as $p) {
             </button>
         </div>
 <?php echo uiPageHeaderClose(); ?>
-<?php echo uiHelpBoxOpen('pluginsHelpBox', t('common.module_guide')); ?><?php echo htmlspecialchars(t('plugins.subtitle', 'AiPBX keeps the core PBX lean. Select and enable only the integrations, Cloud/OpenAI-compatible AI modules, or telemetry tools you need from the official catalog below, or upload a custom .zip plugin package.')); ?><?php echo uiHelpBoxClose(); ?>
+<?php echo uiHelpBoxOpen('pluginsHelpBox', t('common.module_guide')); ?><?php echo htmlspecialchars(t('plugins.subtitle', 'OwnPBX keeps the core PBX lean. Select and enable only the integrations, Cloud/OpenAI-compatible AI modules, or telemetry tools you need from the official catalog below, or upload a custom .zip plugin package.')); ?><?php echo uiHelpBoxClose(); ?>
 
     
 

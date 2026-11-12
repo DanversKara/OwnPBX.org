@@ -175,12 +175,12 @@ $_licNeedsPrompt = ($_licAcceptedAt === '' && !empty($user) && ($user['role'] ??
         </div>
 
         <p class="u-fs-13 u-muted" style="margin:0 0 12px 0; line-height:1.55;">
-            <?php echo htmlspecialchars(t('license.intro', 'AiPBX is free and open-source software released under the MIT License and provided "AS IS" without warranty of any kind. By operating this PBX system, you acknowledge and agree to the following terms:')); ?>
+            <?php echo htmlspecialchars(t('license.intro', 'OwnPBX is free and open-source software released under the MIT License and provided "AS IS" without warranty of any kind. By operating this PBX system, you acknowledge and agree to the following terms:')); ?>
         </p>
 
         <ul class="u-fs-13" style="margin:0 0 16px 0; padding-left:20px; line-height:1.6;">
             <li style="margin-bottom:8px;"><?php echo htmlspecialchars(t('license.item_oss', 'No Warranty (MIT License): The authors and contributors shall not be liable for any direct, indirect, or consequential damages arising from the use of this software.')); ?></li>
-            <li style="margin-bottom:8px;"><?php echo htmlspecialchars(t('license.item_emergency', 'Emergency Calls (112 / 911 / 999): AiPBX is not a certified emergency call service. Power, internet, or SIP trunk outages may prevent emergency calls. Always maintain an independent emergency line.')); ?></li>
+            <li style="margin-bottom:8px;"><?php echo htmlspecialchars(t('license.item_emergency', 'Emergency Calls (112 / 911 / 999): OwnPBX is not a certified emergency call service. Power, internet, or SIP trunk outages may prevent emergency calls. Always maintain an independent emergency line.')); ?></li>
             <li style="margin-bottom:8px;"><?php echo htmlspecialchars(t('license.item_fraud', 'Telecom Billing & Toll Fraud: Securing server access, enforcing strong SIP/admin credentials, and restricting outbound routes are your sole responsibility. The authors are not liable for carrier charges or toll fraud.')); ?></li>
             <li style="margin-bottom:4px;"><?php echo htmlspecialchars(t('license.item_privacy', 'Privacy & Recording Compliance (GDPR / KVKK): Enabling call recording, fax archiving, or AI transcription requires complying with applicable caller-consent and data protection laws in your jurisdiction.')); ?></li>
         </ul>

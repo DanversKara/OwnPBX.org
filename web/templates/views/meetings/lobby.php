@@ -3,8 +3,8 @@
  * Standalone WebRTC Video Meeting Room & Pre-Join Lobby (/meet/{token})
  * Open to anonymous guests and logged-in participants.
  */
-$pageTitle = htmlspecialchars($meeting['title'] ?? 'Video Meeting') . ' - AiPBX';
-$brandName = defined('BRAND_TITLE') ? BRAND_TITLE : 'AiPBX';
+$pageTitle = htmlspecialchars($meeting['title'] ?? 'Video Meeting') . ' - OwnPBX';
+$brandName = defined('BRAND_TITLE') ? BRAND_TITLE : 'OwnPBX';
 $roomNumber = (string)($meeting['room_number'] ?? '');
 $videoMode = (string)($meeting['video_mode'] ?? 'sfu');
 $hasPin = !empty($meeting['pin']) || !empty($meeting['user_pin']) || !empty($meeting['host_pin']);

@@ -5,9 +5,9 @@ $security = $settings['mail_smtp_security'] ?? 'none';
 $auth = $settings['mail_smtp_auth'] ?? 'no';
 $user = $settings['mail_smtp_user'] ?? '';
 $from_addr = $settings['mail_from_address'] ?? ($settings['portal_email_from_address'] ?? 'no-reply@example.com');
-$from_name = $settings['mail_from_name'] ?? ($settings['portal_email_from_name'] ?? 'AI PBX');
+$from_name = $settings['mail_from_name'] ?? ($settings['portal_email_from_name'] ?? 'OwnPBX');
 $fax_from_addr = $settings['fax_email_from_address'] ?? 'fax@example.com';
-$fax_from_name = $settings['fax_email_from_name'] ?? 'AI PBX Faks Sistemi';
+$fax_from_name = $settings['fax_email_from_name'] ?? 'OwnPBX Fax';
 $sync_postfix = ($settings['mail_sync_postfix'] ?? 'yes') === 'yes';
 ?>
 

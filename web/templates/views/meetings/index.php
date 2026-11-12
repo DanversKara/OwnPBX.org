@@ -19,7 +19,7 @@ $canDelete = $can_delete ?? hasModulePermission('meetings', 'delete');
 <?php echo uiPageHeaderClose(); ?>
 
         <?php echo uiHelpBoxOpen('meetingsHelpBox', t('meetings.help_title', 'Video Meetings & Asterisk ConfBridge SFU')); ?>
-        <p><?php echo t('meetings.help_intro', 'AiPBX provides WebRTC multi-party video conferencing backed by Asterisk app_confbridge SFU / Follow-Talker modes.'); ?></p>
+        <p><?php echo t('meetings.help_intro', 'OwnPBX provides WebRTC multi-party video conferencing backed by Asterisk app_confbridge SFU / Follow-Talker modes.'); ?></p>
         <ul>
             <li><strong><?php echo t('meetings.help_sfu_title', 'SFU Mode (Selective Forwarding Unit):'); ?></strong> <?php echo t('meetings.help_sfu_desc', 'For modern WebRTC browsers. Streams are forwarded without re-encoding, allowing responsive multi-speaker gallery grids with minimal server CPU.'); ?></li>
             <li><strong><?php echo t('meetings.help_talker_title', 'Follow-Talker Mode:'); ?></strong> <?php echo t('meetings.help_talker_desc', 'For SIP hardware video phones. Actively switches the dominant speaker to all endpoints.'); ?></li>

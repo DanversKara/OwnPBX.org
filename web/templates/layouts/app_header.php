@@ -17,8 +17,8 @@ $request_uri = $_SERVER['REQUEST_URI'] ?? '';
 // Sidebar groups, their visibility and open state: templates/sidebar_menu.php.
 
 // Fetch Dynamic Branding Settings
-$site_title = getSystemSetting('site_title', 'AiPBX');
-$brand_title = getSystemSetting('brand_title', 'AiPBX');
+$site_title = getSystemSetting('site_title', 'OwnPBX');
+$brand_title = getSystemSetting('brand_title', 'OwnPBX');
 $brand_sub = getSystemSetting('brand_sub', 'PBX & Call Center');
 $site_logo_type = getSystemSetting('site_logo_type', 'image');
 $site_logo_icon = getSystemSetting('site_logo_icon', 'fa-network-wired');
@@ -79,7 +79,7 @@ if (!$is_cc_agent && !empty($user['extension'])) {
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="AI PBX">
+    <meta name="apple-mobile-web-app-title" content="OwnPBX">
 
     <!-- 100% Offline Local Assets & WebRTC Engine -->
     <script>
