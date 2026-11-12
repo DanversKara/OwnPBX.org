@@ -29,6 +29,21 @@ try {
     // Non-fatal
 }
 
+// Do not disturb with a timer ("for 8 hours"): switch it off when the time has passed.
+try {
+    require_once dirname(__DIR__) . '/src/services/DndTimerService.php';
+    $dndOff = DndTimerService::expire();
+    if ($dndOff !== []) {
+        require_once dirname(__DIR__) . '/src/asterisk_sync.php';
+        syncGeneralDialplan();
+        if (function_exists('writeAuditLog')) {
+            writeAuditLog(null, 'user_settings', 'phone', 'DND switched off by its timer: ' . implode(', ', $dndOff), 'update', null);
+        }
+    }
+} catch (\Throwable $e) {
+    error_log('task_dispatcher DND timer: ' . $e->getMessage());
+}
+
 ScheduledTaskRunner::removeDeletedTaskFolders();
 
 if (!ScheduledTaskService::isEnabled()) {

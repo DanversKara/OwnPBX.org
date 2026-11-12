@@ -73,7 +73,11 @@ if ($isFaxUser && ($currentTab ?? '') === 'voicemail') {
             <!-- DND badge -->
             <?php if ($isDnd): ?>
                 <span class="badge u-bg-rgba-239-68-68-0-15 u-danger u-bd-1-solid-rgba-239-68-68-0-3 u-p-4-12 u-fs-12 u-r-8">
-                    <i class="fas fa-minus-circle"></i> <?php echo t('my_phone.dnd_on'); ?>
+                    <i class="fas fa-minus-circle"></i> <?php echo t('my_phone.dnd_on'); ?><?php
+                    require_once dirname(__DIR__, 3) . '/src/services/DndTimerService.php';
+                    $dndBadgeLeft = DndTimerService::minutesLeft((int) ($details['id'] ?? 0));
+                    echo $dndBadgeLeft > 0 ? ' · ' . htmlspecialchars(DndTimerService::label($dndBadgeLeft)) : '';
+                    ?>
                 </span>
             <?php endif; ?>
             <!-- Call forwarding badge -->
@@ -351,6 +355,22 @@ if ($isFaxUser && ($currentTab ?? '') === 'voicemail') {
                     <small class="u-muted u-fs-12 u-lh-1-4"><?php echo t('my_phone.dnd_desc'); ?></small>
                     <input class="u-w-20 u-h-20 u-pointer u-flex-shrink-0" type="checkbox" name="dnd_enabled" value="1" <?php echo $isDnd ? 'checked' : ''; ?>>
                 </label>
+                <?php
+                require_once dirname(__DIR__, 3) . '/src/services/DndTimerService.php';
+                $dndLeft = DndTimerService::minutesLeft((int) ($details['id'] ?? 0));
+                ?>
+                <div class="form-group">
+                    <label class="form-label">Turn off automatically</label>
+                    <select name="dnd_minutes" class="form-control">
+                        <?php if ($dndLeft > 0): ?>
+                            <option value="" selected>Keep: off in <?php echo htmlspecialchars(DndTimerService::label($dndLeft)); ?></option>
+                        <?php endif; ?>
+                        <?php foreach (DndTimerService::OPTIONS as $m): ?>
+                            <option value="<?php echo $m; ?>"<?php echo ($m === 0 && $dndLeft === 0) ? ' selected' : ''; ?>><?php echo $m === 0 ? 'Never (until I turn it off)' : 'After ' . htmlspecialchars(DndTimerService::label($m)); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="u-muted u-fs-11">For example 8 hours at bedtime: calls ring again in the morning without you doing anything.</small>
+                </div>
                     <?php if (hasModulePermission('my_phone', 'edit')): ?>
                         <div class="form-actions"><button type="submit" class="btn btn-primary">
                             <i class="fas fa-check"></i> <?php echo t('my_phone.btn_save_settings'); ?>

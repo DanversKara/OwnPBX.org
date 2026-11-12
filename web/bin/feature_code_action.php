@@ -36,6 +36,11 @@ switch ($action) {
         $cur = (int)$stmt->fetchColumn();
         $new = $cur ? 0 : 1;
         $db->prepare("UPDATE sys_users SET dnd_enabled = ? WHERE extension = ?")->execute([$new, $ext]);
+        try { // the star code means "until I turn it off": no timer left over
+            $db->prepare("UPDATE sys_users SET dnd_until = NULL WHERE extension = ?")->execute([$ext]);
+        } catch (\Throwable $e) {
+            // before the migration
+        }
         break;
 
     case 'cf_set':

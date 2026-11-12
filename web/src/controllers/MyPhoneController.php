@@ -52,6 +52,10 @@ class MyPhoneController extends BaseController
                     }
                 }
                 MyPhoneRepository::updatePhoneSettings($userId, $dnd, $forwardAlways, $mode, $forwardBusy, $forwardNoAnswer, $noAnswerTimeout);
+                // "Turn off automatically": '' = leave the running timer, 0 = never, minutes otherwise.
+                require_once dirname(__DIR__) . '/services/DndTimerService.php';
+                $dndMinutes = (string) ($_POST['dnd_minutes'] ?? '');
+                DndTimerService::apply($userId, (bool) $dnd, $dndMinutes === '' ? null : (int) $dndMinutes);
 
                 // Update session state for current user
                 $_SESSION['allowed_phone_mode'] = $mode;

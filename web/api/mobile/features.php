@@ -79,6 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
     MyPhoneRepository::updatePhoneSettings($userId, $dnd, $forward, $mode, $forwardBusy, $forwardNoAnswer, $noAnswerTimeout);
+    // DND for a while: dnd_minutes (0 = until turned off; absent = leave the timer as it is).
+    require_once dirname(__DIR__, 2) . '/src/services/DndTimerService.php';
+    DndTimerService::apply($userId, (bool) $dnd, isset($json['dnd_minutes']) ? (int) $json['dnd_minutes'] : (isset($_POST['dnd_minutes']) ? (int) $_POST['dnd_minutes'] : null));
 
     // Asterisk dialplan sync.
     //
@@ -117,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'features' => [
             'extension' => $updated['extension'] ?? '',
             'dnd_enabled' => (bool)($updated['dnd_enabled'] ?? false),
+            'dnd_minutes_left' => DndTimerService::minutesLeft($userId),
             'call_forward_number' => $updated['call_forward_number'] ?? '',
             'cf_busy_number' => $updated['cf_busy_number'] ?? '',
             'cf_noanswer_number' => $updated['cf_noanswer_number'] ?? '',
@@ -137,6 +141,11 @@ mobileJson([
     'features' => [
         'extension' => $details['extension'] ?? '',
         'dnd_enabled' => (bool)($details['dnd_enabled'] ?? false),
+        'dnd_minutes_left' => (function () use ($userId) {
+            require_once dirname(__DIR__, 2) . '/src/services/DndTimerService.php';
+            return DndTimerService::minutesLeft($userId);
+        })(),
+        'dnd_minute_options' => [0, 10, 30, 60, 180, 300, 480, 600],
         'call_forward_number' => $details['call_forward_number'] ?? '',
         'cf_busy_number' => $details['cf_busy_number'] ?? '',
         'cf_noanswer_number' => $details['cf_noanswer_number'] ?? '',
