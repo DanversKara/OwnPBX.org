@@ -20,7 +20,7 @@ class QrLoginService
         'google' => 120,        // Google sign-in → code handed back to the app
     ];
 
-    const ANDROID_PACKAGE = 'com.mhrgl.AiPBX';
+    const ANDROID_PACKAGE = 'org.ownpbx'; // applicationId of android.OwnPBX.org
 
     /**
      * Issues a new mobile QR pairing code and QR image for the signed-in user.

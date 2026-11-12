@@ -88,7 +88,7 @@ if ($is_spa_request) {
             <button type="button" class="footer-stat-pill u-muted u-fs-11" onclick="openAipbxLicenseModal()" style="border:none; cursor:pointer; background:transparent;" title="<?php echo htmlspecialchars(t('license.modal_title', 'Open Source License & Disclaimer')); ?>">
                 <i class="fas fa-balance-scale" style="margin-right:4px;"></i>v<?php echo htmlspecialchars(AIPBX_VERSION); ?> · MIT
             </button>
-            <a href="https://github.com/mahirgul/AiPBX" target="_blank" rel="noopener noreferrer" class="footer-stat-pill u-muted u-fs-11" style="text-decoration:none; font-weight:600;" title="GitHub - mahirgul/AiPBX">
+            <a href="https://github.com/DanversKara/OwnPBX.org" target="_blank" rel="noopener noreferrer" class="footer-stat-pill u-muted u-fs-11" style="text-decoration:none; font-weight:600;" title="GitHub - DanversKara/OwnPBX.org">
                 <i class="fab fa-github" style="margin-right:4px;"></i>GitHub
             </a>
         </div>
