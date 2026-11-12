@@ -240,6 +240,7 @@ func GetContacts(currentExt string) ([]Contact, error) {
 		           JOIN chat_participants p2 ON p2.conversation_id = c.id AND p2.extension = u.extension
 		           JOIN chat_messages m ON m.conversation_id = c.id AND m.id > p.last_read_message_id AND m.sender_ext = u.extension AND m.is_deleted = 0
 		           WHERE p.extension = ? AND p.left_at IS NULL
+		               AND NOT EXISTS (SELECT 1 FROM chat_conversation_deletions d WHERE d.conversation_id = c.id AND d.user_ext = p.extension)
 		       ), 0) AS unread_count
 		FROM sys_users u
 		WHERE u.is_active = 1 AND u.extension IS NOT NULL AND u.extension != '' AND u.extension != ? AND u.role != 'fax_user'
@@ -274,9 +275,10 @@ func GetConversations(ext string) ([]Conversation, error) {
 		FROM chat_conversations c
 		JOIN chat_participants p ON c.id = p.conversation_id
 		WHERE p.extension = ? AND p.left_at IS NULL AND c.is_deleted = 0
+		    AND NOT EXISTS (SELECT 1 FROM chat_conversation_deletions d WHERE d.conversation_id = c.id AND d.user_ext = ?)
 		ORDER BY COALESCE(c.last_message_at, c.created_at) DESC
 	`
-	rows, err := db.Query(query, ext)
+	rows, err := db.Query(query, ext, ext)
 	if err != nil {
 		return nil, err
 	}
@@ -597,6 +599,14 @@ func SaveMessage(convID int, senderExt, msgType, message, attachmentURL, fileNam
 	if err != nil {
 		return nil, err
 	}
+
+	// A new message revives a thread anyone had deleted: the deletion only
+	// hides the conversation until there is something new to see. Every
+	// send flows through here (REST and WebSocket alike), so no send path
+	// can leave the thread hidden from the recipient.
+	_, _ = tx.Exec(`
+		DELETE FROM chat_conversation_deletions WHERE conversation_id = ?
+	`, convID)
 
 	// Sender automatically marks their own sent message as read
 	_, _ = tx.Exec(`

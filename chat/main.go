@@ -71,6 +71,7 @@ func main() {
 			}
 		}))
 		mux.HandleFunc(prefix+"/api/messages/delete", server.authMiddleware(server.HandleDeleteMessage))
+		mux.HandleFunc(prefix+"/api/conversations/delete", server.authMiddleware(server.HandleDeleteConversation))
 		mux.HandleFunc(prefix+"/api/read", server.authMiddleware(server.HandleMarkRead))
 		mux.HandleFunc(prefix+"/api/upload", server.authMiddleware(server.HandleUpload))
 		mux.HandleFunc(prefix+"/media/", server.authMiddleware(server.HandleMedia))
