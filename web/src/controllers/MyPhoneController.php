@@ -110,6 +110,12 @@ class MyPhoneController extends BaseController
                 try {
                     $picked = (string) ($_POST['caller_id'] ?? '');
                     CallerIdService::setDefault($userId, $picked);
+                    try {
+                        require_once dirname(__DIR__) . '/sync/SyncExtensions.php';
+                        syncAllExtensions();
+                    } catch (\Throwable $e) {
+                        markPendingSync('extensions', 'extension', 'caller-id', 'Default caller ID changed', 'update', $userId);
+                    }
                     writeAuditLog(null, 'user_settings', 'phone', 'Default caller ID: ' . ($picked !== '' ? $picked : 'line number'), 'update', $userId);
                     static::notifySuccess(t('my_phone.msg_settings_saved'));
                 } catch (\InvalidArgumentException $e) {

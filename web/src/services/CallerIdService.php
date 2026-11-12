@@ -92,7 +92,7 @@ class CallerIdService
 
     /**
      * The user chooses their default among their numbers ('' = the line's own number).
-     * Writes sys_users.cid_external and rewrites the endpoints so it applies at once.
+     * Writes sys_users.cid_external; call applyNow() afterwards.
      */
     public static function setDefault(int $userId, string $number): void
     {
@@ -113,12 +113,8 @@ class CallerIdService
             throw new \InvalidArgumentException('Ask an administrator to give you outgoing numbers first.');
         }
         getDB()->prepare('UPDATE sys_users SET cid_external = ? WHERE id = ?')->execute([$number, $userId]);
-        try {
-            require_once dirname(__DIR__) . '/sync/SyncExtensions.php';
-            syncAllExtensions();
-        } catch (\Throwable $e) {
-            markPendingSync('extensions', 'extension', 'caller-id', 'Default caller ID changed', 'update', $userId);
-        }
+        // The caller (My Phone, the app) rewrites the endpoints right away (syncAllExtensions):
+        // a user's own setting must not wait for an administrator's Apply.
     }
 
     /** The endpoint variable the dialplan checks a picked number against: "-digits-digits-". */

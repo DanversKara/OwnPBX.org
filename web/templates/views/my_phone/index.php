@@ -325,7 +325,7 @@ if ($isFaxUser && ($currentTab ?? '') === 'voicemail') {
                 <h3 class="u-fs-16 u-fw-700 u-mb-16 u-text-main u-d-flex u-ai-center u-gap-8">
                     <i class="fas fa-id-card u-primary"></i> Calling from
                 </h3>
-                <small class="u-muted u-fs-12 u-lh-1-4 u-d-block u-mb-12">The number people see when you call outside. You can also pick another one for a single call in the web phone and the app.</small>
+                <small class="u-hint u-fs-12 u-lh-1-4 u-mb-12">The number people see when you call outside. You can also pick another one for a single call in the web phone and the app.</small>
                 <select name="caller_id" class="form-control u-mb-12">
                     <?php $hasDefault = false; foreach ($callerIds as $c) { $hasDefault = $hasDefault || $c['default']; } ?>
                     <?php if (!$hasDefault): ?><option value="" selected>The line's own number</option><?php endif; ?>

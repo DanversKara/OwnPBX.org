@@ -201,7 +201,7 @@
                         <?php if (empty($caller_id_dids)): ?>
                             <div class="u-muted u-fs-12">No DIDs yet: add your numbers under Inbound Routes (DIDs) first.</div>
                         <?php else: ?>
-                            <div id="modal_caller_ids" class="u-flex-gap u-wrap" style="max-height: 140px; overflow-y: auto;">
+                            <div id="modal_caller_ids" class="u-flex-gap u-wrap u-maxh-140 u-overflow-y-auto">
                                 <?php foreach ($caller_id_dids as $d): ?>
                                     <label class="u-check-label-6"><input type="checkbox" name="caller_ids[]" value="<?php echo htmlspecialchars($d['number']); ?>" class="u-accent"> <?php echo htmlspecialchars($d['number']); ?><?php if ($d['title'] !== ''): ?> <span class="u-muted">(<?php echo htmlspecialchars($d['title']); ?>)</span><?php endif; ?></label>
                                 <?php endforeach; ?>

@@ -20,6 +20,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         $picked = (string) ($in['default'] ?? $_POST['default'] ?? '');
         CallerIdService::setDefault($userId, $picked);
+        try {
+            require_once __DIR__ . '/../../src/sync/SyncExtensions.php';
+            syncAllExtensions();
+        } catch (\Throwable $e) {
+            markPendingSync('extensions', 'extension', 'caller-id', 'Default caller ID changed', 'update', $userId);
+        }
         writeAuditLog(null, 'user_settings', 'phone', 'Default caller ID (app): ' . ($picked !== '' ? $picked : 'line number'), 'update', $userId);
     } catch (\InvalidArgumentException $e) {
         mobileError($e->getMessage(), 400);
