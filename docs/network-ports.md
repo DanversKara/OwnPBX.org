@@ -1,6 +1,6 @@
-# AiPBX Network Ports & Firewall Matrix
+# OwnPBX Network Ports & Firewall Matrix
 
-This document details all network ports, protocols, and access scopes required by AiPBX for VoIP signaling, RTP media, WebRTC, administration, and provisioning.
+This document details all network ports, protocols, and access scopes required by OwnPBX for VoIP signaling, RTP media, WebRTC, administration, and provisioning.
 
 ---
 
@@ -31,7 +31,7 @@ This document details all network ports, protocols, and access scopes required b
 If you provide remote softphone access, remote mobile app calling, or SIP trunks over the public internet:
 - **Allow Inbound**: `80/tcp`, `443/tcp`, `5060/udp,tcp`, `5061/tcp`, `10000:20000/udp`, `3478/udp,tcp`, `5349/tcp`.
 - **Behind Reverse Proxy**: Only `80/tcp` and `443/tcp` go through the reverse proxy. All SIP and RTP ports (`5060`, `5061`, `10000-20000/udp`) **MUST route directly** to the server host.
-- **Fail2ban Protection**: AiPBX automatically monitors authentication attempts on SIP and Web with built-in jails.
+- **Fail2ban Protection**: OwnPBX automatically monitors authentication attempts on SIP and Web with built-in jails.
 
 ### B. Internal LAN Only
 - **69/udp (TFTP)**: Desk phones fetching initial bootstrap firmware. Restrict to internal voice VLANs (e.g., `192.168.10.0/24`).
@@ -50,7 +50,7 @@ Router and firewall SIP ALG implementations frequently corrupt SIP packet header
 > **IMPORTANT**: Disable SIP ALG, SIP Inspection, or SIP Fixup on all edge routers and firewalls.
 
 ### 2. RTP Port Forwarding
-Ensure your edge firewall or NAT gateway forwards the entire UDP port range `10000:20000` to the AiPBX host. Asymmetrical or missing UDP forwarding causes "one-way audio" or dropped calls after 30 seconds.
+Ensure your edge firewall or NAT gateway forwards the entire UDP port range `10000:20000` to the OwnPBX host. Asymmetrical or missing UDP forwarding causes "one-way audio" or dropped calls after 30 seconds.
 
 ### 3. External IP & Local Networks
 On the PBX portal at **PBX Settings → PJSIP & Net**:

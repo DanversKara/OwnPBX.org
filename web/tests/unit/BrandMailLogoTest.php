@@ -37,7 +37,7 @@ final class BrandMailLogoTest extends TestCase
         $_SESSION['user_id'] = null;
         $res = BrandSettingsService::saveSettings([
             'csrf_token' => getCSRFToken(),
-            'site_title' => 'AiPBX',
+            'site_title' => 'OwnPBX',
             'brand_title' => 'Acme',
             'brand_sub' => 'PBX',
             'mail_logo_variant' => 'dark',
@@ -49,7 +49,7 @@ final class BrandMailLogoTest extends TestCase
 
         $res = BrandSettingsService::saveSettings([
             'csrf_token' => getCSRFToken(),
-            'site_title' => 'AiPBX',
+            'site_title' => 'OwnPBX',
             'brand_title' => 'Acme',
             'brand_sub' => 'PBX',
             'mail_logo_variant' => 'something-else',
@@ -69,7 +69,7 @@ final class BrandMailLogoTest extends TestCase
 
         $res = BrandSettingsService::saveSettings([
             'csrf_token' => getCSRFToken(),
-            'site_title' => 'AiPBX',
+            'site_title' => 'OwnPBX',
             'brand_title' => 'Acme',
             'brand_sub' => 'PBX',
             'site_logo_type' => 'image',

@@ -1,6 +1,6 @@
 # Network services (DHCP, TFTP, FTP, NTP and syslog for desk phones)
 
-**Network → Network services** lets desk phones find AiPBX by themselves: the DHCP server hands out
+**Network → Network services** lets desk phones find OwnPBX by themselves: the DHCP server hands out
 the provisioning address (option 66), and TFTP serves boot files or firmware to phones that need
 them. The configuration of each phone (with its SIP password) is always fetched over HTTPS from
 `/provision/` (see [Desk phones](phones.md)), never over TFTP.
@@ -36,7 +36,7 @@ contain the server's own address. The provisioning address is the general one on
 **Extra DHCP options** (DHCP mode): one `code,value` per line, e.g. `66,ftp://192.168.10.2/` for
 phones that should fetch from FTP. Bytes are written in hex with colons, e.g. `43,0a:04:c0:a8:0a:02`;
 without colons a value is sent as text. An option with the same code
-as one above replaces AiPBX's value (66, 160, 150, 42, 3, 6). Extra options are sent even when the
+as one above replaces OwnPBX's value (66, 160, 150, 42, 3, 6). Extra options are sent even when the
 phone does not ask for them (dnsmasq `dhcp-option-force`). Quotes, `#`, backslashes and line
 breaks are refused: the dnsmasq file is written as root.
 
@@ -52,7 +52,7 @@ assigned an extension before they even ask for their configuration.
 TFTP serves the files uploaded under *TFTP files* on the page (boot files, firmware). File
 names that contain a MAC address are refused for upload: those would be per-phone configuration
 files. Shared files such as `y000000000108.cfg` or `000000000000.cfg` are allowed. The per-phone
-files are written into the folder by AiPBX itself when *Also write the phones' files into the
+files are written into the folder by OwnPBX itself when *Also write the phones' files into the
 TFTP/FTP folder* is ticked on *Provisioning → Phones → Provisioning settings* (see
 [Desk phones](phones.md#server-addresses-networks-without-dns)).
 
@@ -119,7 +119,7 @@ Every tab filters by **IP** or **MAC address** (also part of an address) and tex
 address or MAC shows that phone only. The phone column comes from the MAC in the file name
 (`dt-<mac>.cfg`) or in the DHCP line. FTP, TFTP and DHCP show their newest 500 lines; they are read
 through `aipbx-priv netsvc log ftp|tftp|dhcp` (the files are root's), DHCP and TFTP only from
-AiPBX's own dnsmasq. A failed FTP login usually means the phone's FTP user or password does not
+OwnPBX's own dnsmasq. A failed FTP login usually means the phone's FTP user or password does not
 match (see FTP above).
 
 ## Syslog (phone logs)

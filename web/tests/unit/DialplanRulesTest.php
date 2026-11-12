@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AiPBX\Tests\Unit;
+namespace OwnPBX\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
 use DialplanRuleRepository;
@@ -39,7 +39,7 @@ final class DialplanRulesTest extends TestCase
 
     public function testDesktopInternationalNumberIsNotStrippedByDefault(): void
     {
-        // AiPBX's international format is 00 + country code: the "strip the
+        // OwnPBX's international format is 00 + country code: the "strip the
         // outside-line 0" rule is loaded switched off, 0049... stays 0049...
         $res = DialplanRuleRepository::simulate('00493012345678', 'desktop');
         $this->assertFalse($res['matched'], 'Desktop international 0049... must not be rewritten by default');

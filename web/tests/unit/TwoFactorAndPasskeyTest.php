@@ -97,11 +97,11 @@ final class TwoFactorAndPasskeyTest extends TestCase
     public function testOtpAuthUriAndQrCodeGeneration(): void
     {
         $secret = implode('', ['JBSWY3DP', 'EHPK3PXP']);
-        $uri = TwoFactorService::getOtpAuthUri('testuser', $secret, 'AiPBX');
+        $uri = TwoFactorService::getOtpAuthUri('testuser', $secret, 'OwnPBX');
 
         $this->assertStringStartsWith('otpauth://totp/AiPBX:testuser', $uri);
         $this->assertStringContainsString('secret=' . $secret, $uri);
-        $this->assertStringContainsString('issuer=AiPBX', $uri);
+        $this->assertStringContainsString('issuer=OwnPBX', $uri);
 
         $qr = TwoFactorService::getQrCodeDataUri($uri);
         $this->assertStringStartsWith('data:image/svg+xml', $qr);

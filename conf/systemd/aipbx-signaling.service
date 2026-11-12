@@ -1,5 +1,5 @@
 [Unit]
-Description=AiPBX signaling capture daemon (HEPv3 -> pbx_signaling_events)
+Description=OwnPBX signaling capture daemon (HEPv3 -> pbx_signaling_events)
 After=multi-user.target
 ConditionPathExists=/opt/aipbx/signaling
 

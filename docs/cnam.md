@@ -1,8 +1,8 @@
 # Caller Name (CNAM) Lookup (Plugin)
 
-> 🔌 **Plugin (`cnam`)**: Community plugin from the official catalog (`mahirgul/AiPBX-plugins`). Enable it under **Integration → Plugin Catalog** (requires AiPBX 1.72.12 or newer). See [Plugin system & developer guide](plugin-development.md).
+> 🔌 **Plugin (`cnam`)**: Community plugin from the official catalog (`mahirgul/AiPBX-plugins`). Enable it under **Integration → Plugin Catalog** (requires OwnPBX 1.72.12 or newer). See [Plugin system & developer guide](plugin-development.md).
 
-**Integration → Caller Name (CNAM)** (`/plugins/cnam`) provides automated caller name identification for incoming calls. When an external call reaches AiPBX, the dialplan intercepts the caller ID number, queries an internal directory or third-party CNAM API, and injects the resolved caller name into Asterisk's `CALLERID(name)` before the call rings desk phones, ring groups, queues, or mobile apps.
+**Integration → Caller Name (CNAM)** (`/plugins/cnam`) provides automated caller name identification for incoming calls. When an external call reaches OwnPBX, the dialplan intercepts the caller ID number, queries an internal directory or third-party CNAM API, and injects the resolved caller name into Asterisk's `CALLERID(name)` before the call rings desk phones, ring groups, queues, or mobile apps.
 
 ---
 
@@ -32,7 +32,7 @@
 
 ### ⚡ Dialplan Hook (`sub-cnam-lookup`)
 
-AiPBX core calls the hook when it exists; the enabled plugin generates the subroutine in
+OwnPBX core calls the hook when it exists; the enabled plugin generates the subroutine in
 `extensions_plugin_cnam.conf`. Its lookup uses `?num=`, HTTP Basic credentials (`cnam` and a per-installation token), and
 `CURLOPT(conntimeout)` / `CURLOPT(httptimeout)` set to two seconds. The `CURLOPT(userpwd)` credentials are cleared after
 lookup. Save settings and apply the PBX configuration to generate it.

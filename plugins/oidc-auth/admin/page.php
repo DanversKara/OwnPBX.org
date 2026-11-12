@@ -45,7 +45,7 @@ $curDiscovery = $settings['discovery_url'] ?? '';
     </div>
     <div style="padding: 20px;">
         <p style="margin-top: 0; color: var(--text-muted); font-size: 13.5px;">
-            <?php echo htmlspecialchars(t('oidc.test_discovery_desc', 'Verify that your AiPBX server can reach your Identity Provider and retrieve the OpenID Connect discovery document before saving or testing sign-in.')); ?>
+            <?php echo htmlspecialchars(t('oidc.test_discovery_desc', 'Verify that your OwnPBX server can reach your Identity Provider and retrieve the OpenID Connect discovery document before saving or testing sign-in.')); ?>
         </p>
         <form method="POST" style="display: flex; gap: 10px; align-items: center; max-width: 720px;">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">

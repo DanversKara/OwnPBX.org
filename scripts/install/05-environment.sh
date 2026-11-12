@@ -25,7 +25,7 @@ if is_upgrade; then
     # P1.3: Separate DDL migrator credentials from runtime env file
     if [[ ! -f /etc/ai-pbx-migrator.env ]]; then
         cat > /etc/ai-pbx-migrator.env << MIGRATORENV
-# AI PBX - Database Migrator / DDL Configuration
+# OwnPBX - Database Migrator / DDL Configuration
 # Restricted to root — runtime web and asterisk processes must NEVER read this file.
 MIGRATOR_DB_USER=${MIGRATOR_USER}
 MIGRATOR_DB_PASS=${MIGRATOR_PASS}
@@ -51,7 +51,7 @@ SERVER_TIMEZONE="$(timedatectl show -p Timezone --value 2>/dev/null || true)"
 
 # P1.3: Migrator credentials live in dedicated root-only file
 cat > /etc/ai-pbx-migrator.env << MIGRATORENV
-# AI PBX - Database Migrator / DDL Configuration
+# OwnPBX - Database Migrator / DDL Configuration
 # Restricted to root — runtime web and asterisk processes must NEVER read this file.
 MIGRATOR_DB_USER=${MIGRATOR_USER}
 MIGRATOR_DB_PASS=${MIGRATOR_PASS}
@@ -60,7 +60,7 @@ chmod 0600 /etc/ai-pbx-migrator.env
 chown root:root /etc/ai-pbx-migrator.env
 
 cat > /etc/ai-pbx.env << ENVFILE
-# AI PBX - Environment Configuration
+# OwnPBX - Environment Configuration
 # Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 # KEEP THIS FILE SECURE — it contains all service secrets.
 # You can update values here or via the Admin Panel (Settings → System).
@@ -72,7 +72,7 @@ DB_USER=${DB_USER}
 DB_PASS=${DB_PASS}
 
 # --- Site identity ---
-SITE_NAME=AI PBX Portal
+SITE_NAME=OwnPBX Portal
 PORTAL_DOMAIN=${PORTAL_DOMAIN}
 TIMEZONE=${SERVER_TIMEZONE}
 
@@ -96,7 +96,7 @@ SYNC_QUEUE_LOGS_SCRIPT=/usr/local/bin/sync_queue_logs.php
 
 # --- Mail (password reset / fax notification emails) ---
 MAIL_FROM_ADDRESS=no-reply@${PORTAL_DOMAIN}
-MAIL_FROM_NAME=AI PBX Portal
+MAIL_FROM_NAME=OwnPBX Portal
 
 # --- WebRTC TURN (coturn) ---
 TURN_HOST=${PORTAL_DOMAIN}

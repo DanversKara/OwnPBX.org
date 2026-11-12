@@ -17,7 +17,7 @@ final class TransportService
     public const PROTOCOLS = ['udp', 'tcp', 'tls'];
     private const CHANGED_SETTING = 'transports_changed_at';
 
-    /** Ports other services of AiPBX use. Ranges of settings are checked apart. */
+    /** Ports other services of OwnPBX use. Ranges of settings are checked apart. */
     private const RESERVED = [
         21, 22, 25, 53, 67, 69, 80, 123, 443, 514, 3306, 3478, 5038, 5349, 8088, 8089,
     ];

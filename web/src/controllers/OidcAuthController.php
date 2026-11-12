@@ -123,7 +123,7 @@ class OidcAuthController extends BaseController
                     self::renderMobileCallback(false, t('srv_2fa.err_user', 'User not found'), null, sprintf(t('oidc.err_no_user', 'No user found for %s'), $email));
                     return;
                 }
-                notify(sprintf(t('oidc.err_no_user', 'No active AiPBX user is registered with this SSO account (%s). Please contact your administrator.'), $safeEmail), 'danger');
+                notify(sprintf(t('oidc.err_no_user', 'No active OwnPBX user is registered with this SSO account (%s). Please contact your administrator.'), $safeEmail), 'danger');
                 static::redirect('/login');
                 return;
             }

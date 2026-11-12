@@ -1,12 +1,12 @@
-# Running AiPBX Behind a Reverse Proxy
+# Running OwnPBX Behind a Reverse Proxy
 
-This guide covers deploying AiPBX behind existing reverse proxies such as **Nginx**, **Caddy**, **Traefik**, **HAProxy**, or **Apache**.
+This guide covers deploying OwnPBX behind existing reverse proxies such as **Nginx**, **Caddy**, **Traefik**, **HAProxy**, or **Apache**.
 
 ---
 
 ## 1. Architecture & The VoIP Boundary
 
-AiPBX delivers two distinct categories of network traffic:
+OwnPBX delivers two distinct categories of network traffic:
 
 ```
                   +-----------------------------------+
@@ -24,14 +24,14 @@ AiPBX delivers two distinct categories of network traffic:
              | HTTP and WebSockets (80)                     | SIP (5060/5061 UDP/TCP)
              v                                              | RTP (10000-20000 UDP)
    +--------------------------------------------------------+---------+
-   |                            AiPBX Server                          |
+   |                            OwnPBX Server                          |
    +------------------------------------------------------------------+
 ```
 
 ### Critical VoIP Rule:
 Standard reverse proxies operate on **Layer 7 (HTTP/HTTPS/WebSocket)**. They **CANNOT** proxy SIP signaling (UDP/TCP 5060/5061) or RTP audio/video media (UDP 10000-20000).
 - **HTTP / HTTPS / WebSockets**: Route through your reverse proxy.
-- **SIP & RTP Traffic**: **MUST bypass the reverse proxy** and reach the AiPBX server host directly via port forwarding or Layer 4 routing.
+- **SIP & RTP Traffic**: **MUST bypass the reverse proxy** and reach the OwnPBX server host directly via port forwarding or Layer 4 routing.
 
 For complete port details, see [Network Ports & Firewall Matrix](network-ports.md).
 
@@ -39,18 +39,18 @@ For complete port details, see [Network Ports & Firewall Matrix](network-ports.m
 
 ## 2. Portal Configuration
 
-Log in to the AiPBX portal as an administrator and navigate to **Network → Reverse Proxy** (`/reverse-proxy`):
+Log in to the OwnPBX portal as an administrator and navigate to **Network → Reverse Proxy** (`/reverse-proxy`):
 
 1. **Enable Reverse Proxy Mode**: Check the toggle.
 2. **External FQDN**: Enter your public domain (e.g., `pbx.example.com`).
 3. **External Port**: Enter `443` (or your public HTTPS port).
 4. **TLS Termination Mode**:
-   - `Edge Termination` (recommended): The reverse proxy handles SSL certificates and connects to AiPBX via HTTP.
-   - `Re-encryption`: The reverse proxy terminates external SSL and connects to AiPBX via internal HTTPS. HAProxy only, and the page generates no configuration for the others: port 443 of AiPBX tells HTTPS from TURNS by ALPN, which they do not send on the connections softphones need, so softphones would get 502. Use Edge Termination over a private network with them.
+   - `Edge Termination` (recommended): The reverse proxy handles SSL certificates and connects to OwnPBX via HTTP.
+   - `Re-encryption`: The reverse proxy terminates external SSL and connects to OwnPBX via internal HTTPS. HAProxy only, and the page generates no configuration for the others: port 443 of OwnPBX tells HTTPS from TURNS by ALPN, which they do not send on the connections softphones need, so softphones would get 502. Use Edge Termination over a private network with them.
 5. **Trusted Reverse Proxies**: The IP addresses of your reverse proxies; the default is this host only (`127.0.0.1, ::1`). Add the exact address of a proxy on another machine, and avoid whole private networks: every device in a trusted range can claim any client IP in `X-Forwarded-For`, which avoids sign-in lockouts and passes the allowed networks of phone provisioning.
 
 ### Security: Spoofing Prevention
-AiPBX honors forwarded headers only when reverse proxy mode is enabled and the
+OwnPBX honors forwarded headers only when reverse proxy mode is enabled and the
 immediate connection comes from a configured trusted proxy. Untrusted forwarded
 headers do not establish client identity or HTTPS.
 

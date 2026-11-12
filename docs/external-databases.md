@@ -1,6 +1,6 @@
 # External databases & IVR data steps
 
-AiPBX can connect to external SQL databases and HTTP endpoints to look up caller information in real
+OwnPBX can connect to external SQL databases and HTTP endpoints to look up caller information in real
 time during an incoming call and branch the call flow accordingly.
 
 - Database connections: **Integration → Database Connections** (administrators only).
@@ -18,7 +18,7 @@ Store encrypted credentials to query external SQL databases from IVR call flows 
 - **Encrypted credentials:** Passwords are encrypted on disk and decrypted only in memory when
   establishing a connection.
 - **Strict read-only sessions:** Regardless of user account privileges granted on the remote database,
-  AiPBX enforces read-only transactions on every connection:
+  OwnPBX enforces read-only transactions on every connection:
   - MySQL / MariaDB: `SET SESSION TRANSACTION READ ONLY`
   - PostgreSQL: `SET SESSION CHARACTERISTICS AS TRANSACTION READ ONLY`
 - **Time-boxed execution:** A hard statement timeout of **2.5 seconds** is enforced at the session level
@@ -134,5 +134,5 @@ Look up incoming callers in a CRM database and route VIP customers directly to a
    - On **Inbound Routes**, select your main incoming DID.
    - Set Destination to **IVR Data Step → VIP Customer Check**.
 
-When a customer calls, AiPBX checks their number in the CRM. If their record exists, the call is routed
+When a customer calls, OwnPBX checks their number in the CRM. If their record exists, the call is routed
 instantly to VIP Support, while new numbers fall back to General Support without caller delay.

@@ -1,9 +1,9 @@
-Turkish Asterisk core sounds — AiPBX (asterisk-core-sounds-tr)
+Turkish Asterisk core sounds — OwnPBX (asterisk-core-sounds-tr)
 
 Generated with Google Cloud Text-to-Speech, voice tr-TR-Wavenet-C, as a
 16 kHz 16-bit mono master (silence trimmed, peak -6 dBFS, 150 ms tail).
 One voice for the whole set: the Asterisk core sounds (same names as
-asterisk-core-sounds-en), voicemail and AiPBX's own prompts.
+asterisk-core-sounds-en), voicemail and OwnPBX's own prompts.
 
 Asterisk has no Turkish say.c rules, so numbers, dates and voicemail
 counts are assembled in English order; the texts below are worded so that

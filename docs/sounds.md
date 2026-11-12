@@ -30,9 +30,9 @@ The Turkish set ships at the repo root as one package per format,
 laid out like Asterisk's own `asterisk-core-sounds-*` packages so it can be used on any Asterisk
 server: extract the formats you need into the `tr` sounds directory.
 
-- One voice (Google `tr-TR-Wavenet-C`), generated with AiPBX Cloud TTS from 16 kHz masters: every
+- One voice (Google `tr-TR-Wavenet-C`), generated with OwnPBX Cloud TTS from 16 kHz masters: every
   Asterisk core prompt (same names as `asterisk-core-sounds-en`, including voicemail, digits,
-  letters, phonetic, conference, queue and directory prompts) plus AiPBX's own prompts.
+  letters, phonetic, conference, queue and directory prompts) plus OwnPBX's own prompts.
 - Every prompt in six formats: `wav` (8 kHz), `ulaw`, `alaw`, `gsm` and the wideband (HD) `g722`
   and `sln16`. Asterisk picks the one matching the call's codec, so no transcoding is needed.
 - Tones (`beep`, `ascending-2tone`, …) come from the English set; `silence/1..10` are generated.

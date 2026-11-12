@@ -79,7 +79,7 @@ PACKAGES=(
 APT_NET=(-o Acquire::http::Timeout=20 -o Acquire::https::Timeout=20 -o Acquire::Retries=1
          -o "DPkg::Lock::Timeout=$APT_LOCK_WAIT")
 # vsftpd's own unit would start right after installing, with local system
-# accounts allowed to log in: masked first, AiPBX runs its own (aipbx-vsftpd).
+# accounts allowed to log in: masked first, OwnPBX runs its own (aipbx-vsftpd).
 systemctl mask vsftpd.service >/dev/null 2>&1 || true
 MISSING=()
 for p in "${PACKAGES[@]}"; do

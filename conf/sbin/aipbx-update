@@ -1,5 +1,5 @@
 #!/bin/bash
-# aipbx-update — updates AiPBX to a published release (git tag vX.Y.Z).
+# aipbx-update — updates OwnPBX to a published release (git tag vX.Y.Z).
 #
 #   aipbx-update --check              is a newer release available? (writes a status file for the portal)
 #   aipbx-update                      update to the latest release (asks for confirmation)
@@ -62,7 +62,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ $EUID -eq 0 ]] || { echo "Run as root: sudo aipbx-update" >&2; exit 1; }
-[[ -d "$INSTALL_DIR/.git" ]] || { echo "$INSTALL_DIR is not an AiPBX git installation" >&2; exit 1; }
+[[ -d "$INSTALL_DIR/.git" ]] || { echo "$INSTALL_DIR is not an OwnPBX git installation" >&2; exit 1; }
 
 /usr/local/sbin/aipbx-log-init update || exit 1
 /usr/local/sbin/aipbx-system-state prepare || exit 1
@@ -162,7 +162,7 @@ FINAL_TARGET=""
 need_from="$(git_in show "$TARGET:UPGRADE_FROM" 2>/dev/null | tr -d '[:space:]')"
 if [[ -n "$need_from" ]] && ver_lt "$CURRENT" "v$need_from"; then
     if [[ -z "$(git_in tag -l "v$need_from")" ]]; then
-        echo "$TARGET needs AiPBX $need_from first, but release v$need_from was not found." >&2; exit 1
+        echo "$TARGET needs OwnPBX $need_from first, but release v$need_from was not found." >&2; exit 1
     fi
     log "$TARGET needs $need_from or newer: updating to the bridge release v$need_from first"
     FINAL_TARGET="$TARGET"
@@ -263,7 +263,7 @@ if [[ "$AIPBX_ASTERISK_RESTART" == yes && "${calls:-0}" -gt 0 && "$ALLOW_CALLS" 
 fi
 
 if [[ "$ASSUME_YES" != true ]]; then
-    read -r -p "Update AiPBX $CURRENT → $TARGET? [y/N]: " ans
+    read -r -p "Update OwnPBX $CURRENT → $TARGET? [y/N]: " ans
     [[ "${ans,,}" == y || "${ans,,}" == yes ]] || { echo "Cancelled."; exit 0; }
 fi
 
@@ -415,7 +415,7 @@ code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 15 --resolve "${domai
 SMOKE_RESULT="$STATE_DIR/update-page-test-failed"
 rm -f "$SMOKE_RESULT"
 SMOKE_NOTE=""
-systemd-run --quiet --collect --unit="aipbx-update-page-test-$$" --description='AiPBX: test every page after an update' /bin/bash -c \
+systemd-run --quiet --collect --unit="aipbx-update-page-test-$$" --description='OwnPBX: test every page after an update' /bin/bash -c \
     "cd '$INSTALL_DIR/web' && timeout 900 sudo -n -u www-data php bin/smoke.php >>'$LOG_FILE' 2>&1 || { date '+%F %T' > '$SMOKE_RESULT'; chmod 644 '$SMOKE_RESULT'; echo 'WARNING: the page tests (smoke) found problems; see above. The update stays.' >>'$LOG_FILE'; }" \
     2>>"$LOG_FILE" || log "The page test could not be started; run bin/smoke.php by hand if you want it."
 
@@ -426,7 +426,7 @@ HAND_NOTE=""
 status "done" "Updated: $CURRENT → $TARGET$HAND_NOTE$SMOKE_NOTE"
 # Refresh the portal's "update available" information.
 /bin/bash "${AIPBX_UPDATE_REEXEC:-$0}" --check >/dev/null 2>&1 || true
-echo "AiPBX updated to $TARGET. Backup: $BACKUP_DIR"
+echo "OwnPBX updated to $TARGET. Backup: $BACKUP_DIR"
 
 # Continue from the bridge release to the requested one with the bridge's own
 # (just installed) updater.

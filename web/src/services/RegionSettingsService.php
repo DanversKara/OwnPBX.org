@@ -9,7 +9,7 @@ require_once __DIR__ . '/../asterisk_helper.php';
  */
 class RegionSettingsService
 {
-    /** Asterisk's own list of tones, and Turkey, which AiPBX adds. */
+    /** Asterisk's own list of tones, and Turkey, which OwnPBX adds. */
     public const TONES = [
         'au' => 'Australia', 'at' => 'Austria', 'be' => 'Belgium', 'br' => 'Brazil', 'bg' => 'Bulgaria',
         'cl' => 'Chile', 'cn' => 'China', 'cz' => 'Czech Republic', 'dk' => 'Denmark', 'ee' => 'Estonia',

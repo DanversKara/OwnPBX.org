@@ -15,7 +15,7 @@ class AdvancedConfigController extends BaseController
 
         if (($_GET['export'] ?? '') === '1') {
             header('Content-Type: application/json; charset=utf-8');
-            header('Content-Disposition: attachment; filename="aipbx-advanced-config-' . date('Ymd-His') . '.json"');
+            header('Content-Disposition: attachment; filename="ownpbx-advanced-config-' . date('Ymd-His') . '.json"');
             echo AdvancedPjsipService::exportJson();
             exit;
         }

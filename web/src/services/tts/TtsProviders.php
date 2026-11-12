@@ -432,7 +432,7 @@ final class AzureTts extends TtsProvider
             'Ocp-Apim-Subscription-Key' => $this->cfg('api_key'),
             'Content-Type' => 'application/ssml+xml',
             'X-Microsoft-OutputFormat' => 'audio-24khz-48kbitrate-mono-mp3',
-            'User-Agent' => 'AiPBX',
+            'User-Agent' => 'OwnPBX',
         ], $ssml);
         return self::audio($r, 'Azure');
     }

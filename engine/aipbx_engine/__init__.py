@@ -1,4 +1,4 @@
-"""AiPBX desk-phone discovery engine.
+"""OwnPBX desk-phone discovery engine.
 
 Finds the desk phones sitting on the networks the PBX serves and records them
 for the portal's Phones page (PBX -> Phones -> *Discovered on the network*).
@@ -20,7 +20,7 @@ rewrites the status of a row the portal has already decided on.
 Sources, in the order they are read
 -----------------------------------
 
-    lease    the AiPBX DHCP server's lease file (Network services -> DHCP)
+    lease    the OwnPBX DHCP server's lease file (Network services -> DHCP)
     arp      the kernel's neighbour table (/proc/net/arp)
     journal  dnsmasq's own DHCP messages, so a phone that asked is still seen
              after the lease file was rotated or the server restarted

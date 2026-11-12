@@ -4,7 +4,7 @@ Several pages can change a number. This page shows what runs, in what order, and
 each other: on an outgoing call, a number goes through every step in turn, and each step works on the result of the one
 before.
 
-![The order in which AiPBX changes numbers on outgoing and incoming calls](img/number-normalization.svg)
+![The order in which OwnPBX changes numbers on outgoing and incoming calls](img/number-normalization.svg)
 
 ## Which page should I use?
 

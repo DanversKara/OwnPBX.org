@@ -6,7 +6,7 @@ use Phinx\Migration\AbstractMigration;
 
 /**
  * Administrator's own PJSIP options, kept in the database so regenerating the configuration and
- * updating AiPBX cannot lose them. Versions hold the whole list as it was before each change.
+ * updating OwnPBX cannot lose them. Versions hold the whole list as it was before each change.
  */
 final class CreateAdvancedPjsipTables extends AbstractMigration
 {

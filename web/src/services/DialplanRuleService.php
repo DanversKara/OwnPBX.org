@@ -365,7 +365,7 @@ class DialplanRuleService
 
     /**
      * Ready-made rules of a country. A copy in PRESET_OVERRIDE_DIR wins over the one that ships with
-     * AiPBX: updates do not touch it, and editing a shipped file would make aipbx-update refuse.
+     * OwnPBX: updates do not touch it, and editing a shipped file would make aipbx-update refuse.
      *
      * @return array<string, mixed>
      */

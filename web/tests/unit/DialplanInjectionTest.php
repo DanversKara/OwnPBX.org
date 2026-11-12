@@ -68,7 +68,7 @@ final class DialplanInjectionTest extends TestCase
             syncVoicemail();
             $conf = (string) file_get_contents($main);
             $this->assertDoesNotMatchRegularExpression('/^1234 =>/m', $conf);
-            $this->assertStringContainsString(';1234 => 4242,Example Mailbox,root@localhost ; sample mailbox, disabled by AiPBX', $conf);
+            $this->assertStringContainsString(';1234 => 4242,Example Mailbox,root@localhost ; sample mailbox, disabled by OwnPBX', $conf);
             $this->assertStringContainsString('#include "pbx/voicemail_pbx.conf"', $conf);
         } finally {
             $before === null ? @unlink($main) : file_put_contents($main, $before);

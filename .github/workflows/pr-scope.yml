@@ -87,7 +87,7 @@ jobs:
               MARKER,
               `Thank you for your contribution, @${pr.user.login}! 🙏`,
               '',
-              'AiPBX accepts **one topic per pull request**, and this PR looks like it may contain several:',
+              'OwnPBX accepts **one topic per pull request**, and this PR looks like it may contain several:',
               '',
               ...reasons.map(r => `- ${r}`),
               '',

@@ -1,4 +1,4 @@
-# AiPBX — Changelog
+# OwnPBX — Changelog
 
 Each release is published with `scripts/release.sh X.Y.Z`: the section below becomes
 the git tag message and the GitHub Release notes, and installations show it as
@@ -111,7 +111,7 @@ the git tag message and the GitHub Release notes, and installations show it as
 ## 1.72.2
 
 - **The update's page test no longer fails on /plugins.** With the community catalog on, PHP 8.5 warned that `curl_close()` is deprecated, and the test after the update reported it as an error (the update itself had gone through). The call did nothing since PHP 8.0 and is gone everywhere (webhooks, captcha, AI services, the IVR data step); the page test now refuses it in the code.
-- **A tidier installer.** The AiPBX logo at the start, a box with the server and folders, a progress bar with the step number (3/13), ✔ ⚠ ℹ ✖ marks in their colours, and the result in boxes with how long it took. Colours only on a terminal (not in a log file or with NO_COLOR), plain ASCII without a UTF-8 locale; the messages' words are unchanged.
+- **A tidier installer.** The OwnPBX logo at the start, a box with the server and folders, a progress bar with the step number (3/13), ✔ ⚠ ℹ ✖ marks in their colours, and the result in boxes with how long it took. Colours only on a terminal (not in a log file or with NO_COLOR), plain ASCII without a UTF-8 locale; the messages' words are unchanged.
 
 ## 1.72.1
 
@@ -122,7 +122,7 @@ the git tag message and the GitHub Release notes, and installations show it as
 ## 1.72.0
 
 - **Community plugins from the catalog, without a .zip** (#152). A switch on Integrations → Plugins lists the community plugins of github.com/mahirgul/aipbx-plugins there; Install and, when a newer version is out, Update fetch the plugin, check it against the catalog's SHA-256 and install it like an upload. Off by default, as it installs code from the internet.
-- **A plugin can name the AiPBX it needs.** `"requires_aipbx": "1.71.0"` in plugin.json: an older AiPBX refuses it with that message instead of failing later.
+- **A plugin can name the OwnPBX it needs.** `"requires_aipbx": "1.71.0"` in plugin.json: an older OwnPBX refuses it with that message instead of failing later.
 
 ## 1.71.1
 
@@ -163,7 +163,7 @@ the git tag message and the GitHub Release notes, and installations show it as
 ---
 
 ### Archive & Previous Series
-- 📁 **[AiPBX 1.6 Series (1.60 - 1.61)](CHANGELOG-1.6.md)**
-- 📁 **[AiPBX 1.5 Series (1.50)](CHANGELOG-1.5.md)**
-- 📁 **[AiPBX 1.0 - 1.34 Archive](CHANGELOG-archive.md)**
+- 📁 **[OwnPBX 1.6 Series (1.60 - 1.61)](CHANGELOG-1.6.md)**
+- 📁 **[OwnPBX 1.5 Series (1.50)](CHANGELOG-1.5.md)**
+- 📁 **[OwnPBX 1.0 - 1.34 Archive](CHANGELOG-archive.md)**
 

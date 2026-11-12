@@ -1,5 +1,5 @@
 #!/bin/bash
-# AI PBX — git hook installation.
+# OwnPBX — git hook installation.
 #
 # Usage: bash bin/install-hooks.sh
 #
@@ -17,7 +17,7 @@ fi
 
 cat > "$HOOK" <<'HOOKEOF'
 #!/bin/bash
-# AI PBX smoke test — installed by bin/install-hooks.sh.
+# OwnPBX smoke test — installed by bin/install-hooks.sh.
 # To skip: git commit --no-verify   (do not make it a habit!)
 REPO="$(git rev-parse --show-toplevel)"
 

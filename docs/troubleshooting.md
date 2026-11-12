@@ -46,7 +46,7 @@ When a remote desk phone has audio in only one direction (e.g., calling out to a
 
 2. **Verify `direct_media=no` on both Extensions and Trunks:**
    If `direct_media` is enabled, Asterisk attempts to send a re-INVITE so the two endpoints stream RTP directly to each other without passing through Asterisk. Because the remote phone is behind NAT, it cannot stream RTP directly to an external carrier gateway.
-   - **Extensions:** AiPBX templates default to `direct_media=no`. Verify under **Extensions → edit → Advanced SIP Options** that Direct Media is set to `No`.
+   - **Extensions:** OwnPBX templates default to `direct_media=no`. Verify under **Extensions → edit → Advanced SIP Options** that Direct Media is set to `No`.
    - **Trunks:** Go to **Trunks → edit trunk → Direct Media: No**, then click **Apply Changes**.
 
 3. **Check PBX External IP & Media Address:**
@@ -59,7 +59,7 @@ When a remote desk phone has audio in only one direction (e.g., calling out to a
 4. **Verify Datacenter Firewall & RTP Port Range:**
    Asterisk carries audio over UDP ports defined in `/etc/asterisk/rtp.conf` (default: `10000–12999/udp` or `10000–20000/udp`).
    - Ensure the datacenter firewall, cloud security group, and local firewall (`ufw` or `nftables`) allow incoming UDP traffic on the entire RTP port range.
-   - Ensure Asterisk has `strictrtp=yes` and `rtpkeepalive=5` (default in AiPBX) to keep NAT pinholes open.
+   - Ensure Asterisk has `strictrtp=yes` and `rtpkeepalive=5` (default in OwnPBX) to keep NAT pinholes open.
 
 5. **Capture and Inspect SIP/RTP Traffic:**
    ```bash

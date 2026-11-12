@@ -75,7 +75,7 @@ if [[ "${USE_MDNS:-false}" == "true" ]]; then
     grep -qE "[[:space:]]${PORTAL_DOMAIN}([[:space:]]|$)" /etc/hosts || echo "127.0.0.1 ${PORTAL_DOMAIN}" >> /etc/hosts
     cat > /etc/systemd/system/aipbx-mdns.service << MDNS
 [Unit]
-Description=AiPBX mDNS alias (${PORTAL_DOMAIN} -> ${SERVER_IP})
+Description=OwnPBX mDNS alias (${PORTAL_DOMAIN} -> ${SERVER_IP})
 After=avahi-daemon.service network-online.target
 Requires=avahi-daemon.service
 

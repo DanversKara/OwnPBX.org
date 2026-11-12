@@ -1,7 +1,7 @@
 """Where the engine reads its settings and its inputs from.
 
 There is no engine configuration file. Everything comes from the two places the
-rest of AiPBX uses:
+rest of OwnPBX uses:
 
 * ``/etc/ai-pbx.env`` — the same file the portal and the signaling daemon read
   (`chown root:asterisk`, ``chmod 640``), for the database credentials, and
@@ -44,7 +44,7 @@ SETTINGS: dict[str, str] = {
     "provision_discovery_models": "",
 }
 
-#: The AiPBX DHCP server's lease file (PBX -> Network services -> DHCP).
+#: The OwnPBX DHCP server's lease file (PBX -> Network services -> DHCP).
 DEFAULT_LEASE_FILE = "/var/lib/aipbx-netsvc/dnsmasq.leases"
 #: The kernel's neighbour table: what talked on the local segment recently.
 DEFAULT_ARP_FILE = "/proc/net/arp"

@@ -169,7 +169,7 @@ class FaxSettingsService {
 
     /**
      * The login number of a fax user: their first number no other user has as theirs, or none when all
-     * are shared. Two rows with one extension would look like one person everywhere else in AiPBX.
+     * are shared. Two rows with one extension would look like one person everywhere else in OwnPBX.
      *
      * @param list<string> $numbers
      * @param list<string> $takenByOthers

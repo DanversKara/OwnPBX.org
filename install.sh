@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================================
-# AI PBX — Fresh Install Script
+# OwnPBX — Fresh Install Script
 # Supported: Ubuntu 26.04 LTS+, Debian 13+, 64-bit Raspberry Pi OS / Armbian
 # Architectures: x86_64 (amd64), aarch64 (arm64)
 #
 # Usage:
-#   git clone https://github.com/mahirgul/AiPBX.git /opt/aipbx
+#   git clone https://github.com/DanversKara/OwnPBX.org.git /opt/aipbx
 #   cd /opt/aipbx
 #   sudo bash install.sh
 #
@@ -100,7 +100,7 @@ case "$ARCH" in
     x86_64|amd64|aarch64|arm64)
         ;;
     *)
-        error "AiPBX requires a 64-bit architecture (x86_64 or aarch64/arm64); detected: ${ARCH}. 32-bit systems (such as 32-bit Raspbian/armv7l or i686) are not supported. Please install a 64-bit operating system."
+        error "OwnPBX requires a 64-bit architecture (x86_64 or aarch64/arm64); detected: ${ARCH}. 32-bit systems (such as 32-bit Raspbian/armv7l or i686) are not supported. Please install a 64-bit operating system."
         ;;
 esac
 
@@ -137,7 +137,7 @@ if [[ "${AIPBX_SKIP_OS_CHECK:-0}" != 1 ]]; then
     fi
 
     if [[ "$IS_SUPPORTED" -eq 0 ]]; then
-        error "AiPBX officially supports 64-bit Ubuntu 26.04 LTS+, Debian 13 (Trixie)+, or 64-bit Raspberry Pi OS / Armbian (detected: ${OS_ID} ${OS_VER} on ${ARCH}). Prerequisites: PHP >= 8.4 and Asterisk 22. If your system meets these prerequisites (e.g. via Sury PPA or backports), set AIPBX_SKIP_OS_CHECK=1 to try anyway."
+        error "OwnPBX officially supports 64-bit Ubuntu 26.04 LTS+, Debian 13 (Trixie)+, or 64-bit Raspberry Pi OS / Armbian (detected: ${OS_ID} ${OS_VER} on ${ARCH}). Prerequisites: PHP >= 8.4 and Asterisk 22. If your system meets these prerequisites (e.g. via Sury PPA or backports), set AIPBX_SKIP_OS_CHECK=1 to try anyway."
     fi
 fi
 
@@ -338,7 +338,7 @@ fi
 # secrets: one forgotten word on a live server. An install that stopped half way
 # can go again with --reinstall.
 if [[ "$AIPBX_MODE" == "install" && -f /etc/ai-pbx.env && "${AIPBX_REINSTALL:-0}" != "1" ]]; then
-    error "AiPBX is already installed here (/etc/ai-pbx.env). To update it: bash install.sh --upgrade. To install over it, which resets the admin password and the secrets: bash install.sh --reinstall"
+    error "OwnPBX is already installed here (/etc/ai-pbx.env). To update it: bash install.sh --upgrade. To install over it, which resets the admin password and the secrets: bash install.sh --reinstall"
 fi
 is_upgrade() { [[ "$AIPBX_MODE" == "upgrade" ]]; }
 # A value for inside '...' in SQL: a password an admin set may hold a quote or a backslash.
@@ -373,7 +373,7 @@ if is_upgrade && [[ -f "$INSTALL_DIR/UPGRADE_FROM" ]]; then
     have="$(dd if="$version_marker" iflag=nofollow,nonblock bs=64 count=1 status=none 2>/dev/null | tr -d '[:space:]' || true)"
     [[ "$have" =~ ^[0-9]{1,5}\.[0-9]{1,5}\.[0-9]{1,5}$ ]] || have=""
     if [[ -z "$have" || "$(printf '%s\n%s\n' "$have" "$need_from" | sort -V | head -1)" != "$need_from" ]]; then
-        error "This release can only update AiPBX ${need_from} or newer (installed: ${have:-older than 1.50.0}). Update to v${need_from} first: sudo aipbx-update --to v${need_from}"
+        error "This release can only update OwnPBX ${need_from} or newer (installed: ${have:-older than 1.50.0}). Update to v${need_from} first: sudo aipbx-update --to v${need_from}"
     fi
 fi
 
@@ -400,7 +400,7 @@ prompt_read() {
 # If running via curl pipe or outside a cloned repository:
 if ! is_upgrade && [[ ! -f "$SCRIPT_DIR/web/config.php" ]]; then
     step "Bootstrapping Repository"
-    info "Running via remote curl installer. Cloning AiPBX to $INSTALL_DIR..."
+    info "Running via remote curl installer. Cloning OwnPBX to $INSTALL_DIR..."
     
     if ! command -v git >/dev/null 2>&1; then
         info "Installing git..."
@@ -415,7 +415,7 @@ if ! is_upgrade && [[ ! -f "$SCRIPT_DIR/web/config.php" ]]; then
     else
         mkdir -p "$(dirname "$INSTALL_DIR")"
         # Full clone (not --depth 1): aipbx-update later checks out release tags.
-        git clone --quiet https://github.com/mahirgul/AiPBX.git "$INSTALL_DIR"
+        git clone --quiet https://github.com/DanversKara/OwnPBX.org.git "$INSTALL_DIR"
     fi
     # Install the latest published release by default so that the installed
     # version matches VERSION/CHANGELOG and aipbx-update works from a known
@@ -427,7 +427,7 @@ if ! is_upgrade && [[ ! -f "$SCRIPT_DIR/web/config.php" ]]; then
     else
         git -c safe.directory="$INSTALL_DIR" -C "$INSTALL_DIR" checkout --quiet --force --detach "$AIPBX_REF"
     fi
-    info "Installing AiPBX ${AIPBX_REF}"
+    info "Installing OwnPBX ${AIPBX_REF}"
     # Re-run the installer from the checked-out release (it may differ from this copy).
     # Through `curl | bash` the rest of this script is still in the pipe: read it
     # first, or curl ends the install with "(23) Failure writing output".

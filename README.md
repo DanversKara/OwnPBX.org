@@ -1,6 +1,6 @@
 <p align="center">
-  <a href="https://aipbx.bid">
-    <img src="docs/logo.png" alt="AI PBX Logo" width="130">
+  <a href="https://ownpbx.org">
+    <img src="docs/logo.png" alt="OwnPBX Logo" width="130">
   </a>
 </p>
 
@@ -10,11 +10,11 @@
 </p>
 
 <p align="center">
-  📖 <a href="docs/README.md"><strong>Documentation</strong></a> · 🌐 <a href="https://aipbx.bid"><strong>Website: aipbx.bid</strong></a> · 🖥️ <a href="https://aipbx.bid/demo/"><strong>Live demo</strong></a> · 📺 <a href="https://www.youtube.com/@aipbx"><strong>YouTube</strong></a>
+  📖 <a href="docs/README.md"><strong>Documentation</strong></a> · 🌐 <a href="https://ownpbx.org"><strong>Website: ownpbx.org</strong></a> · 🖥️ <a href="https://aipbx.bid/demo/"><strong>Live demo</strong></a> · 📺 <a href="https://www.youtube.com/@aipbx"><strong>YouTube</strong></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/mahirgul/AiPBX/releases/latest"><img src="https://img.shields.io/github/v/release/mahirgul/AiPBX?style=for-the-badge&logo=github&label=Release&color=2563EB&logoColor=white" alt="Latest release" height="32"></a>
+  <a href="https://github.com/DanversKara/OwnPBX.org/releases/latest"><img src="https://img.shields.io/github/v/release/DanversKara/OwnPBX.org?style=for-the-badge&logo=github&label=Release&color=2563EB&logoColor=white" alt="Latest release" height="32"></a>
   <a href="https://play.google.com/store/apps/details?id=com.mhrgl.AiPBX"><img src="https://img.shields.io/badge/Google_Play-Download-01875F?style=for-the-badge&logo=googleplay&logoColor=white" alt="Get it on Google Play" height="32"></a>
 </p>
 
@@ -52,20 +52,20 @@
 
 ```bash
 # Recommended one-liner installation (installs the latest release)
-curl -fsSL aipbx.bid/i | sudo bash
+curl -fsSL https://raw.githubusercontent.com/DanversKara/OwnPBX.org/main/install.sh | sudo bash
 ```
 
 Or via direct GitHub raw URL:
 
 ```bash
 # Alternative direct GitHub script
-curl -fsSL https://raw.githubusercontent.com/mahirgul/AiPBX/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/DanversKara/OwnPBX.org/main/install.sh | sudo bash
 ```
 
 Or clone manually and install the latest release:
 
 ```bash
-git clone https://github.com/mahirgul/AiPBX.git /opt/aipbx
+git clone https://github.com/DanversKara/OwnPBX.org.git /opt/aipbx
 cd /opt/aipbx
 git checkout "$(git tag -l 'v*' --sort=-v:refname | head -1)"
 sudo bash install.sh
@@ -89,19 +89,19 @@ After installing, open `https://<your-server>` and log in with the admin credent
 
 ### 📺 Video guides
 
-Narrated and with subtitles — on the [AiPBX YouTube channel](https://www.youtube.com/@aipbx):
+Narrated and with subtitles — on the [OwnPBX YouTube channel](https://www.youtube.com/@aipbx):
 
 #### 🚀 Installation step by step
 
 | English | Türkçe | Deutsch |
 |:---:|:---:|:---:|
-| [![Install AiPBX (English)](https://img.youtube.com/vi/lH1-k_z5jFE/mqdefault.jpg)](https://www.youtube.com/watch?v=lH1-k_z5jFE) | [![AiPBX kurulumu (Türkçe)](https://img.youtube.com/vi/eDHHHW6ZcvQ/mqdefault.jpg)](https://www.youtube.com/watch?v=eDHHHW6ZcvQ) | [![AiPBX installieren (Deutsch)](https://img.youtube.com/vi/1QuOM6Rtcbg/mqdefault.jpg)](https://www.youtube.com/watch?v=1QuOM6Rtcbg) |
+| [![Install OwnPBX (English)](https://img.youtube.com/vi/lH1-k_z5jFE/mqdefault.jpg)](https://www.youtube.com/watch?v=lH1-k_z5jFE) | [![OwnPBX kurulumu (Türkçe)](https://img.youtube.com/vi/eDHHHW6ZcvQ/mqdefault.jpg)](https://www.youtube.com/watch?v=eDHHHW6ZcvQ) | [![OwnPBX installieren (Deutsch)](https://img.youtube.com/vi/1QuOM6Rtcbg/mqdefault.jpg)](https://www.youtube.com/watch?v=1QuOM6Rtcbg) |
 
 #### 🗺️ Menu tour: every screen of the portal
 
 | English | Türkçe | Deutsch |
 |:---:|:---:|:---:|
-| [![AiPBX Menu Tour (English)](https://img.youtube.com/vi/xU0BYN6AKE4/mqdefault.jpg)](https://www.youtube.com/watch?v=xU0BYN6AKE4) | [![AiPBX Menü Turu (Türkçe)](https://img.youtube.com/vi/Teol14NgXbY/mqdefault.jpg)](https://www.youtube.com/watch?v=Teol14NgXbY) | [![AiPBX Menütour (Deutsch)](https://img.youtube.com/vi/8whV_DY3ZqQ/mqdefault.jpg)](https://www.youtube.com/watch?v=8whV_DY3ZqQ) |
+| [![OwnPBX Menu Tour (English)](https://img.youtube.com/vi/xU0BYN6AKE4/mqdefault.jpg)](https://www.youtube.com/watch?v=xU0BYN6AKE4) | [![OwnPBX Menü Turu (Türkçe)](https://img.youtube.com/vi/Teol14NgXbY/mqdefault.jpg)](https://www.youtube.com/watch?v=Teol14NgXbY) | [![OwnPBX Menütour (Deutsch)](https://img.youtube.com/vi/8whV_DY3ZqQ/mqdefault.jpg)](https://www.youtube.com/watch?v=8whV_DY3ZqQ) |
 
 ---
 
@@ -239,7 +239,7 @@ release first; `aipbx-update` does both steps in one run. See [INSTALL.md](INSTA
   </a>
 </p>
 
-- **Android** (Kotlin) — [AiPBX-Android](https://github.com/mahirgul/AiPBX-Android): WebRTC calling with push wake-up and a foreground service, chat,
+- **Android** (Kotlin) — [android.OwnPBX.org](https://github.com/DanversKara/android.OwnPBX.org): WebRTC calling with push wake-up and a foreground service, chat,
   directory with presence, call history, DND / call forward, in-app log viewer. Available on [Google Play](https://play.google.com/store/apps/details?id=com.mhrgl.AiPBX).
 - **iOS** (SwiftUI, CallKit) — [AiPBX-ios](https://github.com/mahirgul/AiPBX-ios): calling with native incoming-call screen, chat, directory, features.
 - **Sign-in** with username + password (+ 2FA code), by scanning a QR code on the portal, or with the
@@ -321,7 +321,7 @@ release first; `aipbx-update` does both steps in one run. See [INSTALL.md](INSTA
 
 ## 🏗️ Architecture
 
-![AiPBX architecture](docs/img/system-map.svg)
+![OwnPBX architecture](docs/img/system-map.svg)
 
 ```
 AiPBX/
@@ -365,7 +365,7 @@ AiPBX/
 | 🛡️ **Edge** | nginx stream on 443 (ALPN, SNI + PROXY protocol) → Apache, coturn (TURNS) or Asterisk (SIP-TLS of phone regions) |
 | 💬 **Chat** | Go + gorilla/websocket |
 | 🎧 **WebRTC** | coturn TURN/STUN, DTLS-SRTP, Opus |
-| 🤖 **Android** | Kotlin, WebRTC, FCM ([AiPBX-Android](https://github.com/mahirgul/AiPBX-Android)) |
+| 🤖 **Android** | Kotlin, WebRTC, FCM ([android.OwnPBX.org](https://github.com/DanversKara/android.OwnPBX.org)) |
 | 🍎 **iOS** | Swift, SwiftUI, CallKit ([AiPBX-ios](https://github.com/mahirgul/AiPBX-ios)) |
 | ⚙️ **CI** | GitHub Actions: PHPStan, PHPUnit, page smoke tests, Go tests |
 
@@ -384,12 +384,12 @@ AiPBX/
 
 ## 🗺️ Project Roadmap & Architecture Vision
 
-AiPBX follows a transparent, phased engineering roadmap. For the complete specification, architectural diagrams, and upcoming milestones, see **[ROADMAP.md](ROADMAP.md)** (or online at [aipbx.bid/docs/roadmap](https://aipbx.bid/docs/roadmap)).
+OwnPBX follows a transparent, phased engineering roadmap. For the complete specification, architectural diagrams, and upcoming milestones, see **[ROADMAP.md](ROADMAP.md)** (or online at [aipbx.bid/docs/roadmap](https://aipbx.bid/docs/roadmap)).
 
 - **✅ Wave 1 (Delivered in v1.50.10):** Trunk rate limits, early media announcements, night dialing protection, voicemail PIN policies.
 - **✅ Wave 2 (Delivered in v1.50.11):** Sandboxed scheduled background tasks (`systemd-run`), encrypted external database integrations, IVR caller lookup steps, PBX fine-tuning & Asterisk night restarts.
 - **🚀 Wave 3 (In Active Development & Planning):**
-  - **Several customers on one server:** one Incus/LXD container per customer running the normal install, managed from a super-admin page. One AiPBX in a container [works today](docs/incus-lxd.md).
+  - **Several customers on one server:** one Incus/LXD container per customer running the normal install, managed from a super-admin page. One OwnPBX in a container [works today](docs/incus-lxd.md).
   - **Group Voice Conferences from Instant Chat:** WebRTC conference rooms dynamically bridged from mobile and web chat groups.
   - **Remote GPU Speech Engines:** Offloaded high-fidelity neural TTS engines on dedicated GPU compute instances.
 
@@ -412,13 +412,13 @@ Code comments, commit messages and documentation are written in English.
 ## ⚖️ Disclaimer & Legal Notice / Sorumluluk Reddi
 
 > ⚠️ **English — Disclaimer of Warranty & Regulatory Responsibility**
-> 1. **Provided "AS IS":** AiPBX is open-source software provided under the [MIT License](LICENSE) **"AS IS"**, without warranty of any kind, express or implied. In no event shall the author or contributors be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, without limitation, service interruptions, data loss, or toll fraud) arising out of the use or inability to use this software.
+> 1. **Provided "AS IS":** OwnPBX is open-source software provided under the [MIT License](LICENSE) **"AS IS"**, without warranty of any kind, express or implied. In no event shall the author or contributors be liable for any direct, indirect, incidental, special, exemplary, or consequential damages (including, without limitation, service interruptions, data loss, or toll fraud) arising out of the use or inability to use this software.
 > 2. **Call Recording, AI Processing & Automated Outbound Dialing Compliance:** Features such as call recording, AI speech-to-text / LLM processing, and automated outbound dialing (`auto-dialer` / AMD) are subject to strict telecommunications, wiretapping, and data protection laws worldwide (including **GDPR**, **KVKK**, **FCC / TCPA**, **CCPA**, **HIPAA**, and local two-party consent statutes). Configuring appropriate pre-call disclosures, obtaining caller/callee consent, and complying with local laws are the **sole responsibility of the system administrator and deploying organization**.
-> 3. **Emergency Calls (`112` / `911` / `E911`):** VoIP and IP PBX telephony depend on electrical power, network connectivity, and properly configured upstream SIP trunks. AiPBX is **not** a certified replacement for traditional PSTN emergency lines unless explicitly configured, tested, and maintained with a compliant carrier by the operator.
-> 4. **Network Security & Toll Fraud:** While AiPBX generates strong random credentials and configures firewall/fail2ban rules by default, securing SIP trunks, outbound dial permissions, rate limits, and network exposure against unauthorized access or toll fraud remains the sole responsibility of the system administrator.
+> 3. **Emergency Calls (`112` / `911` / `E911`):** VoIP and IP PBX telephony depend on electrical power, network connectivity, and properly configured upstream SIP trunks. OwnPBX is **not** a certified replacement for traditional PSTN emergency lines unless explicitly configured, tested, and maintained with a compliant carrier by the operator.
+> 4. **Network Security & Toll Fraud:** While OwnPBX generates strong random credentials and configures firewall/fail2ban rules by default, securing SIP trunks, outbound dial permissions, rate limits, and network exposure against unauthorized access or toll fraud remains the sole responsibility of the system administrator.
 
 > ⚠️ **Türkçe — Sorumluluk Reddi ve Yasal Uyarı**
-> 1. **"Olduğu Gibi" (AS-IS) Sunum:** AiPBX, [MIT Lisansı](LICENSE) kapsamında açık kaynaklı olarak, açık veya zımni hiçbir garanti verilmeksizin **"OLDUĞU GİBİ"** sunulmaktadır. Yazılımın kullanımından veya kullanılamamasından doğabilecek doğrudan ya da dolaylı hiçbir zarardan (hizmet kesintisi, veri kaybı, yetkisiz arama/fatura maliyeti vb. dahil) geliştirici veya katkıda bulunanlar sorumlu tutulamaz.
+> 1. **"Olduğu Gibi" (AS-IS) Sunum:** OwnPBX, [MIT Lisansı](LICENSE) kapsamında açık kaynaklı olarak, açık veya zımni hiçbir garanti verilmeksizin **"OLDUĞU GİBİ"** sunulmaktadır. Yazılımın kullanımından veya kullanılamamasından doğabilecek doğrudan ya da dolaylı hiçbir zarardan (hizmet kesintisi, veri kaybı, yetkisiz arama/fatura maliyeti vb. dahil) geliştirici veya katkıda bulunanlar sorumlu tutulamaz.
 > 2. **Çağrı Kaydı, Yapay Zeka ve Otomatik Arama Mevzuat Uyumu:** Çağrı ses kaydı, yapay zeka ile ses-metin dönüştürme (STT/LLM) ve otomatik dış arama (`auto-dialer` / AMD) özellikleri; **6698 sayılı KVKK**, **BTK düzenlemeleri**, **İYS / Ticari Elektronik İleti mevzuatı**, **GDPR** ve ilgili ülkelerin telekomünikasyon/dinleme yasalarına tabidir. Aydınlatma metinlerinin dinletilmesi, açık rıza alınması ve yasal saklama sürelerine uyum tamamen **sistemi kuran ve işleten kurumun/yöneticinin sorumluluğundadır**.
 > 3. **Acil Çağrı Hizmetleri (`112` / `911`):** VoIP ve IP santral üzerinden yapılan aramalar elektrik enerjisi, yerel ağ, internet erişimi ve SIP operatör (trunk) bağlantısına bağımlıdır. Uygun operatör yönlendirmesi ve yedeklilik sağlanmadığı sürece geleneksel sabit acil çağrı hatlarının (PSTN) yerini garanti etmez.
 > 4. **Ağ Güvenliği ve Ücretli Arama Güvenliği (Toll Fraud):** Kurulum aracı rastgele güçlü parolalar ve güvenlik duvarı kuralları oluştursa da; SIP trunk limitlerinin, dış arama yetkilerinin (Call Barring) ve sunucu erişim güvenliğinin korunması sistem yöneticisinin sorumluluğundadır.
@@ -427,7 +427,7 @@ Code comments, commit messages and documentation are written in English.
 
 ## 💖 Sponsor & Cloud Partners
 
-If you find AiPBX useful for your organization or projects, consider sponsoring its ongoing development and maintenance:
+If you find OwnPBX useful for your organization or projects, consider sponsoring its ongoing development and maintenance:
 
 <p align="center">
   <a href="https://github.com/sponsors/mahirgul">
@@ -437,7 +437,7 @@ If you find AiPBX useful for your organization or projects, consider sponsoring 
 
 ### ☁️ Recommended Cloud Infrastructure — UpCloud
 
-AiPBX runs great on [UpCloud](https://signup.upcloud.com/?promo=affiliate-aipbx250&amp;utm_source=aipbx&amp;utm_medium=affiliate&amp;utm_campaign=affiliate-aipbx250) high-performance European and global cloud servers with ultra-fast MaxIOPS block storage.
+OwnPBX runs great on [UpCloud](https://signup.upcloud.com/?promo=affiliate-aipbx250&amp;utm_source=aipbx&amp;utm_medium=affiliate&amp;utm_campaign=affiliate-aipbx250) high-performance European and global cloud servers with ultra-fast MaxIOPS block storage.
 
 <p align="center">
   <a href="https://signup.upcloud.com/?promo=affiliate-aipbx250&amp;utm_source=aipbx&amp;utm_medium=affiliate&amp;utm_campaign=affiliate-aipbx250">

@@ -352,7 +352,7 @@ class CdrReportRepository extends BaseRepository
             $flow = $r['legs'] ? $analyzer->analyze($r['legs']) : null;
             $r['flow'] = $flow;
             if ($flow) {
-                // Only an AiPBX extension; a number behind an outgoing trunk is not one.
+                // Only an OwnPBX extension; a number behind an outgoing trunk is not one.
                 $r['agent_extension'] = $flow['answered_ext'];
             }
             $ext = $r['agent_extension'] ?? '';

@@ -7,7 +7,7 @@ require_once __DIR__ . '/../../src/services/PhoneProvisionService.php';
 
 /**
  * Cisco CallManager-series phones (7900/8800 with Cisco's SIP firmware):
- * the SEP<MAC>.cnf.xml AiPBX writes for them.
+ * the SEP<MAC>.cnf.xml OwnPBX writes for them.
  *
  * The two assertions that carry the most weight are
  * testTheDocumentIsWellFormedXml() — the phone rejects the whole file when one

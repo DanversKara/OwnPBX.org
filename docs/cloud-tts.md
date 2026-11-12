@@ -24,7 +24,7 @@ provider's own error message is shown.
 Credentials are **encrypted** (libsodium) with a key kept outside the database — `AIPBX_SETTINGS_KEY`
 in the environment or `/var/lib/aipbx/settings.key`, created by `install.sh` — and are never sent back
 to the browser; the page only shows that a key is set (for a Google service account: its e-mail).
-AiPBX calls the providers' REST APIs directly; no vendor SDK is installed.
+OwnPBX calls the providers' REST APIs directly; no vendor SDK is installed.
 
 ## Synthesize
 
@@ -42,6 +42,6 @@ the audit log.
 
 ## Turkish system prompts
 
-AiPBX's complete Turkish prompt set was generated with the Google provider configured here (voice
+OwnPBX's complete Turkish prompt set was generated with the Google provider configured here (voice
 `tr-TR-Wavenet-C`, 16 kHz masters) and ships as the `asterisk-core-sounds-tr` packages. To change or
 add a prompt, see [Sounds & languages](sounds.md#turkish-prompts).

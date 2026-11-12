@@ -40,7 +40,7 @@ class ForgotPasswordController extends BaseController
             'sent' => $sent,
             'csrf_token' => getCSRFToken(),
             'captcha' => $_SESSION['forgot_captcha'],
-            'brand_title' => getSystemSetting('brand_title', 'AiPBX'),
+            'brand_title' => getSystemSetting('brand_title', 'OwnPBX'),
             'brand_sub' => getSystemSetting('brand_sub', 'PBX & Call Center'),
         ], ['title' => t('forgot.title')]);
     }

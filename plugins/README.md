@@ -1,6 +1,6 @@
-# AiPBX Plugin Catalog (Official & Community)
+# OwnPBX Plugin Catalog (Official & Community)
 
-This directory contains the **official plugins** bundled with AiPBX. Community plugins are maintained in the separate plugin repository. Starting with the modular plugin architecture, optional external integrations, telemetry collectors, and AI modules live here as self-contained plugin manifests (`<slug>/plugin.json`) rather than being force-enabled on every PBX installation.
+This directory contains the **official plugins** bundled with OwnPBX. Community plugins are maintained in the separate plugin repository. Starting with the modular plugin architecture, optional external integrations, telemetry collectors, and AI modules live here as self-contained plugin manifests (`<slug>/plugin.json`) rather than being force-enabled on every PBX installation.
 
 - **Lean Core by Default**: Fresh installations start with a clean, fast core PBX. Administrators can browse, install, enable, configure, or disable any plugin with a single click under **Integrations → Plugins** (`/plugins`) or via the **REST API v1** (`POST /api/v1/plugins/{slug}/enable`).
 - **Zero-Disruption Upgrades**: Existing servers that already have Google Sign-In, Microsoft Teams, Website Call Widgets, or AI settings configured automatically keep those plugins enabled during database migration.
@@ -12,14 +12,14 @@ This directory contains the **official plugins** bundled with AiPBX. Community p
 
 | Slug | Category | Author | Description |
 |---|---|---|---|
-| [`google-auth`](./google-auth/plugin.json) | `integration` | AiPBX Official Team | Google Sign-In (OAuth 2.0) for web portal and mobile apps |
-| [`ms-teams`](./ms-teams/plugin.json) | `integration` | AiPBX Official Team | Microsoft Teams Direct Routing SBC trunking, PowerShell generator, and call webhooks |
-| [`web-widgets`](./web-widgets/plugin.json) | `integration` | AiPBX Official Team | Embeddable WebRTC click-to-call button, callback form, and downloadable WordPress plugin (`.zip`) |
-| [`ai-cloud`](./ai-cloud/plugin.json) | `ai` | AiPBX Official Team | Cloud & OpenAI-compatible AI provider connection manager |
-| [`ai-tts`](./ai-tts/plugin.json) | `ai` | AiPBX Official Team | AI Text-to-Speech studio for generating IVR and system announcements |
-| [`ai-apps`](./ai-apps/plugin.json) | `ai` | AiPBX Official Team | Conversational AI Voice Bots (`AudioSocket` / `ARI`) for inbound calls |
-| [`ai-models`](./ai-models/plugin.json) | `ai` | AiPBX Official Team | Lightweight local TTS & speech runtime manager |
-| [`sms`](./sms/plugin.json) | `integration` | OwnPBX | SMS/MMS on your numbers (Twilio, Vonage, Plivo, Telnyx, Bandwidth, Sinch, VoIP.ms, BulkVS): replies, delete, emoji and GIFs (GIPHY), in the portal and the app. Originally the AiPBX community plugin (MIT). |
+| [`google-auth`](./google-auth/plugin.json) | `integration` | OwnPBX Official Team | Google Sign-In (OAuth 2.0) for web portal and mobile apps |
+| [`ms-teams`](./ms-teams/plugin.json) | `integration` | OwnPBX Official Team | Microsoft Teams Direct Routing SBC trunking, PowerShell generator, and call webhooks |
+| [`web-widgets`](./web-widgets/plugin.json) | `integration` | OwnPBX Official Team | Embeddable WebRTC click-to-call button, callback form, and downloadable WordPress plugin (`.zip`) |
+| [`ai-cloud`](./ai-cloud/plugin.json) | `ai` | OwnPBX Official Team | Cloud & OpenAI-compatible AI provider connection manager |
+| [`ai-tts`](./ai-tts/plugin.json) | `ai` | OwnPBX Official Team | AI Text-to-Speech studio for generating IVR and system announcements |
+| [`ai-apps`](./ai-apps/plugin.json) | `ai` | OwnPBX Official Team | Conversational AI Voice Bots (`AudioSocket` / `ARI`) for inbound calls |
+| [`ai-models`](./ai-models/plugin.json) | `ai` | OwnPBX Official Team | Lightweight local TTS & speech runtime manager |
+| [`sms`](./sms/plugin.json) | `integration` | OwnPBX | SMS/MMS on your numbers (Twilio, Vonage, Plivo, Telnyx, Bandwidth, Sinch, VoIP.ms, BulkVS): replies, delete, emoji and GIFs (GIPHY), in the portal and the app. Originally the OwnPBX community plugin (MIT). |
 
 ## Community Plugins (`type: "community"`)
 

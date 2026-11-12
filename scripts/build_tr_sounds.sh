@@ -70,10 +70,10 @@ export -f convert_one
 
 cp "$REPO/sounds/core-sounds-tr.txt" "$PKG/core-sounds-tr.txt"
 cat > "$PKG/LICENSE-asterisk-core-tr-$VERSION" <<EOF
-Turkish Asterisk core sounds — AiPBX (asterisk-core-sounds-tr $VERSION)
+Turkish Asterisk core sounds — OwnPBX (asterisk-core-sounds-tr $VERSION)
 
 The Turkish speech prompts were generated with Google Cloud Text-to-Speech
-(voice tr-TR-Wavenet-C) for the AiPBX project and are released under the
+(voice tr-TR-Wavenet-C) for the OwnPBX project and are released under the
 Creative Commons Attribution-ShareAlike 4.0 International license
 (CC BY-SA 4.0): https://creativecommons.org/licenses/by-sa/4.0/
 
@@ -82,11 +82,11 @@ confbridge-leave, descending-2tone, tt-monkeys) come from the Asterisk
 core sounds (asterisk-core-sounds-en), Copyright Digium, Inc., licensed
 under CC BY-SA 3.0.
 
-Source and prompt texts: https://github.com/mahirgul/AiPBX
+Source and prompt texts: https://github.com/DanversKara/OwnPBX.org
 EOF
 cat > "$PKG/CHANGES-asterisk-core-tr-$VERSION" <<EOF
 asterisk-core-sounds-tr $VERSION
-  - Every prompt of asterisk-core-sounds-en plus voicemail and AiPBX prompts
+  - Every prompt of asterisk-core-sounds-en plus voicemail and OwnPBX prompts
     in Turkish, one voice (Google Wavenet tr-TR-Wavenet-C).
   - Formats: wav (8 kHz), ulaw, alaw, gsm, g722 and sln16 (16 kHz).
 EOF

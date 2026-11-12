@@ -6,7 +6,7 @@
         "en": "AI Voice Applications (Conversational IVR Bots)"
     },
     "version": "1.2.0",
-    "author": "AiPBX Official Team",
+    "author": "OwnPBX Official Team",
     "category": "ai",
     "icon": "fas fa-robot",
     "icon_style": "color: var(--purple);",
@@ -27,5 +27,5 @@
         }
     },
     "type": "official",
-    "author_url": "https://github.com/mahirgul/AiPBX"
+    "author_url": "https://github.com/DanversKara/OwnPBX.org"
 }

@@ -29,7 +29,7 @@ managers: yesterday's calls and faxes and the state of every check.
 | TLS certificate | daily | warning 14 days before it ends, failed 3 days before |
 | Daily backup | daily | the newest file in `/var/backups/aipbx-daily` is older than 26 h |
 | Installation | daily | something `install.sh` sets up is missing or has the wrong owner/rights (helper, sudo rule, cron, TFTP folder, voicemail folders, masked vsftpd unit) |
-| AiPBX version | daily | a newer release is out — information only, never an alarm |
+| OwnPBX version | daily | a newer release is out — information only, never an alarm |
 
 Each check's **interval** can be changed on the page (off, 5 or 15 minutes, 1 or 6 hours, daily).
 A check that does not apply to the server (no trunks, FTP switched off) shows *Not used*.

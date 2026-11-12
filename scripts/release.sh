@@ -1,5 +1,5 @@
 #!/bin/bash
-# Publishes an AiPBX server release (developer tool).
+# Publishes an OwnPBX server release (developer tool).
 #
 #   scripts/release.sh 1.0.1
 #
@@ -62,6 +62,6 @@ git tag -a "v$VER" -m "$NOTES"
 git push -q origin main
 git push -q origin "v$VER"
 if command -v gh >/dev/null 2>&1; then
-    gh release create "v$VER" --title "AiPBX v$VER" --notes "$NOTES" >/dev/null && echo "GitHub Release created."
+    gh release create "v$VER" --title "OwnPBX v$VER" --notes "$NOTES" >/dev/null && echo "GitHub Release created."
 fi
 echo "v$VER published. Installations: sudo aipbx-update (or portal → System Update)"

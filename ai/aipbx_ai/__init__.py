@@ -1,7 +1,7 @@
 """aipbx-ai — AI models that run on the PBX itself (roadmap 5, AI -> Local models).
 
 Audio and text never leave the server: the models are downloaded once (from
-AiPBX's own model releases, checked by SHA-256) and then run locally on the
+OwnPBX's own model releases, checked by SHA-256) and then run locally on the
 CPU with ONNX Runtime. The first model is
 EMA Lightning, a Turkish text-to-speech model (Apache-2.0); further models
 (e.g. EmbeddingGemma 2 for audio/text embeddings) are new entries in

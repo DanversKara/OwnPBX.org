@@ -1,6 +1,6 @@
 {
     "name": "ai-pbx/portal",
-    "description": "AI PBX — PBX, fax & call center portal",
+    "description": "OwnPBX — PBX, fax & call center portal",
     "type": "project",
     "license": "MIT",
     "authors": [

@@ -1,6 +1,6 @@
 # System map (for administrators)
 
-Where everything is on an installed AiPBX server and how to follow a problem from the portal to the
+Where everything is on an installed OwnPBX server and how to follow a problem from the portal to the
 file, process or log behind it. Everything here is on the server itself: it works without internet
 access. Paths are those of a standard `install.sh` installation; commands run as root (`sudo`).
 
@@ -9,7 +9,7 @@ automatic checks).
 
 ## 1. The big picture
 
-![How the parts of AiPBX connect](img/system-map.svg)
+![How the parts of OwnPBX connect](img/system-map.svg)
 
 Changes made in the portal are stored in the database first. **Apply** (top bar) writes the Asterisk
 files under `/etc/asterisk/pbx/` and reloads Asterisk (section 5).

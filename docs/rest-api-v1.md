@@ -1,6 +1,6 @@
 # REST API v1 & Outbound Webhooks
 
-AiPBX provides a stateless JSON REST API under `/api/v1/*` with OpenAPI 3.1 discovery (`/api/v1/openapi.json`), scoped Bearer API keys (`apbx_<token>`), CIDR IP allowlists, per-key rate limiting, and HMAC-SHA256 signed outbound webhooks.
+OwnPBX provides a stateless JSON REST API under `/api/v1/*` with OpenAPI 3.1 discovery (`/api/v1/openapi.json`), scoped Bearer API keys (`apbx_<token>`), CIDR IP allowlists, per-key rate limiting, and HMAC-SHA256 signed outbound webhooks.
 
 ---
 

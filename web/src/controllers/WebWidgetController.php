@@ -85,7 +85,7 @@ class WebWidgetController extends BaseController
         $zip->close();
 
         header('Content-Type: application/zip');
-        header('Content-Disposition: attachment; filename="aipbx-call-widget.zip"');
+        header('Content-Disposition: attachment; filename="ownpbx-call-widget.zip"');
         header('Content-Length: ' . (string) filesize($tmpZip));
         header('Cache-Control: no-store, no-cache, must-revalidate');
         readfile($tmpZip);

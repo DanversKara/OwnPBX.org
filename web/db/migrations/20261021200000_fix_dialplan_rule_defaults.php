@@ -8,7 +8,7 @@ use Phinx\Migration\AbstractMigration;
  * Turns off two kinds of seeded normalization rules that broke calls.
  *
  * 1. Desktop "_00." / "_00[1-9]." (strip the first 0): meant for offices
- *    whose users dial 0 for an outside line, but AiPBX's own international
+ *    whose users dial 0 for an outside line, but OwnPBX's own international
  *    format is 00 + country code. A desk phone dialling 0049... was turned
  *    into 049... and the call failed. Faxes and call forwarding go through
  *    the desktop rules too.

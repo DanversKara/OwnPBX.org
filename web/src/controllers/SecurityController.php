@@ -143,7 +143,7 @@ class SecurityController extends BaseController
                 $_SESSION['pending_2fa_setup_secret'] = TwoFactorService::generateSecret(32);
             }
             $setupSecret = $_SESSION['pending_2fa_setup_secret'];
-            $brandTitle = getSystemSetting('brand_title', 'AiPBX');
+            $brandTitle = getSystemSetting('brand_title', 'OwnPBX');
             $otpUri = TwoFactorService::getOtpAuthUri($user['username'], $setupSecret, $brandTitle);
             $qrCodeDataUri = TwoFactorService::getQrCodeDataUri($otpUri);
         }

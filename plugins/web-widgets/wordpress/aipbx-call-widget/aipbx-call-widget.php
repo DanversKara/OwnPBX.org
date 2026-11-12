@@ -1,12 +1,12 @@
 <?php
 /**
- * Plugin Name:       AiPBX Call Widget & API Connector
- * Plugin URI:        https://github.com/mahirgul/AiPBX
- * Description:       Adds the AiPBX "Call us" button (browser call over WebRTC and the call-back form) to your WordPress site. Supports pasting the embed code or fetching widgets directly via AiPBX REST API v1 (/api/v1/web-widgets).
+ * Plugin Name:       OwnPBX Call Widget & API Connector
+ * Plugin URI:        https://github.com/DanversKara/OwnPBX.org
+ * Description:       Adds the OwnPBX "Call us" button (browser call over WebRTC and the call-back form) to your WordPress site. Supports pasting the embed code or fetching widgets directly via OwnPBX REST API v1 (/api/v1/web-widgets).
  * Version:           1.2.0
  * Requires at least: 5.8
  * Requires PHP:      7.4
- * Author:            AiPBX
+ * Author:            OwnPBX
  * License:           GPL-3.0-or-later
  * Text Domain:       aipbx-call-widget
  */
@@ -34,7 +34,7 @@ function aipbx_cw_settings()
 }
 
 /**
- * Reads the PBX address and the widget id from the embed code AiPBX shows:
+ * Reads the PBX address and the widget id from the embed code OwnPBX shows:
  * <script src="https://pbx.example.com/widget.js" data-widget="w_…" async></script>
  *
  * @return array{base: string, widget: string}|null
@@ -51,7 +51,7 @@ function aipbx_cw_parse_embed($code)
 }
 
 /**
- * Fetch available widgets from AiPBX REST API (/api/v1/web-widgets) when base URL and API token are configured.
+ * Fetch available widgets from OwnPBX REST API (/api/v1/web-widgets) when base URL and API token are configured.
  *
  * @return list<array{token: string, name: string, number: string}>
  */
@@ -130,7 +130,7 @@ function aipbx_cw_sanitize($input)
     } else {
         $parsed = aipbx_cw_parse_embed($code);
         if ($parsed === null) {
-            add_settings_error(AIPBX_CW_OPTION, 'embed', __('This is not an AiPBX embed code. Copy it from Integrations → Web widgets in AiPBX.', 'aipbx-call-widget'));
+            add_settings_error(AIPBX_CW_OPTION, 'embed', __('This is not an OwnPBX embed code. Copy it from Integrations → Web widgets in OwnPBX.', 'aipbx-call-widget'));
         } else {
             $out = array_merge($out, $parsed);
         }
@@ -165,7 +165,7 @@ add_action('admin_init', function () {
 });
 
 add_action('admin_menu', function () {
-    add_options_page('AiPBX Call Widget', 'AiPBX Call Widget', 'manage_options', 'aipbx-call-widget', 'aipbx_cw_settings_page');
+    add_options_page('OwnPBX Call Widget', 'OwnPBX Call Widget', 'manage_options', 'aipbx-call-widget', 'aipbx_cw_settings_page');
 });
 
 function aipbx_cw_settings_page()
@@ -177,8 +177,8 @@ function aipbx_cw_settings_page()
     $remoteWidgets = aipbx_cw_fetch_remote_widgets($s['base'], $s['api_token']);
     ?>
     <div class="wrap">
-        <h1>AiPBX Call Widget</h1>
-        <p><?php esc_html_e('Create a widget in AiPBX under Integrations → Web widgets, add this site to its allowed websites, and paste the embed code below (or connect via REST API v1).', 'aipbx-call-widget'); ?></p>
+        <h1>OwnPBX Call Widget</h1>
+        <p><?php esc_html_e('Create a widget in OwnPBX under Integrations → Web widgets, add this site to its allowed websites, and paste the embed code below (or connect via REST API v1).', 'aipbx-call-widget'); ?></p>
         <form method="post" action="options.php">
             <?php settings_fields('aipbx_call_widget'); ?>
             <table class="form-table" role="presentation">
@@ -195,10 +195,10 @@ function aipbx_cw_settings_page()
                     </td>
                 </tr>
                 <tr>
-                    <th scope="row"><label for="aipbx-cw-token"><?php esc_html_e('AiPBX API Key (Optional)', 'aipbx-call-widget'); ?></label></th>
+                    <th scope="row"><label for="aipbx-cw-token"><?php esc_html_e('OwnPBX API Key (Optional)', 'aipbx-call-widget'); ?></label></th>
                     <td>
                         <input type="password" id="aipbx-cw-token" name="<?php echo esc_attr(AIPBX_CW_OPTION); ?>[api_token]" value="" autocomplete="new-password" class="regular-text" placeholder="<?php echo $s['api_token'] !== '' ? esc_attr__('•••••••• (saved — leave blank to keep)', 'aipbx-call-widget') : 'apbx_...'; ?>">
-                        <p class="description"><?php esc_html_e('Optional: provide an API key with pbx:read scope to pick widgets directly from your AiPBX server.', 'aipbx-call-widget'); ?></p>
+                        <p class="description"><?php esc_html_e('Optional: provide an API key with pbx:read scope to pick widgets directly from your OwnPBX server.', 'aipbx-call-widget'); ?></p>
                     </td>
                 </tr>
                 <?php if (!empty($remoteWidgets)): ?>

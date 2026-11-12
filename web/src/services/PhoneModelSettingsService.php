@@ -4,7 +4,7 @@ require_once __DIR__ . '/phones/PhoneTemplates.php';
 
 /**
  * Extra settings per phone model: "name = value" lines an administrator adds to what
- * AiPBX writes for that model. They live in the database, so an update keeps them, and
+ * OwnPBX writes for that model. They live in the database, so an update keeps them, and
  * a setting the template also writes takes the value given here.
  */
 class PhoneModelSettingsService

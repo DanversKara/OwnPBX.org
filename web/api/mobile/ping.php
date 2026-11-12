@@ -2,8 +2,8 @@
 require_once __DIR__ . '/auth_helper.php';
 mobileApiStart('GET, OPTIONS');
 
-$site_title = getSystemSetting('site_title', 'AI PBX');
-$brand_title = getSystemSetting('brand_title', 'AI PBX');
+$site_title = getSystemSetting('site_title', 'OwnPBX');
+$brand_title = getSystemSetting('brand_title', 'OwnPBX');
 $brand_sub = getSystemSetting('brand_sub', t('mobile_api.brand_sub_default'));
 
 mobileJson([

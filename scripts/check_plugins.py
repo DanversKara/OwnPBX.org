@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""AiPBX Plugin Validator & Manifest Contract Checker.
+"""OwnPBX Plugin Validator & Manifest Contract Checker.
 
 Validates official bundled plugins (plugins/<slug>/) and custom uploaded plugins
 against the PluginManager specification:
@@ -160,7 +160,7 @@ class PluginValidator:
         if p_type not in ("official", "community"):
             self.add_error(f"Invalid 'type': must be 'official' or 'community', got '{p_type}'")
 
-        # The AiPBX a plugin needs (optional, AiPBX 1.72+)
+        # The OwnPBX a plugin needs (optional, OwnPBX 1.72+)
         requires = data.get("requires_aipbx")
         if requires is not None and (not isinstance(requires, str) or not re.match(r"^\d+\.\d+(\.\d+)?$", requires)):
             self.add_error("'requires_aipbx' must be a version such as \"1.71.0\"")

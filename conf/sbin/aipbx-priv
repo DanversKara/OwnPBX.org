@@ -1,5 +1,5 @@
 #!/bin/bash
-# aipbx-priv — the ONLY command the AI PBX web portal may run as root.
+# aipbx-priv — the ONLY command the OwnPBX web portal may run as root.
 #
 # /etc/sudoers.d/aipbx grants www-data this script and nothing else. Before,
 # asterisk/postconf/fail2ban-client/firewall-cmd were allowed without argument
@@ -369,7 +369,7 @@ case "$cmd" in
         fi
         systemctl reset-failed aipbx-cert.service >/dev/null 2>&1 || true
         exec systemd-run --quiet --wait --pipe --collect --unit=aipbx-cert \
-            --description="AiPBX certificate: $sub" /usr/local/sbin/aipbx-cert "$sub" ${args[@]+"${args[@]}"}
+            --description="OwnPBX certificate: $sub" /usr/local/sbin/aipbx-cert "$sub" ${args[@]+"${args[@]}"}
         ;;
 
     update)
@@ -394,7 +394,7 @@ case "$cmd" in
                 systemctl reset-failed aipbx-update.service >/dev/null 2>&1 || true
                 exec systemd-run --quiet --collect --unit=aipbx-update \
                     --setenv=HOME=/root \
-                    --description="AiPBX update" /usr/local/sbin/aipbx-update --yes $extra
+                    --description="OwnPBX update" /usr/local/sbin/aipbx-update --yes $extra
                 ;;
             end-calls|cancel)
                 # While an update waits for calls: end them after all, or give up.
@@ -429,7 +429,7 @@ case "$cmd" in
                 systemctl is-active --quiet aipbx-backup-now.service && die "a backup is already running"
                 systemctl reset-failed aipbx-backup-now.service >/dev/null 2>&1 || true
                 exec systemd-run --quiet --collect --unit=aipbx-backup-now \
-                    --description="AiPBX backup" /usr/local/sbin/aipbx-backup
+                    --description="OwnPBX backup" /usr/local/sbin/aipbx-backup
                 ;;
             creating)
                 [ $# -eq 0 ] || die "usage: backup creating"
@@ -470,7 +470,7 @@ case "$cmd" in
                 systemctl is-active --quiet aipbx-update.service && die "an update is running"
                 systemctl reset-failed aipbx-restore.service >/dev/null 2>&1 || true
                 exec systemd-run --quiet --collect --unit=aipbx-restore \
-                    --setenv=HOME=/root --description="AiPBX restore" \
+                    --setenv=HOME=/root --description="OwnPBX restore" \
                     /usr/local/sbin/aipbx-restore "$name" --token-hash "$hash" "${extra[@]}"
                 ;;
             keep)
@@ -496,7 +496,7 @@ case "$cmd" in
         fi
         systemctl reset-failed aipbx-sounds.service >/dev/null 2>&1 || true
         exec systemd-run --quiet --collect --unit=aipbx-sounds \
-            --description="AiPBX sound pack: $1 $2-$3-$4" /usr/local/sbin/aipbx-sounds "$1" "$2" "$3" "$4"
+            --description="OwnPBX sound pack: $1 $2-$3-$4" /usr/local/sbin/aipbx-sounds "$1" "$2" "$3" "$4"
         ;;
 
     timezone)
@@ -508,7 +508,7 @@ case "$cmd" in
         [ -f "/usr/share/zoneinfo/$1" ] || die "unknown time zone: $1"
         timedatectl set-timezone "$1" || die "could not set the time zone"
         # In the unit, not here: Apache's sandbox keeps the environment file read-only.
-        exec systemd-run --quiet --collect --on-active=3 --setenv=ZONE="$1" --description="AiPBX: time zone changed" /bin/sh -c \
+        exec systemd-run --quiet --collect --on-active=3 --setenv=ZONE="$1" --description="OwnPBX: time zone changed" /bin/sh -c \
             'if grep -q "^TIMEZONE=" /etc/ai-pbx.env; then sed -i "s|^TIMEZONE=.*|TIMEZONE=$ZONE|" /etc/ai-pbx.env; else echo "TIMEZONE=$ZONE" >> /etc/ai-pbx.env; fi
              for s in mariadb asterisk cron aipbx-webhook-worker aipbx-chat apache2; do systemctl try-restart "$s"; done'
         ;;
@@ -524,7 +524,7 @@ case "$cmd" in
             set)
                 [ $# -eq 2 ] || die "usage: tones set COUNTRY"
                 match "$2" '^[a-z]{2}$'
-                # Asterisk's own file has no Turkey; AiPBX ships those tones.
+                # Asterisk's own file has no Turkey; OwnPBX ships those tones.
                 if [ "$2" = tr ] && ! grep -q '^\[tr\]' "$conf"; then
                     src="$(readlink -f /var/www/html)/../conf/asterisk/indications.conf"
                     grep -q '^\[tr\]' "$src" 2>/dev/null || die "tones for tr not found"
@@ -709,7 +709,7 @@ case "$cmd" in
             apply)
                 # netsvc apply mode=tftp|dhcp [iface=] [start= end= mask= gw= lease=HOURS]
                 #   [dns=IP,IP] [ntp=IP,IP] [url=http(s)://HOST/provision/] [tftp=0|1] [net=CIDR]...
-                #   [opt=CODE,VALUE]...  (extra DHCP options; the same code replaces AiPBX's own)
+                #   [opt=CODE,VALUE]...  (extra DHCP options; the same code replaces OwnPBX's own)
                 mode=""; iface=""; start=""; end=""; mask=""; gw=""; lease=""; dns=""; ntp=""; url=""; tftp=1
                 nets=(); opts=(); declare -A optcode=()
                 for kv in "$@"; do
@@ -858,7 +858,7 @@ case "$cmd" in
 listen=YES
 listen_ipv6=NO
 background=NO
-ftpd_banner=AiPBX
+ftpd_banner=OwnPBX
 # Read only. Anonymous login only when switched on (the folder holds the
 # phones' SIP passwords).
 write_enable=NO
@@ -1043,12 +1043,12 @@ FTPCONF
                 systemctl reset-failed aipbx-ai-setup.service >/dev/null 2>&1 || true
                 if [ "$sub" = runtime-install ]; then
                     exec systemd-run --quiet --collect --unit=aipbx-ai-setup \
-                        --description="AiPBX AI runtime: install" /usr/local/sbin/aipbx-ai-setup install
+                        --description="OwnPBX AI runtime: install" /usr/local/sbin/aipbx-ai-setup install
                 fi
                 # Seconds only, but outside Apache's sandbox like everything
                 # that deletes under /opt; --wait returns its result.
                 exec systemd-run --quiet --wait --pipe --collect --unit=aipbx-ai-setup \
-                    --description="AiPBX AI runtime: remove" /usr/local/sbin/aipbx-ai-setup remove
+                    --description="OwnPBX AI runtime: remove" /usr/local/sbin/aipbx-ai-setup remove
                 ;;
             runtime-status)
                 exec /usr/local/sbin/aipbx-ai-setup status
@@ -1106,7 +1106,7 @@ FTPCONF
                 fi
                 systemctl reset-failed aipbx-readdress.service >/dev/null 2>&1 || true
                 exec systemd-run --quiet --wait --pipe --collect --unit=aipbx-readdress \
-                    --description="AiPBX: server address change" /usr/local/sbin/aipbx-priv net readdress-run "$@"
+                    --description="OwnPBX: server address change" /usr/local/sbin/aipbx-priv net readdress-run "$@"
                 ;;
             readdress-run)
                 # net readdress-run old=IP new=IP — puts the new address where the old

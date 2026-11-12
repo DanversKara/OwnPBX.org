@@ -8,9 +8,9 @@ use Phinx\Migration\AbstractMigration;
  * The SIP firmware switch, per phone (see PhoneFirmwareService).
  *
  * A 7900-series Cisco phone is usually found running the SCCP firmware it left
- * the factory with; it only becomes an AiPBX phone once it is running Cisco's
+ * the factory with; it only becomes an OwnPBX phone once it is running Cisco's
  * SIP load. That switch is configuration-driven (the phone reads its file,
- * compares the load with the one in flash and reflashes), so what AiPBX has to
+ * compares the load with the one in flash and reflashes), so what OwnPBX has to
  * remember is: which load was written, whether that load's file set was on the
  * phone server, and whether the phone has come back and read its file since.
  *

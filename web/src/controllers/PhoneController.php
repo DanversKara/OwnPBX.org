@@ -71,7 +71,7 @@ class PhoneController extends BaseController
             'restore_discovery' => fn() => PhoneDiscoveryService::restore((int) ($_POST['discovery_id'] ?? 0), $csrf),
         ]);
 
-        // Phones that got an address from AiPBX's DHCP (Network services) wait here too.
+        // Phones that got an address from OwnPBX's DHCP (Network services) wait here too.
         NetworkServicesService::syncLeasesToWaiting();
 
         $phones = PhoneProvisionService::listPhones();

@@ -13,12 +13,12 @@ final class ApiV1OpenApi
         $spec = [
             'openapi' => '3.1.0',
             'info'    => [
-                'title'       => 'AiPBX REST API & Plugin Platform',
+                'title'       => 'OwnPBX REST API & Plugin Platform',
                 'version'     => defined('AIPBX_VERSION') ? AIPBX_VERSION : '1.0.0',
-                'description' => 'Full-coverage stateless REST API for managing AiPBX extensions, trunks, routing, queues, calls, CDRs, webhooks, and plugins.',
+                'description' => 'Full-coverage stateless REST API for managing OwnPBX extensions, trunks, routing, queues, calls, CDRs, webhooks, and plugins.',
             ],
             'servers' => [
-                ['url' => '/api/v1', 'description' => 'AiPBX REST API v1'],
+                ['url' => '/api/v1', 'description' => 'OwnPBX REST API v1'],
             ],
             'components' => [
                 'securitySchemes' => [

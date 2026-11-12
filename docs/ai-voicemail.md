@@ -1,7 +1,7 @@
 # AI Voicemail Summaries & Transcripts
 
 The community `ai-voicemail` plugin displays completed voicemail transcripts and summaries at
-`/plugins/ai-voicemail`. AiPBX 1.72.12 includes the corrected event subscription and full transcript
+`/plugins/ai-voicemail`. OwnPBX 1.72.12 includes the corrected event subscription and full transcript
 payload. See the [plugin developer guide](plugin-development.md).
 
 ## Enable transcription
@@ -53,4 +53,4 @@ all processing is local: the core's speech and summary engines must also be conf
 
 ## Moving from the bundled version
 
-The next core upgrade moves an installed bundled copy to `/var/lib/aipbx/plugins/ai-voicemail` using an offline transition package. It preserves its enabled/disabled state, encrypted settings and stored summaries. Existing uploaded copies are preserved. New installations do not install it automatically. Later plugin updates come from the community catalog. The core transcription service remains in AiPBX.
+The next core upgrade moves an installed bundled copy to `/var/lib/aipbx/plugins/ai-voicemail` using an offline transition package. It preserves its enabled/disabled state, encrypted settings and stored summaries. Existing uploaded copies are preserved. New installations do not install it automatically. Later plugin updates come from the community catalog. The core transcription service remains in OwnPBX.

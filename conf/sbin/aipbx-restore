@@ -219,7 +219,7 @@ def check_archive(archive, out):
             with open(os.path.join(out, parts[1]), 'wb') as dst:
                 shutil.copyfileobj(src, dst)
     if not {'db.sql.gz', 'config.tgz'} <= seen:
-        die('refused: this is not an AiPBX backup (db.sql.gz and config.tgz are missing)')
+        die('refused: this is not an OwnPBX backup (db.sql.gz and config.tgz are missing)')
 
 
 cmd = sys.argv[1]

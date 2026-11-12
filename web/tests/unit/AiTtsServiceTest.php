@@ -80,7 +80,7 @@ final class AiTtsServiceTest extends TestCase
     public function testSynthesizeStoresTheResultAndSplitsLongText(): void
     {
         AiTtsService::saveProvider('google', ['api_key' => 'k']);
-        $row = AiTtsService::synthesize('google', 'tr-TR-Standard-A', 'tr-TR', 'Merhaba, AiPBX santraline hoş geldiniz.', 1.0);
+        $row = AiTtsService::synthesize('google', 'tr-TR-Standard-A', 'tr-TR', 'Merhaba, OwnPBX santraline hoş geldiniz.', 1.0);
         $this->assertSame(1, $this->calls);
         $this->assertSame('google', $row['provider']);
         $this->assertSame(39, (int) $row['chars']);

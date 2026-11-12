@@ -1,6 +1,6 @@
 /**
  * Shared footer notification & system warning manager (Unified Footer Notification System)
- * AI PBX — PBX, fax & call center portal
+ * OwnPBX — PBX, fax & call center portal
  */
 
 (function() {

@@ -287,7 +287,7 @@ def cmd_status(_args):
 # ---------------------------------------------------------------- changing
 
 def unit(name, *command, delay=None):
-    args = ['systemd-run', '--quiet', '--collect', f'--unit={name}', f'--description=AiPBX address change ({name})']
+    args = ['systemd-run', '--quiet', '--collect', f'--unit={name}', f'--description=OwnPBX address change ({name})']
     if delay is not None:
         args.append(f'--on-active={delay}')
     run([*args, SELF, *command], check=True)

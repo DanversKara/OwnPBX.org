@@ -492,7 +492,7 @@ class MeetingService
         }
 
         $joinUrl = self::getMeetingUrl($token);
-        $brand = (string)getSystemSetting('brand_title', 'AiPBX');
+        $brand = (string)getSystemSetting('brand_title', 'OwnPBX');
         $lang = MailTemplateService::languageFor($toEmail);
 
         $vars = [

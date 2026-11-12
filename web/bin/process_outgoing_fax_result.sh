@@ -18,7 +18,7 @@ log() {
 
 # Environment fallbacks — no static values in code (rule: AGENTS.md)
 # Read KEY=value lines; the file is not sourced: values such as
-# "SITE_NAME=AI PBX Portal" are not shell syntax ("PBX: command not found").
+# "SITE_NAME=OwnPBX Portal" are not shell syntax ("PBX: command not found").
 if [ -r /etc/ai-pbx.env ]; then
     while IFS= read -r line || [ -n "$line" ]; do
         [[ "$line" =~ ^([A-Z_][A-Z0-9_]*)=(.*)$ ]] && export "${BASH_REMATCH[1]}=${BASH_REMATCH[2]}"

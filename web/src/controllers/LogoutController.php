@@ -41,7 +41,7 @@ class LogoutController extends BaseController
                 $providerLogout = OidcAuthService::buildLogoutUrl((string) ($_SESSION['oidc_id_token'] ?? ''), (string) preg_replace('#/auth/oidc/callback$#', '', OidcAuthService::getRedirectUri()) . '/login?signed_out=1');
             }
         } catch (\Throwable $e) {
-            error_log('Single Logout: ' . $e->getMessage()); // Signing out of AiPBX still works.
+            error_log('Single Logout: ' . $e->getMessage()); // Signing out of OwnPBX still works.
         }
 
         $_SESSION = [];

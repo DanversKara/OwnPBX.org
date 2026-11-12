@@ -1,8 +1,8 @@
-# Running AiPBX in an Incus or LXD Container
+# Running OwnPBX in an Incus or LXD Container
 
-AiPBX manages a whole machine: systemd, the firewall, fail2ban, coturn, the 443 edge, DHCP/TFTP and `aipbx-update`. An
+OwnPBX manages a whole machine: systemd, the firewall, fail2ban, coturn, the 443 edge, DHCP/TFTP and `aipbx-update`. An
 Incus or LXD *system container* is a complete Ubuntu, so the normal installer runs inside it unchanged, and everything
-works as it does on a server. It is a good way to try AiPBX, to keep a server tidy, and to take a snapshot before an
+works as it does on a server. It is a good way to try OwnPBX, to keep a server tidy, and to take a snapshot before an
 update.
 
 Docker is not supported, because it runs one program per container. See the [roadmap](roadmap.md), section 3.1.
@@ -31,14 +31,14 @@ incus exec pbx1 -- cloud-init status --wait
 With LXD the image is `ubuntu:26.04`. The first download takes a while.
 
 `systemctl is-system-running` inside the container can say `degraded` because of `console-getty.service`. That is normal
-in a container and does not affect AiPBX.
+in a container and does not affect OwnPBX.
 
-## 2. Install AiPBX
+## 2. Install OwnPBX
 
 ```bash
 incus exec pbx1 -- bash
 apt-get update && apt-get install -y git
-git clone https://github.com/mahirgul/AiPBX.git /opt/aipbx
+git clone https://github.com/DanversKara/OwnPBX.org.git /opt/aipbx
 cd /opt/aipbx
 AIPBX_FQDN=pbx1.example.com bash install.sh
 ```
@@ -91,5 +91,5 @@ when the container restarts.
 ## Several customers on one server
 
 Running one container per customer, with a super-admin page to manage them, is planned. See the [roadmap](roadmap.md),
-section 3.2. AiPBX assumes port 5060 in some places today, so a second AiPBX on the same IP address does not work yet.
+section 3.2. OwnPBX assumes port 5060 in some places today, so a second OwnPBX on the same IP address does not work yet.
 Containers with their own IP addresses do not have this limit.

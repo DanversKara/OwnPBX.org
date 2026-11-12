@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-"""AiPBX phone log receiver (unit aipbx-syslog; PBX -> Phone logs).
+"""OwnPBX phone log receiver (unit aipbx-syslog; PBX -> Phone logs).
 
 Desk phones send their log as syslog over UDP 514. This writes one line per
 message to /var/log/aipbx-phones/phones.log:

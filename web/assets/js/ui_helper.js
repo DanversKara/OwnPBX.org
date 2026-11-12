@@ -1,5 +1,5 @@
 /**
- * AI PBX Universal UI & Frontend Helper Suite
+ * OwnPBX Universal UI & Frontend Helper Suite
  */
 const UIHelper = {
     /**

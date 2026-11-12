@@ -663,7 +663,7 @@ XML;
     {
         $autoProvision = self::getSetting('auto_provision', '1');
         if ($autoProvision !== '1') {
-            self::setLastError('Auto-provisioning is disabled and user does not exist in AiPBX');
+            self::setLastError('Auto-provisioning is disabled and user does not exist in OwnPBX');
             return null;
         }
 
@@ -824,7 +824,7 @@ XML;
             $inResponseTo = (string)$dom->documentElement->getAttribute('InResponseTo');
         }
         if ($pending['id'] === '' || $inResponseTo === '' || !hash_equals($pending['id'], $inResponseTo)) {
-            return $fail('SAML response does not match a sign-in started in this browser. Start the sign-in from the AiPBX login page.');
+            return $fail('SAML response does not match a sign-in started in this browser. Start the sign-in from the OwnPBX login page.');
         }
 
         // 6. Validate Destination (if specified in response)
@@ -981,7 +981,7 @@ XML;
 
     /**
      * The address that ends the session at the identity provider, or null when Single Logout is not
-     * set up. HTTP-Redirect, and not signed: AiPBX has no signing key of its own, so a provider that
+     * set up. HTTP-Redirect, and not signed: OwnPBX has no signing key of its own, so a provider that
      * insists on a signed LogoutRequest refuses it.
      */
     public static function buildLogoutUrl(string $nameId, string $sessionIndex): ?string

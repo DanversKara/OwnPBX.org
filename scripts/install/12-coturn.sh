@@ -4,7 +4,7 @@
 # ============================================================================
 step "12. Configuring coturn"
 
-# TURN may relay only to this server. Every AiPBX call goes through Asterisk,
+# TURN may relay only to this server. Every OwnPBX call goes through Asterisk,
 # so the far end of a relay is always one of this server's addresses; private
 # and link-local networks are denied otherwise. TURN credentials are handed to
 # anonymous website visitors (call widget), and without this a relay could
@@ -75,7 +75,7 @@ chmod 0640 "$TURN_CONFIG_TMP"
 mkdir -p /etc/letsencrypt/renewal-hooks/deploy
 cat > /etc/letsencrypt/renewal-hooks/deploy/aipbx.sh << 'LEHOOK'
 #!/bin/bash
-# AiPBX: deploy a renewed certificate while Let's Encrypt is the active source.
+# OwnPBX: deploy a renewed certificate while Let's Encrypt is the active source.
 exec /usr/local/sbin/aipbx-cert renewal-hook
 LEHOOK
 chmod 755 /etc/letsencrypt/renewal-hooks/deploy/aipbx.sh

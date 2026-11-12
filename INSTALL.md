@@ -1,10 +1,10 @@
-# AI PBX — Installation & Deployment Guide
+# OwnPBX — Installation & Deployment Guide
 
-This guide covers installing and configuring **AI PBX** on **Ubuntu 26.04 LTS+**, **Debian 13+**, and **64-bit Raspberry Pi OS / Armbian** (x86_64 & aarch64/ARM64).
+This guide covers installing and configuring **OwnPBX** on **Ubuntu 26.04 LTS+**, **Debian 13+**, and **64-bit Raspberry Pi OS / Armbian** (x86_64 & aarch64/ARM64).
 
 > 📺 **Prefer to watch?** The installation step by step, narrated and subtitled:
 > [English](https://www.youtube.com/watch?v=lH1-k_z5jFE) · [Türkçe](https://www.youtube.com/watch?v=eDHHHW6ZcvQ) ·
-> [Deutsch](https://www.youtube.com/watch?v=1QuOM6Rtcbg) — more on the [AiPBX YouTube channel](https://www.youtube.com/@aipbx).
+> [Deutsch](https://www.youtube.com/watch?v=1QuOM6Rtcbg) — more on the [OwnPBX YouTube channel](https://www.youtube.com/@aipbx).
 
 ---
 
@@ -29,26 +29,26 @@ release** (see [CHANGELOG.md](CHANGELOG.md)).
 
 ```bash
 # Ultra-fast one-liner installation
-curl -fsSL aipbx.bid/i | sudo bash
+curl -fsSL https://raw.githubusercontent.com/DanversKara/OwnPBX.org/main/install.sh | sudo bash
 ```
 
 Or via direct GitHub raw URL:
 
 ```bash
 # Alternative direct GitHub script
-curl -fsSL https://raw.githubusercontent.com/mahirgul/AiPBX/main/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/DanversKara/OwnPBX.org/main/install.sh | sudo bash
 ```
 
 Or clone manually:
 
 ```bash
-git clone https://github.com/mahirgul/AiPBX.git /opt/aipbx
+git clone https://github.com/DanversKara/OwnPBX.org.git /opt/aipbx
 cd /opt/aipbx
 git checkout "$(git tag -l 'v*' --sort=-v:refname | head -1)"   # latest release
 sudo bash install.sh
 ```
 
-On a server where AiPBX is already installed, `install.sh` stops: a new install would reset the admin password
+On a server where OwnPBX is already installed, `install.sh` stops: a new install would reset the admin password
 and the secrets. Update with `sudo aipbx-update`. If an install stopped half way and you want to run it again,
 use `sudo bash install.sh --reinstall`.
 

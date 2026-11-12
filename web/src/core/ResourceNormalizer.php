@@ -79,7 +79,7 @@ final class ResourceNormalizer
 
     /**
      * Merge an existing DB row with an incoming JSON payload (for PUT/PATCH/POST)
-     * and map structured JSON fields into the array keys expected by AiPBX services.
+     * and map structured JSON fields into the array keys expected by OwnPBX services.
      *
      * @param array<string, mixed> $existingRow
      * @param array<string, mixed> $input

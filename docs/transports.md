@@ -12,7 +12,7 @@ After saving, press **Apply**, then restart Asterisk. Asterisk keeps a port it h
 
 - **Firewall.** A new port opens on all network cards when you save. An old port stays open until you close it on the Firewall page.
 - **Phones.** They learn a new port when they next fetch their configuration, so they can stay offline until then.
-- **Refused ports.** Those of other AiPBX services, those inside the media ranges, and those another transport already uses.
+- **Refused ports.** Those of other OwnPBX services, those inside the media ranges, and those another transport already uses.
 
 ## Adding a transport
 

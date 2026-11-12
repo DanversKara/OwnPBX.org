@@ -37,7 +37,7 @@ chmod 600 /etc/asterisk/res_odbc.conf
 # ODBC data source "asterisk" used by res_odbc.conf (MariaDB Connector/ODBC).
 cat > /etc/odbc.ini << 'ODBCINI'
 [asterisk]
-Description = AI PBX MariaDB (Asterisk CDR / queue_log)
+Description = OwnPBX MariaDB (Asterisk CDR / queue_log)
 Driver      = MariaDB Unicode
 Socket      = /run/mysqld/mysqld.sock
 Server      = localhost
@@ -133,7 +133,7 @@ link_sound_dir() {  # link_sound_dir TARGET LINK
 link_sound_dir /var/lib/asterisk/sounds/custom /usr/local/share/asterisk/sounds
 link_sound_dir /var/lib/asterisk/sounds/tr /usr/share/asterisk/sounds/tr
 
-# Turkish prompts: AiPBX's own asterisk-core-sounds-tr packages (built by
+# Turkish prompts: OwnPBX's own asterisk-core-sounds-tr packages (built by
 # scripts/build_tr_sounds.sh, texts in sounds/core-sounds-tr.txt), one per
 # format like Asterisk's own sound packages. They are not in git but assets of
 # the sounds-tr-<version> GitHub release; aipbx-sounds (installed in step 8)
@@ -215,7 +215,7 @@ systemctl daemon-reload
 # Kernel sysctl tuning for real-time VoIP, high UDP burst, and WebRTC
 mkdir -p /etc/sysctl.d
 cat > /etc/sysctl.d/99-aipbx.conf << 'SYSCTL'
-# Managed by AiPBX: VoIP & Asterisk high-concurrency kernel network tuning
+# Managed by OwnPBX: VoIP & Asterisk high-concurrency kernel network tuning
 net.core.rmem_max = 16777216
 net.core.wmem_max = 16777216
 net.core.rmem_default = 1048576
@@ -234,7 +234,7 @@ sysctl --system >/dev/null 2>&1 || sysctl -p /etc/sysctl.d/99-aipbx.conf >/dev/n
 # Disable Linux kernel SIP ALG (nf_conntrack_sip/nf_nat_sip) which corrupts VoIP/WebRTC SDP
 mkdir -p /etc/modprobe.d
 cat > /etc/modprobe.d/aipbx-blacklist-sip.conf << 'MOD'
-# Managed by AiPBX: disable kernel SIP ALG modules that corrupt VoIP/WebRTC SDP
+# Managed by OwnPBX: disable kernel SIP ALG modules that corrupt VoIP/WebRTC SDP
 blacklist nf_conntrack_sip
 blacklist nf_nat_sip
 MOD
@@ -246,7 +246,7 @@ modprobe -r nf_nat_sip nf_conntrack_sip 2>/dev/null || true
 if [[ -d /etc/needrestart ]]; then
     mkdir -p /etc/needrestart/conf.d
     cat > /etc/needrestart/conf.d/aipbx.conf << 'NR'
-# Managed by AiPBX install.sh: never restart Asterisk automatically (drops calls).
+# Managed by OwnPBX install.sh: never restart Asterisk automatically (drops calls).
 $nrconf{override_rc}{qr(^asterisk\.service$)} = 0;
 NR
 fi

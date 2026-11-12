@@ -1,8 +1,8 @@
 #!/bin/bash
-# aipbx-backup — daily backup of the AiPBX database and configuration.
+# aipbx-backup — daily backup of the OwnPBX database and configuration.
 #
 # Run by cron (/etc/cron.d/aipbx) as root. Each run creates
-#   <dir>/aipbx-YYYYmmdd-HHMM/db.sql.gz     full dump of the AiPBX database
+#   <dir>/aipbx-YYYYmmdd-HHMM/db.sql.gz     full dump of the OwnPBX database
 #   <dir>/aipbx-YYYYmmdd-HHMM/config.tgz    /etc/ai-pbx.env, /etc/asterisk, uploaded
 #                                            sounds and music on hold, certificates
 #                                            (Let's Encrypt and /etc/ssl/aipbx), the

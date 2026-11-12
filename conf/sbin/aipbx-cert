@@ -1,5 +1,5 @@
 #!/bin/bash
-# aipbx-cert — TLS certificate management for AiPBX (root).
+# aipbx-cert — TLS certificate management for OwnPBX (root).
 #
 # One active certificate serves the portal (Apache), TURNS (coturn) and
 # SIP-TLS/WSS (Asterisk). It lives in /etc/ssl/aipbx/active.{crt,key};

@@ -172,7 +172,7 @@ final class PluginAndApiV1Test extends TestCase
         $this->assertArrayHasKey('ai-models', $manifests);
         $this->assertArrayHasKey('ai-voicemail', $manifests);
         $this->assertArrayHasKey('ai-assistant', $manifests);
-        // Signaling capture is part of AiPBX since 1.50.8, not a plugin any more.
+        // Signaling capture is part of OwnPBX since 1.50.8, not a plugin any more.
         $this->assertArrayNotHasKey('signaling-capture', $manifests);
 
         // Secret settings: decrypted by getSetting(), masked by getAllSettings(..., true)

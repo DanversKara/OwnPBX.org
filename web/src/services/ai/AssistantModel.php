@@ -2,7 +2,7 @@
 /**
  * AI → Assistant: the model behind the Dialplan editor.
  *
- * "Ask" chain, cheap to expensive, in AiPBX's own idiom (the rules of
+ * "Ask" chain, cheap to expensive, in OwnPBX's own idiom (the rules of
  * AssistantPlanner always run first; a model is only consulted for what the
  * rules could not resolve):
  *

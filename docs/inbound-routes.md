@@ -32,7 +32,7 @@ you renumber fax DIDs, update both, otherwise faxes are received but not deliver
 
 A route whose destination is a queue, an IVR or anything but fax can still take faxes. Turn on **Also take faxes on this number**:
 
-1. The call is answered, and the caller hears ringing while AiPBX listens for a fax tone. The default is 10 seconds (5 before 1.70.0; some fax machines start their tone late), from 3 to 15.
+1. The call is answered, and the caller hears ringing while OwnPBX listens for a fax tone. The default is 10 seconds (5 before 1.70.0; some fax machines start their tone late), from 3 to 15.
 2. With a tone, the call goes to fax. Without one, it goes to the route's destination.
 
 **File faxes under number** decides which fax number the fax belongs to; empty means this route's number.

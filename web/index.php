@@ -1,6 +1,6 @@
 <?php
 /**
- * Front controller (router) — AI PBX portal
+ * Front controller (router) — OwnPBX portal
  * Maps clean URLs (whitelist) to their targets; permanently redirects old URLs.
  * httpd mod_rewrite sends every request that is not a file/directory here.
  *

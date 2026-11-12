@@ -10,7 +10,7 @@
 ## 1. Problem & Goal (What & Why)
 
 ### 1.1 Problem Statement
-AiPBX administrators frequently need to configure custom star codes, paging groups, supervisor whisper/spy codes, CRM webhooks, or direct Asterisk application routines (*80, *55, *700, DISA) without opening an SSH terminal or editing `/etc/asterisk/extensions_*.conf` files manually. Manual file modifications are prone to syntax errors and get overwritten or desynchronized during system updates.
+OwnPBX administrators frequently need to configure custom star codes, paging groups, supervisor whisper/spy codes, CRM webhooks, or direct Asterisk application routines (*80, *55, *700, DISA) without opening an SSH terminal or editing `/etc/asterisk/extensions_*.conf` files manually. Manual file modifications are prone to syntax errors and get overwritten or desynchronized during system updates.
 
 ### 1.2 Proposed Solution
 Provide a dedicated Web Management UI under **PBX → Custom Dialplan** (`/custom-dialplan`) that allows administrators to define custom Asterisk contexts safely, validate syntax before saving, preview the compiled `.conf` file, and automatically link internal contexts to the PBX internal dialplan (`[from-internal-pbx-ortak]`).

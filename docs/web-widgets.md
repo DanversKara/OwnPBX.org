@@ -57,7 +57,7 @@ Paste it before `</body>` on the website, and add the site to the widget's allow
 
 **WordPress**: the plugin is in [`plugins/web-widgets/wordpress/aipbx-call-widget`](../plugins/web-widgets/wordpress/aipbx-call-widget).
 Zip the folder, upload it under *Plugins → Add New → Upload*, activate it, and paste the embed code
-under *Settings → AiPBX Call Widget*. The button shows on every page, or only on pages with the
+under *Settings → OwnPBX Call Widget*. The button shows on every page, or only on pages with the
 `[aipbx_call_widget]` shortcode.
 
 ## How a call works

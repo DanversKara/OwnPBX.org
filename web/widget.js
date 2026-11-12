@@ -1,5 +1,5 @@
 /*
- * AiPBX website call widget (roadmap item 1, #14).
+ * OwnPBX website call widget (roadmap item 1, #14).
  *
  * Embed with one line (Integrations -> Web widgets shows it):
  *   <script src="https://pbx.example.com/widget.js" data-widget="w_xxxxxxxxxxxx" async></script>

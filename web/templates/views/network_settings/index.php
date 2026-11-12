@@ -1,7 +1,7 @@
 <?php
 /**
  * Network → Network settings: the server's network cards (editable where netplan manages them), its
- * addresses as AiPBX uses them, the addresses desk phones are told, and moving
+ * addresses as OwnPBX uses them, the addresses desk phones are told, and moving
  * them all after the server's IP changed.
  *
  * @var string $csrf

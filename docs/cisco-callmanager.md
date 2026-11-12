@@ -1,7 +1,7 @@
 # Cisco 7900 / 8800 series (CallManager firmware)
 
 Cisco's **enterprise desk phones** — 7941G, 7942G, 7945G, 7961G, 7962G, 7965G, 7975G and 8841, 8851,
-8861, 8865 — are not the [Cisco SPA sets](phones.md) AiPBX supports alongside Yealink and the rest.
+8861, 8865 — are not the [Cisco SPA sets](phones.md) OwnPBX supports alongside Yealink and the rest.
 They ship with *CallManager* (CUCM) firmware, they speak a Cisco-flavoured SIP, and they are configured by
 one big XML file called `SEP<MAC>.cnf.xml`.
 
@@ -10,7 +10,7 @@ documents how: it publishes the Asterisk patch that adds what Cisco's firmware e
 and DND synchronisation, pickup, parking), a sample `tftpboot` folder with the shared files these phones ask
 for, and a full reference for every element of `SEP<MAC>.cnf.xml`.
 
-AiPBX writes the per-phone file for you (**Provisioning → Phones → Add phone**, model `Cisco 79xx/88xx`), from the same extension,
+OwnPBX writes the per-phone file for you (**Provisioning → Phones → Add phone**, model `Cisco 79xx/88xx`), from the same extension,
 password, codec and key data it uses for every other vendor. Everything around it — the firmware, the
 Asterisk patch and the shared files — is a one-time setup on your own server, described below.
 
@@ -18,19 +18,19 @@ Asterisk patch and the shared files — is a one-time setup on your own server, 
 
 | | What | Where it comes from |
 |---|---|---|
-| 1 | **Cisco SIP firmware** for each model | Cisco's software download page (a free account). The files are `SIP<version>.loads` plus `.sbn`/`.loads` companions. AiPBX cannot ship them: they are Cisco's. |
+| 1 | **Cisco SIP firmware** for each model | Cisco's software download page (a free account). The files are `SIP<version>.loads` plus `.sbn`/`.loads` companions. OwnPBX cannot ship them: they are Cisco's. |
 | 2 | **The Asterisk patch** (for BLF, forwards, pickup) | [usecallmanager.nz/patching-asterisk.html](https://usecallmanager.nz/patching-asterisk.html) — patch, rebuild, reinstall Asterisk. Without it the phones register and make calls, but the shared-line features are missing. |
 | 3 | **The shared files** (`Softkeys.xml`, `DialTemplate.xml`, ringtones, locales) | The sample `tftpboot` folder from [usecallmanager.nz/tftp-provisioning.html](https://usecallmanager.nz/tftp-provisioning.html), or your own. |
 | 4 | **A firmware load name** per model | The `.loads` file you downloaded, without the extension: e.g. `SIP42.9-4-2SR3-1S`. |
 
 > **Licences.** The Asterisk patch is GPL-2.0 and the sample `tftpboot` files are CC BY 4.0 (attribution).
-> Cisco's **firmware** is Cisco's: download it from Cisco and do not redistribute it. AiPBX ships none of
+> Cisco's **firmware** is Cisco's: download it from Cisco and do not redistribute it. OwnPBX ships none of
 > these files — that is why the shared files are yours to copy in once (step 3).
 
 ## 1. Put the shared files where the phones look for them
 
 **Provisioning → Phones → Provisioning settings → *Also write the phones' files into the TFTP/FTP folder*** does two things: it keeps
-every assigned phone's `SEP<MAC>.cnf.xml` current in the TFTP/FTP folder, and it makes AiPBX reference the
+every assigned phone's `SEP<MAC>.cnf.xml` current in the TFTP/FTP folder, and it makes OwnPBX reference the
 shared files below by name (it only references files that are actually there).
 
 Copy the sample folder's contents into the same directory:
@@ -46,7 +46,7 @@ definitions) and `DialTemplate.xml` (dial-plan timeouts). Ringtones and wallpape
 from the same folder; the firmware files go here too.
 
 > **The folder is a secret.** `SEP<MAC>.cnf.xml` contains the extension's SIP password, and TFTP has no
-> authentication at all. AiPBX's TFTP/FTP services answer only the *allowed networks* you set in
+> authentication at all. OwnPBX's TFTP/FTP services answer only the *allowed networks* you set in
 > **Provisioning → Regions** — keep that list to your phone network, and never point a public interface at it.
 
 ## 2. Tell the phones where the server is
@@ -55,7 +55,7 @@ Cisco phones take their configuration server from DHCP — **option 150** (the C
 
 | Your DHCP server | What to set |
 |------------------|-------------|
-| AiPBX itself (**Network → Network Services → DHCP**) | Add the extra option `150,<this server's IP>` on the page. Option 150 is already on the hint list for the company's own DHCP server. |
+| OwnPBX itself (**Network → Network Services → DHCP**) | Add the extra option `150,<this server's IP>` on the page. Option 150 is already on the hint list for the company's own DHCP server. |
 | Your own DHCP server | Option 150 = the PBX's IP address; option 66 (`tftp-server-name`) as the fallback, which is what these phones use when 150 has no value. |
 
 Then pick the model per phone: **Provisioning → Phones → Add phone**, MAC address and model (`Cisco 7942G`, `Cisco 8861`, …). If
@@ -77,7 +77,7 @@ Firmware loads are set in **Provisioning → Phones → Provisioning settings**:
 ## 3. Switching a phone that is still on SCCP
 
 A 7900-series phone that came from a CallManager (or from a box) is usually running the **SCCP** firmware it
-left the factory with, and it is useless to AiPBX until it runs Cisco's **SIP** load. AiPBX does that switch
+left the factory with, and it is useless to OwnPBX until it runs Cisco's **SIP** load. OwnPBX does that switch
 as part of provisioning:
 
 1. Fill in **Provisioning → Phones → Provisioning settings → *SIP firmware load per model (automatic switch)*** with the SIP load for each 7900 model you own
@@ -94,9 +94,9 @@ On that boot the phone asks for its file, sees a load that differs from the one 
 the TFTP server, programs it and reboots onto SIP. The row on **Phones** then shows *SIP firmware taken*, and
 the phone registers.
 
-What AiPBX checks, and what it will not do:
+What OwnPBX checks, and what it will not do:
 
-- **The file set is checked before the load is written** (`CiscoFirmware`): AiPBX reads the load's `.loads`
+- **The file set is checked before the load is written** (`CiscoFirmware`): OwnPBX reads the load's `.loads`
   manifest and verifies that every file it names is in the TFTP folder. A phone pointed at a load it cannot
   download does not fail politely — it sits at *Upgrading* — so a missing file is reported instead.
 - **A load with a missing file is not written to the phone's file.** The phone's row reads *SIP firmware not
@@ -139,20 +139,20 @@ Two limits worth knowing:
   tested on real hardware, the keys on a KEM stay unconfigured.
 - **The phone's own display language is English (US).** The file sets the built-in
   `English_United_States` locale; other languages need the locale files from the `tftpboot` folder, which
-  AiPBX does not reference.
+  OwnPBX does not reference.
 
 Re-provisioning (**↻** on the phone's row) sends the Cisco `check-sync` NOTIFY: the phone fetches
 `SEP<MAC>.cnf.xml` again and applies it. There is no **Reboot** button for these models — they have no
 NOTIFY that reboots them, and they restart by themselves when the new configuration needs it.
 
-## 5. What AiPBX writes, and what you do on the phone
+## 5. What OwnPBX writes, and what you do on the phone
 
 The generated file sets the server and SIP port (UDP 5060, or TLS 5061 from the transport setting), the
 extension with its SIP password as `name`/`authName`/`authPassword`, the display name, `remotePartyID` (so a
 connected line update works), NTP, the time zone for the phone's own time zone list, the messages key
 (`*97`) so the voicemail lamp works, G.722 on or off, and the key layout above.
 
-The **web admin password** AiPBX generates per phone is *not* written to these models: Cisco only accepts
+The **web admin password** OwnPBX generates per phone is *not* written to these models: Cisco only accepts
 `adminPassword` from the file on the 8821, so a 79xx/88xx keeps its own. Change it on the phone itself
 (Settings → Administration → Password) if the factory default is unacceptable.
 
@@ -164,12 +164,12 @@ untested here: UDP is the path that works out of the box.
 
 | Symptom | Check |
 |---------|-------|
-| The phone reboots and never registers | Is it running a **SIP** load and not SCCP? Its own status screen says which. A 7900 still on SCCP needs the switch in section 3 (and the restart that comes with it); AiPBX does not run chan-sccp, so a phone left on SCCP never registers. |
+| The phone reboots and never registers | Is it running a **SIP** load and not SCCP? Its own status screen says which. A 7900 still on SCCP needs the switch in section 3 (and the restart that comes with it); OwnPBX does not run chan-sccp, so a phone left on SCCP never registers. |
 | A 7900 sits at *Upgrading* | It is asking for a firmware file the server does not have (a load from the single field is not checked): `aipbx_cisco_firmware.php` lists what the per-model list needs. Copy the rest of that release's package into the TFTP folder — do not rename the files, and do not use another model's package (the loads are signed per model). |
 | It has a name but no extension | The file was not fetched: DHCP option 150, or the TFTP folder's owner and the allowed networks. `Provisioning → Phone logs → TFTP/FTP` shows every fetch the PBX answered. |
 | It fetched the file and stayed on the old settings | The `loadInformation` you set may be a load you do not have. Clear it and re-provision (↻). |
-| The lamp of a BLF key never changes | A hint in the dialplan and the usecallmanager Asterisk patch — both are outside AiPBX's file. |
+| The lamp of a BLF key never changes | A hint in the dialplan and the usecallmanager Asterisk patch — both are outside OwnPBX's file. |
 | It asks for `Softkeys.xml` / `DialTemplate.xml` and logs a 404 | Harmless (the phone uses its defaults), but copy the shared files in and re-provision to get the intended soft keys. |
 
-Tested against: AiPBX 1.50.x, generated files verified structurally; not yet on physical 7900/8800 hardware
+Tested against: OwnPBX 1.50.x, generated files verified structurally; not yet on physical 7900/8800 hardware
 — see the [desk phones](phones.md) page for the rest of the provisioning system.

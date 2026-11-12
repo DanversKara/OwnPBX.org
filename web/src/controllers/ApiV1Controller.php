@@ -119,7 +119,7 @@ final class ApiV1Controller
             ApiRequestContext::requireScope('system:read');
             ApiResponse::success([
                 'version'            => defined('AIPBX_VERSION') ? AIPBX_VERSION : 'dev',
-                'site_title'         => getSystemSetting('site_title', 'AiPBX'),
+                'site_title'         => getSystemSetting('site_title', 'OwnPBX'),
                 'php_version'        => PHP_VERSION,
                 'timezone'           => date_default_timezone_get(),
                 'server_time'        => date(DATE_ATOM),

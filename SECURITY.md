@@ -13,10 +13,10 @@ Security updates are published as new releases on the `main` branch and can be a
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in **AiPBX** (web portal, Asterisk dialplan generator, REST API v1, Go chat service, Python AI/signaling services, system helpers, or mobile applications):
+If you discover a security vulnerability in **OwnPBX** (web portal, Asterisk dialplan generator, REST API v1, Go chat service, Python AI/signaling services, system helpers, or mobile applications):
 
 1. **Please do not open a public GitHub issue** for unpatched vulnerabilities.
-2. Report it privately via [GitHub Security Advisories](https://github.com/mahirgul/AiPBX/security/advisories/new) or contact the project lead directly via [mhrgl.com](https://mhrgl.com).
+2. Report it privately via [GitHub Security Advisories](https://github.com/DanversKara/OwnPBX.org/security/advisories/new) or contact the project lead directly via [mhrgl.com](https://mhrgl.com).
 3. Include a clear description of the issue, affected component/file, and reproduction steps.
 
 ---

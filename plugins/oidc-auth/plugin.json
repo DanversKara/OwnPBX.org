@@ -6,8 +6,8 @@
         "en": "OpenID Connect & Corporate SSO (OIDC)"
     },
     "version": "1.0.0",
-    "author": "AiPBX Official Team",
-    "author_url": "https://github.com/mahirgul/AiPBX",
+    "author": "OwnPBX Official Team",
+    "author_url": "https://github.com/DanversKara/OwnPBX.org",
     "type": "official",
     "category": "integration",
     "icon": "fas fa-shield-alt",
@@ -133,10 +133,10 @@
                 "tr": "Yeni Kullanıcıları Otomatik Oluştur (JIT)",
                 "en": "Auto-Provision New Users (JIT)"
             },
-            "help": "When enabled, users logging in via SSO for the first time are automatically registered in AiPBX.",
+            "help": "When enabled, users logging in via SSO for the first time are automatically registered in OwnPBX.",
             "help_i18n": {
-                "tr": "Etkinleştirildiğinde, SSO ile ilk kez giriş yapan doğrulanmış kullanıcılara AiPBX üzerinde otomatik hesap açılır.",
-                "en": "When enabled, users logging in via SSO for the first time are automatically registered in AiPBX."
+                "tr": "Etkinleştirildiğinde, SSO ile ilk kez giriş yapan doğrulanmış kullanıcılara OwnPBX üzerinde otomatik hesap açılır.",
+                "en": "When enabled, users logging in via SSO for the first time are automatically registered in OwnPBX."
             }
         },
         {
@@ -233,9 +233,9 @@
             "label_i18n": {
                 "en": "Single Logout"
             },
-            "help": "Signing out of AiPBX also ends the session at the identity provider, if its discovery document has an end-session address. Register /login as a post-logout address there.",
+            "help": "Signing out of OwnPBX also ends the session at the identity provider, if its discovery document has an end-session address. Register /login as a post-logout address there.",
             "help_i18n": {
-                "en": "Signing out of AiPBX also ends the session at the identity provider, if its discovery document has an end-session address. Register /login as a post-logout address there."
+                "en": "Signing out of OwnPBX also ends the session at the identity provider, if its discovery document has an end-session address. Register /login as a post-logout address there."
             }
         }
     ]

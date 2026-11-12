@@ -1,6 +1,6 @@
 # Plugin System & Developer Guide
 
-AiPBX includes a modular **Plugin Catalog & Custom `.zip` Plugin Engine** (`PluginManager`) integrated with `/api/v1/*` and Outbound Webhooks.
+OwnPBX includes a modular **Plugin Catalog & Custom `.zip` Plugin Engine** (`PluginManager`) integrated with `/api/v1/*` and Outbound Webhooks.
 
 - 📦 **Bundled catalog (`plugins/<slug>/`)**: Ships in the repository. Official plugins: `google-auth`, `oidc-auth`, `saml-auth`, `ms-teams`, `web-widgets`, `ai-cloud`, `ai-tts`, `ai-apps`, `ai-models`. Fresh installations start lean; administrators enable only the plugins they need under **Integration → Plugin Catalog** (`/plugins`). Existing installations automatically keep previously configured integrations enabled on upgrade.
 - 🌐 **Community plugins**: published in [AiPBX-plugins](https://github.com/mahirgul/AiPBX-plugins) (`plugins/community/<slug>/`) and installed as an uploaded `.zip`. Bundled plugins are maintained in the main repository; community plugins are maintained in the separate plugin repository.
@@ -172,7 +172,7 @@ $recent = PluginManager::kvList('my-crm-bridge', 'recent_calls', 20);
 - **`admin/action.php`**: returns `function (string $slug, array $settings): array`, run on every request
   to `/plugins/<slug>` before the page is drawn. Check CSRF (`verifyCSRFToken($_POST['csrf_token'])`) for
   your own forms; return `['message' => ...]`, `['error' => ...]` or `[]`.
-- **`user_page`** (AiPBX 1.71+): a page for signed-in users, not only administrators, at `/apps/<slug>`,
+- **`user_page`** (OwnPBX 1.71+): a page for signed-in users, not only administrators, at `/apps/<slug>`,
   with a line in the sidebar under the dashboard group. Declare it in `hooks`:
   `"user_page": {"label": "Messages", "label_i18n": {"tr": "Mesajlar"}, "icon": "fas fa-comment-sms"}`.
   `user/page.php` draws it with `$slug`, `$settings`, `$user` (the signed-in user's row) and `$csrf_token`.
@@ -181,17 +181,17 @@ $recent = PluginManager::kvList('my-crm-bridge', 'recent_calls', 20);
   CSRF token and runs `user/action.php`, `function (string $slug, array $settings, array $user): array`;
   return `['message' => ...]` or `['error' => ...]` for a form, or `['json' => [...]]` to answer a script.
   Check what the user may touch yourself: the page is open to every signed-in user `visible.php` lets in.
-- **Alerts in the bell** (AiPBX 1.50.8+): `NoticeService::raise($key, 'warn'|'fail', $title, $message, $link, $slug)`
+- **Alerts in the bell** (OwnPBX 1.50.8+): `NoticeService::raise($key, 'warn'|'fail', $title, $message, $link, $slug)`
   opens or updates one problem, `NoticeService::resolve($key)` ends it. Raise the same key on every pass
   while the problem lasts and resolve it when it is gone; the bell shows it to administrators until then,
   and the health check *Other alerts* e-mails it to the health recipients.
   Prefix keys with your slug, pass your slug as the last argument (a disabled plugin's alerts are hidden),
-  and check `class_exists('NoticeService')` for older AiPBX versions.
+  and check `class_exists('NoticeService')` for older OwnPBX versions.
 
 ---
 
-### `requires_aipbx` (AiPBX 1.72+)
-`"requires_aipbx": "1.71.0"` in `plugin.json`: an older AiPBX refuses to install the plugin and says which
+### `requires_aipbx` (OwnPBX 1.72+)
+`"requires_aipbx": "1.71.0"` in `plugin.json`: an older OwnPBX refuses to install the plugin and says which
 version it needs, instead of the plugin failing at its first missing hook.
 
 ## 4. Packaging and Uploading Your Custom `.zip` Plugin
@@ -200,13 +200,13 @@ version it needs, instead of the plugin failing at its first missing hook.
    ```bash
    zip -r my-crm-bridge.zip my-crm-bridge/
    ```
-2. In the AiPBX portal, go to **Integration → Plugin Catalog** (`/plugins`).
+2. In the OwnPBX portal, go to **Integration → Plugin Catalog** (`/plugins`).
 3. Click **Upload Custom Plugin (`.zip`)** and select `my-crm-bridge.zip`.
-4. AiPBX validates the archive (blocks path traversal, checks `plugin.json`, and runs `php -l` syntax checks on every `.php` file), extracts it to `/var/lib/aipbx/plugins/my-crm-bridge/`, enables it, and adds it to the sidebar menu (`Integrations` or `AI`).
+4. OwnPBX validates the archive (blocks path traversal, checks `plugin.json`, and runs `php -l` syntax checks on every `.php` file), extracts it to `/var/lib/aipbx/plugins/my-crm-bridge/`, enables it, and adds it to the sidebar menu (`Integrations` or `AI`).
 
 ---
 
-### From the community catalog (AiPBX 1.72+)
+### From the community catalog (OwnPBX 1.72+)
 Community plugins live in [mahirgul/aipbx-plugins](https://github.com/mahirgul/aipbx-plugins) under
 `plugins/community/<slug>/`. Its CI builds each one as `<slug>.zip` (the `tests/` folder left out) with
 `catalog.json` (slug, name, version, SHA-256) on the release `catalog`. On **Integration → Plugin Catalog**,
@@ -326,5 +326,5 @@ it. Run relevant checks in CI and keep them with the plugin. Passing syntax chec
 percentage alone does not establish correct authorization, billing behavior or call handling.
 
 Develop and test in a workspace or isolated installation. Do not edit the managed `/opt/aipbx` checkout
-on live servers. Distribute bundled changes through tagged AiPBX releases and community changes through
+on live servers. Distribute bundled changes through tagged OwnPBX releases and community changes through
 the supported plugin package/catalog update path.

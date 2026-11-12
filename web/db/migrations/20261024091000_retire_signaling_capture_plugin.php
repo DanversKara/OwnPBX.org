@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Phinx\Migration\AbstractMigration;
 
 /**
- * Signaling capture is part of AiPBX itself from 1.50.8 (PBX settings →
+ * Signaling capture is part of OwnPBX itself from 1.50.8 (PBX settings →
  * Signaling), no longer the bundled signaling-capture plugin.
  *
  * The plugin pointed Asterisk's HEP output at 127.0.0.1:9060, where nothing

@@ -17,7 +17,7 @@ a2enmod mpm_prefork 2>/dev/null || true
 # JIT memory failed" for every request. Switch the JIT off for Apache's PHP.
 for php_conf_d in /etc/php/*/apache2/conf.d; do
     if [[ -d "$php_conf_d" ]]; then
-        printf '; AiPBX (install.sh): apache2.service denies executable memory\npcre.jit=0\n' > "$php_conf_d/99-aipbx.ini"
+        printf '; OwnPBX (install.sh): apache2.service denies executable memory\npcre.jit=0\n' > "$php_conf_d/99-aipbx.ini"
     fi
 done
 
@@ -327,7 +327,7 @@ if sip443_lines="$(php -r "require '$INSTALL_DIR/web/config.php'; require_once '
     done <<< "$sip443_lines"
 fi
 cat > /etc/nginx/aipbx-stream.conf << 'STREAM'
-# AI PBX edge multiplexer on 443 (managed by install.sh)
+# OwnPBX edge multiplexer on 443 (managed by install.sh)
 stream {
     log_format aipbx_stream '$remote_addr [$time_local] alpn="$ssl_preread_alpn_protocols" backend=$aipbx_backend status=$status bytes_s=$bytes_sent bytes_r=$bytes_received';
     access_log /var/log/nginx/stream.log aipbx_stream;
@@ -443,7 +443,7 @@ install -o root -g root -m 0755 "$INSTALL_DIR/conf/sbin/aipbx-vpn" /usr/local/sb
 install -o root -g root -m 0755 "$INSTALL_DIR/conf/sbin/aipbx-netcfg" /usr/local/sbin/aipbx-netcfg
 cat > /etc/systemd/system/aipbx-netcfg-boot.service << 'NETCFGUNIT'
 [Unit]
-Description=AiPBX: an address change not confirmed before a reboot goes back
+Description=OwnPBX: an address change not confirmed before a reboot goes back
 Before=network-online.target
 After=systemd-networkd.service NetworkManager.service
 
@@ -512,7 +512,7 @@ install -d -o www-data -g www-data -m 0700 /var/lib/aipbx/backup-upload
 
 cat > /etc/systemd/system/aipbx-webhook-worker.service << 'WEBHOOKUNIT'
 [Unit]
-Description=AiPBX Outbound Webhook & Plugin Event Worker
+Description=OwnPBX Outbound Webhook & Plugin Event Worker
 After=network-online.target mariadb.service
 Wants=network-online.target
 
@@ -543,7 +543,7 @@ systemctl enable aipbx-webhook-worker.service >/dev/null 2>&1 || true
 # (openvpn-client@..., wg-quick@...) is a different unit and is not touched.
 cat > /etc/systemd/system/aipbx-vpn@.service << 'VPNUNIT'
 [Unit]
-Description=AiPBX VPN %i (Network -> VPN)
+Description=OwnPBX VPN %i (Network -> VPN)
 After=network-online.target firewalld.service
 Wants=network-online.target
 StartLimitIntervalSec=0
@@ -567,7 +567,7 @@ systemctl daemon-reload
 
 cat > /etc/systemd/system/aipbx-dnsmasq.service << 'NETSVC'
 [Unit]
-Description=AiPBX DHCP/TFTP for desk phones (PBX -> Network services)
+Description=OwnPBX DHCP/TFTP for desk phones (PBX -> Network services)
 After=network-online.target
 Wants=network-online.target
 ConditionPathExists=/var/lib/aipbx-netsvc/dnsmasq.conf
@@ -607,7 +607,7 @@ fi
 systemctl disable --now vsftpd.service >/dev/null 2>&1 || true
 systemctl mask vsftpd.service >/dev/null 2>&1 || true
 cat > /etc/pam.d/aipbx-ftp << 'FTPPAM'
-# AiPBX read-only FTP (PBX -> Network services). Every FTP user, NECSDT700 (the
+# OwnPBX read-only FTP (PBX -> Network services). Every FTP user, NECSDT700 (the
 # user of NEC DT700/DT800 phones) included, is checked against the password file
 # written by aipbx-priv. No system account can log in.
 auth    required   pam_pwdfile.so pwdfile=/var/lib/aipbx-netsvc/ftp.passwd
@@ -615,7 +615,7 @@ account required   pam_permit.so
 FTPPAM
 cat > /etc/systemd/system/aipbx-vsftpd.service << 'FTPUNIT'
 [Unit]
-Description=AiPBX read-only FTP for desk phones (PBX -> Network services)
+Description=OwnPBX read-only FTP for desk phones (PBX -> Network services)
 After=network-online.target
 Wants=network-online.target
 ConditionPathExists=/var/lib/aipbx-netsvc/vsftpd.conf
@@ -652,7 +652,7 @@ id -u aipbx-syslog >/dev/null 2>&1 || useradd --system --no-create-home --home-d
     --shell /usr/sbin/nologin --gid www-data aipbx-syslog
 cat > /etc/systemd/system/aipbx-syslog.service << 'SYSLOGUNIT'
 [Unit]
-Description=AiPBX phone log receiver, syslog UDP 514 (PBX -> Phone logs)
+Description=OwnPBX phone log receiver, syslog UDP 514 (PBX -> Phone logs)
 After=network-online.target
 Wants=network-online.target
 ConditionPathExists=/var/lib/aipbx-netsvc/syslog.conf

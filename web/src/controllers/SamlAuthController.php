@@ -134,7 +134,7 @@ class SamlAuthController extends BaseController
     /**
      * Outputs SP EntityDescriptor Metadata XML for IdP configuration.
      */
-    /** Where the identity provider returns after Single Logout. The AiPBX session already ended. */
+    /** Where the identity provider returns after Single Logout. The OwnPBX session already ended. */
     public static function sls(): void
     {
         static::redirect('/login?signed_out=1');
@@ -144,7 +144,7 @@ class SamlAuthController extends BaseController
     {
         $xml = SamlAuthService::getSpMetadataXml();
         header('Content-Type: application/xml; charset=utf-8');
-        header('Content-Disposition: inline; filename="aipbx-sp-metadata.xml"');
+        header('Content-Disposition: inline; filename="ownpbx-sp-metadata.xml"');
         echo $xml;
         exit;
     }

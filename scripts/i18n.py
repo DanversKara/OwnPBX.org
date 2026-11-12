@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Translation workflow for the AiPBX portal (web/lang/*.php).
+"""Translation workflow for the OwnPBX portal (web/lang/*.php).
 See docs/translating.md.
 
     scripts/i18n.py export SIZE                 # en.php -> chunks: <dir>/en_NN.txt  ("idx<TAB>key<TAB>json-string"; import also takes "idx<TAB>json-string")

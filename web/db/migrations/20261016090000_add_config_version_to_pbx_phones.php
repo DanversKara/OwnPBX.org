@@ -12,7 +12,7 @@ use Phinx\Migration\AbstractMigration;
  * unchanged number makes them ignore a changed file. config_hash is the
  * hash of the phone's files without that number: when it changes, the
  * version goes up by one. Starts at 2: the NEC phones in use were set up
- * with files of version 2, so the first file from AiPBX gets 3.
+ * with files of version 2, so the first file from OwnPBX gets 3.
  */
 final class AddConfigVersionToPbxPhones extends AbstractMigration
 {

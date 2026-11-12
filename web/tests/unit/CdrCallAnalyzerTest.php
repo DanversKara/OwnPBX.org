@@ -40,7 +40,7 @@ final class CdrCallAnalyzerTest extends TestCase
         $this->assertSame('', $this->an->endpoint('')['kind']);
     }
 
-    /** Carrier → AiPBX → NEC: came in on VOIP, answered on the NEC behind the nectip trunk. */
+    /** Carrier → OwnPBX → NEC: came in on VOIP, answered on the NEC behind the nectip trunk. */
     public function testTrunkToTrunk(): void
     {
         $f = $this->an->analyze([self::leg(1, [
@@ -55,7 +55,7 @@ final class CdrCallAnalyzerTest extends TestCase
         $this->assertSame('nectip', $f['out_trunk']);
         $this->assertSame('NEC Tip', $f['out_trunk_title']);
         $this->assertSame('9611', $f['out_number']);
-        $this->assertSame('', $f['answered_ext'], 'nobody on AiPBX answered');
+        $this->assertSame('', $f['answered_ext'], 'nobody on OwnPBX answered');
         $this->assertSame(['VOIP', 'NEC Tip'], array_column($f['path'], 'label'));
     }
 

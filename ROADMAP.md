@@ -1,7 +1,7 @@
 # Roadmap
 
 Planned work, roughly in the order it is expected. Nothing here is a promise of a date; the
-[issues](https://github.com/mahirgul/AiPBX/issues) hold the discussion of each item, and ideas are
+[issues](https://github.com/DanversKara/OwnPBX.org/issues) hold the discussion of each item, and ideas are
 welcome there.
 
 ## Next: after the 1.50 maintenance freeze
@@ -119,7 +119,7 @@ checks.
 
 #### 3.1 Modular Containerization (Decoupled Docker Compose)
 
-**Goal.** Provide a turnkey, zero-downtime container deployment for AiPBX without sacrificing telecommunications-grade performance or reliability.
+**Goal.** Provide a turnkey, zero-downtime container deployment for OwnPBX without sacrificing telecommunications-grade performance or reliability.
 
 **Architecture: Decoupled Services vs. Monolithic "Fat Container".**
 An all-in-one container running `systemd`, Asterisk, MariaDB, Web, Cron, and AI in a single image is deliberately rejected because:
@@ -179,7 +179,7 @@ use it.
 #### 3.4 Remote TTS server
 
 The "nefes-0.5" voice (Hugging Face) as a remote engine for announcements; it needs an NVIDIA GPU with
-16 GB, so it runs on a separate machine and AiPBX calls it like a cloud TTS.
+16 GB, so it runs on a separate machine and OwnPBX calls it like a cloud TTS.
 
 Also waiting: per-domain apply of pending changes (#120).
 
@@ -350,7 +350,7 @@ audio part is dropped (too heavy, too weak on Turkish speech). See "Model catalo
    room comes from the calling extension (no need to say it). The scenario of that request runs:
    - an e-mail to housekeeping ("Room 312 — towels, 14:32") with the guest's recording attached,
      so details such as "two" can be heard,
-   - and/or a chat message to a staff group (AiPBX app notification), a web request (webhook) to
+   - and/or a chat message to a staff group (OwnPBX app notification), a web request (webhook) to
      the hotel's own system, a transfer to an extension,
    - and a spoken confirmation by EMA ("Your request has been received").
 
@@ -418,7 +418,7 @@ outbound calls, appointments with calendar and clash checks, confirmation and re
 assistants handing over to each other with the whole conversation, recordings with transcripts,
 asking the panel questions; critical promises are spoken by the system, not the language model)
 and **talku.ai** (inbound voice agents as a service, attached to an existing PBX through a SIP
-address, ~650 ms response, n8n/Zapier, priced per minute). For AiPBX this suggests, in order:
+address, ~650 ms response, n8n/Zapier, priced per minute). For OwnPBX this suggests, in order:
 (1) a destination "external AI assistant (SIP)" so any such service can take calls while
 recording and CDR stay here; (2) transcripts of call recordings in the CDR, searchable;
 (3) an own assistant (cloud language model, local Turkish voice, allowed actions only, hand-over
@@ -485,7 +485,7 @@ phones also get no voicemail lamp: their endpoints have no `mailboxes=`.
 ## 9. Phone provisioning page
 
 **Goal.** A new desk phone works within a minute: plug it in, it fetches its configuration from
-AiPBX and registers with the right extension, keys and settings, without anyone typing on it.
+OwnPBX and registers with the right extension, keys and settings, without anyone typing on it.
 
 **Admin page** (*Network & devices → Phones*):
 
@@ -510,7 +510,7 @@ download is logged. Plain TFTP and HTTP serve only the first step for phones tha
 with HTTPS (see item 10).
 
 **Later:** SIP plug-and-play (Yealink/Fanvil/Snom phones ask the network for their provisioning
-server by multicast; a small listener answers with AiPBX's URL), so even the DHCP option is not
+server by multicast; a small listener answers with OwnPBX's URL), so even the DHCP option is not
 needed.
 
 ## 10. DHCP and TFTP management
@@ -593,8 +593,8 @@ networks, RTP ports), *Phones → Provisioning settings* (addresses for the phon
 and *Network services*. One page collects them:
 
 - **Shows** interfaces, addresses, gateway, DNS servers, host name / FQDN, the detected public
-  address and whether the server is behind NAT, and the networks AiPBX treats as local.
-- **Edits** AiPBX's own network settings in one place: public address, local networks, RTP port
+  address and whether the server is behind NAT, and the networks OwnPBX treats as local.
+- **Edits** OwnPBX's own network settings in one place: public address, local networks, RTP port
   range, the address phones get, allowed networks. The fields move here from the other pages.
 - **Optionally the server's own network** (static address or DHCP, gateway, DNS through
   netplan): with an automatic roll-back, as `netplan try` does: the old settings come back after

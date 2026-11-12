@@ -23,8 +23,8 @@ class ResetPasswordController extends BaseController
         }
 
         $csrf_token = getCSRFToken();
-        $site_title = getSystemSetting('site_title', 'AI PBX Portal');
-        $brand_title = getSystemSetting('brand_title', 'AI PBX');
+        $site_title = getSystemSetting('site_title', 'OwnPBX Portal');
+        $brand_title = getSystemSetting('brand_title', 'OwnPBX');
         $brand_sub = getSystemSetting('brand_sub', 'PBX & Call Center');
 
         static::renderAuthPage('reset_password/index', [

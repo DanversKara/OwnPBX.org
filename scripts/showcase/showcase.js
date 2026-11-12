@@ -1,5 +1,5 @@
 /*
- * AiPBX static showcase (aipbx.bid/demo): the portal's own pages with made-up data, no server.
+ * OwnPBX static showcase (aipbx.bid/demo): the portal's own pages with made-up data, no server.
  * Nothing leaves the browser: API calls are answered from the answers recorded at export
  * (window.DEMO_API) or by the small call simulator below, forms that would save do nothing, and
  * phone/chat connections are never opened.

@@ -1,12 +1,12 @@
 # Specification-Driven Development (SDD) Guide & Constitution
 
-AiPBX uses a lightweight **Specification-Driven Development (SDD)** workflow. Before writing code for non-trivial features, we define **what** we are building, **why**, and the **technical blueprint**. This eliminates guesswork, prevents security gaps, and keeps our 1,000+ unit test suite green.
+OwnPBX uses a lightweight **Specification-Driven Development (SDD)** workflow. Before writing code for non-trivial features, we define **what** we are building, **why**, and the **technical blueprint**. This eliminates guesswork, prevents security gaps, and keeps our 1,000+ unit test suite green.
 
 ---
 
-## 🏛️ The AiPBX Constitution (Core Rules)
+## 🏛️ The OwnPBX Constitution (Core Rules)
 
-Every new feature, API endpoint, or configuration generator in AiPBX must respect these non-negotiable rules:
+Every new feature, API endpoint, or configuration generator in OwnPBX must respect these non-negotiable rules:
 
 1. **Zero Dialplan Regressions:**
    - Asterisk core dialplans (`[from-internal-pbx-ortak]`, `[local-extensions]`, `[outbound-routes]`) must never break. If a custom context is empty or removed, default PBX calling flows must remain 100% operational.

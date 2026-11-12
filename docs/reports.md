@@ -12,7 +12,7 @@ Each call is analysed from its legs:
 | Caller | number and name, and the **inbound trunk** the call came in on |
 | Dialled | the number dialled and the route it hit (DID, queue title) |
 | Outbound trunk | the trunk the call left on and the number actually sent to it |
-| Answered by | the AiPBX extension that answered and its device (desk phone, browser, app) |
+| Answered by | the OwnPBX extension that answered and its device (desk phone, browser, app) |
 | Direction | inbound, outbound, internal or **trunk to trunk**; transferred calls are marked |
 
 The journey shows the path, e.g. `VOIP → 3001 → NEC: 8807` for a call that came in on the `VOIP` trunk,

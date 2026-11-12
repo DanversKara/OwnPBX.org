@@ -53,7 +53,7 @@ define('DB_NAME', portalEnv('DB_NAME', 'asterisk'));
 define('DB_USER', portalEnv('DB_USER'));          // secret: NO fallback
 define('DB_PASS', portalEnv('DB_PASS'));          // secret: NO fallback
 
-define('SITE_NAME', portalEnv('SITE_NAME', 'AI PBX Portal'));
+define('SITE_NAME', portalEnv('SITE_NAME', 'OwnPBX Portal'));
 define('FAX_STORAGE_PATH', portalEnv('FAX_STORAGE_PATH', '/var/www/faxes'));
 define('MONITOR_STORAGE_PATH', portalEnv('MONITOR_STORAGE_PATH', '/var/spool/asterisk/monitor'));
 define('FAX_OUTGOING_SPOOL', portalEnv('FAX_OUTGOING_SPOOL', '/var/spool/asterisk/fax/outgoing'));
@@ -129,7 +129,7 @@ function _isSessionActivityFresh() {
  */
 function renderFatalErrorPage($title, $message, $logDetail = '', $httpCode = 503) {
     if ($logDetail !== '') {
-        error_log('[AI PBX Fatal] ' . $logDetail);
+        error_log('[OwnPBX Fatal] ' . $logDetail);
     }
     // Command line (cron, smoke test, aipbx-update): no HTML, and a non-zero
     // exit code so the caller sees the failure (exit; returned 0).
@@ -233,10 +233,10 @@ function verifyCSRFToken($token) {
 }
 
 // Fetch System Setting Value with Fallback Default
-// AiPBX logo used when no logo image is uploaded in Brand & Appearance / after a reset to defaults.
+// OwnPBX logo used when no logo image is uploaded in Brand & Appearance / after a reset to defaults.
 const BRAND_DEFAULT_LOGO_URL = '/assets/images/aipbx-logo.png';
 
-// Installed AiPBX version: VERSION at the repo root (releases are tagged by
+// Installed OwnPBX version: VERSION at the repo root (releases are tagged by
 // bin/release.sh; updates by conf/sbin/aipbx-update). "dev" when the file is
 // missing (development checkout etc.).
 define('AIPBX_VERSION', (function (): string {
@@ -329,7 +329,7 @@ const LANGUAGE_LABELS = [
  */
 function getAvailableLanguages() {
     // Asterisk plays prompts from /usr/share/asterisk/sounds/<lang> (Debian's
-    // English set lives only there); AiPBX's own and downloaded packs are in
+    // English set lives only there); OwnPBX's own and downloaded packs are in
     // /var/lib/asterisk/sounds/<lang> and linked into it. Only language-code
     // names count (en, tr, en_GB) — not custom/recordings/en_US_f_Allison.
     $langs = [];

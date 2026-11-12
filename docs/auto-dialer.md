@@ -1,6 +1,6 @@
 # Auto dialer & AMD campaigns (Plugin)
 
-> 🔌 **Plugin (`auto-dialer`)**: Community plugin (AiPBX 1.72.12+) from the community catalog. Install and enable it under **Integration → Plugin Catalog** (see [Plugin system & developer guide](plugin-development.md)).
+> 🔌 **Plugin (`auto-dialer`)**: Community plugin (OwnPBX 1.72.12+) from the community catalog. Install and enable it under **Integration → Plugin Catalog** (see [Plugin system & developer guide](plugin-development.md)).
 
 **Integration → Auto Dialer & AMD Campaigns** (`/plugins/auto-dialer`) runs automated outbound calling campaigns with Asterisk **Answering Machine Detection (`AMD()`)**, queue free-agent pacing, optional voicemail audio drop, and real-time call result tracking.
 

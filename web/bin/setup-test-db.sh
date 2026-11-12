@@ -1,5 +1,5 @@
 #!/bin/bash
-# AI PBX — isolated test database setup.
+# OwnPBX — isolated test database setup.
 #
 # Usage: bash bin/setup-test-db.sh
 #

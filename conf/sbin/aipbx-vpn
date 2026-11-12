@@ -1,5 +1,5 @@
 #!/usr/bin/python3 -I
-"""aipbx-vpn: the VPN server and VPN client connections of AiPBX.
+"""aipbx-vpn: the VPN server and VPN client connections of OwnPBX.
 
 The portal reaches this only through `aipbx-priv vpn ...`. It runs as root, so:
 
@@ -607,7 +607,7 @@ def ovpn_profile_peer(state, peer):
     server = state['server']
     proto = 'tcp-client' if server['proto'] == 'tcp' else 'udp'
     body = [
-        '# AiPBX VPN profile: ' + peer['name'],
+        '# OwnPBX VPN profile: ' + peer['name'],
         'client', 'dev tun', f'proto {proto}', f'remote {server["endpoint"]} {int(server["port"])}',
         'nobind', 'persist-key', 'persist-tun', 'remote-cert-tls server', 'verb 3',
         'data-ciphers AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305', 'tls-version-min 1.2',
@@ -620,7 +620,7 @@ def ovpn_profile_peer(state, peer):
 def wg_profile_peer(state, peer):
     server = state['server']
     return '\n'.join([
-        '# AiPBX VPN profile: ' + peer['name'],
+        '# OwnPBX VPN profile: ' + peer['name'],
         '[Interface]', f'PrivateKey = {read_file(priv("wg", "peer-" + str(peer["id"]) + ".key")).strip()}',
         f'Address = {peer["ip"]}/32', '',
         '[Peer]', f'PublicKey = {wg_server_keys()[1]}', f'PresharedKey = {peer["psk"]}',

@@ -4,7 +4,7 @@
          colors="true"
          cacheDirectory=".phpunit.cache">
     <testsuites>
-        <testsuite name="AI PBX">
+        <testsuite name="OwnPBX">
             <directory>tests/unit</directory>
         </testsuite>
     </testsuites>

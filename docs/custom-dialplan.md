@@ -1,6 +1,6 @@
 # Custom Asterisk Dialplan & Context Injection
 
-AiPBX provides a dedicated management engine and user interface (`/custom-dialplan`) for creating, validating, and injecting custom Asterisk dialplan contexts, extension patterns, and operational execution hooks directly into the running telephony system.
+OwnPBX provides a dedicated management engine and user interface (`/custom-dialplan`) for creating, validating, and injecting custom Asterisk dialplan contexts, extension patterns, and operational execution hooks directly into the running telephony system.
 
 ## Architectural Overview
 

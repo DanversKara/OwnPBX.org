@@ -317,7 +317,7 @@ class WebhookService
                 'data'        => [
                     'webhook_id'   => (int)$wh['id'],
                     'webhook_name' => $wh['name'],
-                    'message'      => 'Test webhook delivery from AiPBX.',
+                    'message'      => 'Test webhook delivery from OwnPBX.',
                 ],
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 

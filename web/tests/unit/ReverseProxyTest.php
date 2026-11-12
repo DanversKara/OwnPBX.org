@@ -289,7 +289,7 @@ final class ReverseProxyTest extends TestCase
         $config = fn(string $type): string => ReverseProxyService::generateProxyConfig($type, 'pbx.example.com', '192.168.1.150', 443, 're_encrypt');
         $this->assertStringContainsString('server aipbx_ws1 192.168.1.150:443 check ssl verify none alpn http/1.1', $config('haproxy'));
         foreach (['nginx', 'caddy', 'traefik', 'apache'] as $type) {
-            $this->assertStringContainsString('cannot connect to AiPBX with re-encryption', $config($type), $type);
+            $this->assertStringContainsString('cannot connect to OwnPBX with re-encryption', $config($type), $type);
             $this->assertStringNotContainsString('192.168.1.150', $config($type), $type);
         }
     }

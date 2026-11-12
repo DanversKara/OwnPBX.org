@@ -91,7 +91,7 @@ func testStore(ctx context.Context, store Store) error {
 	rnd := make([]byte, 8)
 	_, _ = rand.Read(rnd)
 	key := "aipbx-connection-test-" + hex.EncodeToString(rnd) + ".txt"
-	body := []byte("AiPBX storage test " + time.Now().UTC().Format(time.RFC3339))
+	body := []byte("OwnPBX storage test " + time.Now().UTC().Format(time.RFC3339))
 	if err := store.Put(ctx, key, bytes.NewReader(body), int64(len(body)), "text/plain"); err != nil {
 		return fmt.Errorf("upload: %w", err)
 	}

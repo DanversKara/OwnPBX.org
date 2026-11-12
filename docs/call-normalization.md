@@ -33,7 +33,7 @@ To guarantee that call centers, queues, faxes and IVRs are never disrupted:
 
 ## Defaults and Rule Order
 
-- **Desk phone "strip the outside-line 0" rule is off by default.** AiPBX's international format is `00` + country code, so with this rule `0049...` would become `049...`. Switch it on only when your desk phone users dial `0` for an outside line. Faxes and call forwarding also use the desk phone rules.
+- **Desk phone "strip the outside-line 0" rule is off by default.** OwnPBX's international format is `00` + country code, so with this rule `0049...` would become `049...`. Switch it on only when your desk phone users dial `0` for an outside line. Faxes and call forwarding also use the desk phone rules.
 - **Country-specific rules** (e.g. Turkey: `+90` → `0`, `5XXXXXXXXX` → `05XXXXXXXXX`) are loaded with **Load defaults** for the selected country. An upgrade switches them off on installations that are not set up for that country.
 - **Order:** when several rules match, Asterisk picks the most specific pattern (`_+90.` beats `_+X.`), not the row order. The simulator shows the rule that really applies.
 

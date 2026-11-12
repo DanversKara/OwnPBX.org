@@ -1,6 +1,6 @@
 # Backups, Disaster Recovery & Upgrade Rollback
 
-AiPBX is engineered for high-availability enterprise environments where telecommunications downtime is costly. The platform ships with:
+OwnPBX is engineered for high-availability enterprise environments where telecommunications downtime is costly. The platform ships with:
 - **Reproducible daily automated backups** (`aipbx-backup`)
 - **Automated atomic rollback during upgrades** (`aipbx-update`)
 - **Deterministic disaster recovery restoration procedures**
@@ -9,7 +9,7 @@ AiPBX is engineered for high-availability enterprise environments where telecomm
 
 ## 1. Automated Daily Backups (`aipbx-backup`)
 
-AiPBX automatically configures a daily cron job (`/etc/cron.d/aipbx`) that executes `/usr/local/sbin/aipbx-backup` at **02:30** local time.
+OwnPBX automatically configures a daily cron job (`/etc/cron.d/aipbx`) that executes `/usr/local/sbin/aipbx-backup` at **02:30** local time.
 
 ### 1.1. Archive Structure & Contents
 
@@ -52,7 +52,7 @@ When `AIPBX_BACKUP_COPY_TO` is specified, `aipbx-backup` automatically syncs the
 
 ### 1.3. Health Check Monitoring
 
-AiPBX's internal [health monitoring engine](health.md#checks) monitors backup freshness every hour. If the newest backup directory in `/var/backups/aipbx-daily` is older than **26 hours**, the system immediately raises an alarm via the portal bell and sends an automated email notification to administrators.
+OwnPBX's internal [health monitoring engine](health.md#checks) monitors backup freshness every hour. If the newest backup directory in `/var/backups/aipbx-daily` is older than **26 hours**, the system immediately raises an alarm via the portal bell and sends an automated email notification to administrators.
 
 ---
 
@@ -104,7 +104,7 @@ an update that died (in a reboot, for example) does not block the next one.
 
 - **Back up now.** The nightly backup runs as well.
 - **Download** a backup as a `.tar.gz` file. It holds every password and secret key of the system, so keep it safe. The download is written to the audit log.
-- **Upload** a backup from this or another AiPBX server. It is checked and added to the list; nothing is restored until you choose to.
+- **Upload** a backup from this or another OwnPBX server. It is checked and added to the list; nothing is restored until you choose to.
 - **Restore** everything, or the database only. You type the name of the backup and your password. On a system with SSO-only sign-in, only the name is asked.
 - **Set how many days** backups are kept.
 
@@ -130,9 +130,9 @@ The page does not cover call recordings and faxes, which are not in the backup. 
 If the portal cannot be used, or you restore on a clean server without it:
 
 ### Step 1: Install a Clean Base System
-Install AiPBX on a fresh Linux server using the standard turnkey installer:
+Install OwnPBX on a fresh Linux server using the standard turnkey installer:
 ```bash
-curl -fsSL aipbx.bid/i | sudo bash
+curl -fsSL https://raw.githubusercontent.com/DanversKara/OwnPBX.org/main/install.sh | sudo bash
 ```
 
 ### Step 2: Transfer Your Backup Archive

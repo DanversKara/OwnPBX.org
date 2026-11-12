@@ -6,8 +6,8 @@
         "en": "SAML 2.0 & Corporate SSO"
     },
     "version": "1.0.0",
-    "author": "AiPBX Official Team",
-    "author_url": "https://github.com/mahirgul/AiPBX",
+    "author": "OwnPBX Official Team",
+    "author_url": "https://github.com/DanversKara/OwnPBX.org",
     "type": "official",
     "category": "integration",
     "icon": "fas fa-shield-alt",
@@ -100,9 +100,9 @@
                 "en": "IdP Single Logout (SLO) URL (optional)"
             },
             "placeholder": "https://idp.example.com/saml2/logout",
-            "help": "Signing out of AiPBX also ends the session at the identity provider. The request is not signed, so a provider that requires signed logout requests refuses it. Empty ends only the AiPBX session.",
+            "help": "Signing out of OwnPBX also ends the session at the identity provider. The request is not signed, so a provider that requires signed logout requests refuses it. Empty ends only the OwnPBX session.",
             "help_i18n": {
-                "en": "Signing out of AiPBX also ends the session at the identity provider. The request is not signed, so a provider that requires signed logout requests refuses it. Empty ends only the AiPBX session."
+                "en": "Signing out of OwnPBX also ends the session at the identity provider. The request is not signed, so a provider that requires signed logout requests refuses it. Empty ends only the OwnPBX session."
             }
         },
         {
@@ -131,10 +131,10 @@
                 "en": "Custom SP Entity ID"
             },
             "placeholder": "Leave empty for default (https://your-domain/auth/saml/metadata)",
-            "help": "AiPBX Service Provider Entity ID. Leave blank to automatically use /auth/saml/metadata.",
+            "help": "OwnPBX Service Provider Entity ID. Leave blank to automatically use /auth/saml/metadata.",
             "help_i18n": {
-                "tr": "AiPBX Servis Sağlayıcı Entity ID kimliği. Boş bırakırsanız /auth/saml/metadata varsayılan olarak kullanılır.",
-                "en": "AiPBX Service Provider Entity ID. Leave blank to automatically use /auth/saml/metadata."
+                "tr": "OwnPBX Servis Sağlayıcı Entity ID kimliği. Boş bırakırsanız /auth/saml/metadata varsayılan olarak kullanılır.",
+                "en": "OwnPBX Service Provider Entity ID. Leave blank to automatically use /auth/saml/metadata."
             }
         },
         {
@@ -162,10 +162,10 @@
                 "tr": "Otomatik Kullanıcı Açma (JIT)",
                 "en": "Auto-Provision New Users (JIT)"
             },
-            "help": "Automatically create a user account in AiPBX when an authorized corporate user logs in for the first time.",
+            "help": "Automatically create a user account in OwnPBX when an authorized corporate user logs in for the first time.",
             "help_i18n": {
-                "tr": "Yetkili bir kurumsal kullanıcı ilk kez giriş yaptığında AiPBX sisteminde otomatik hesap oluşturur.",
-                "en": "Automatically create a user account in AiPBX when an authorized corporate user logs in for the first time."
+                "tr": "Yetkili bir kurumsal kullanıcı ilk kez giriş yaptığında OwnPBX sisteminde otomatik hesap oluşturur.",
+                "en": "Automatically create a user account in OwnPBX when an authorized corporate user logs in for the first time."
             }
         },
         {

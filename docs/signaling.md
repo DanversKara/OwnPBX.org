@@ -1,11 +1,11 @@
 # Signaling capture
 
-> Built by Gregory Merriweather ([@shido6](https://github.com/shido6)). Part of AiPBX itself since 1.50.8:
+> Built by Gregory Merriweather ([@shido6](https://github.com/shido6)). Part of OwnPBX itself since 1.50.8:
 > **PBX settings → Signaling**. Until then it was switched by the bundled `signaling-capture` plugin, which
 > pointed Asterisk at a port nothing listened on; the update turns capture on when that plugin was on and
 > removes it.
 
-AiPBX ships an optional signaling pipeline: what crosses the SIP stack can
+OwnPBX ships an optional signaling pipeline: what crosses the SIP stack can
 be captured, kept on this server and read by the dialplan editor's Echo box
 and [Call quality](call-quality.md).
 Capture is opt-in and off by default, so a normal installation captures

@@ -1,6 +1,6 @@
 # Advanced Configuration
 
-AiPBX generates the PJSIP and dialplan files under `/etc/asterisk/pbx` from its database, and replaces them on
+OwnPBX generates the PJSIP and dialplan files under `/etc/asterisk/pbx` from its database, and replaces them on
 **Apply** and on updates. To change something the portal has no field for, do not edit those files. Use one of these
 instead, and your change stays:
 
@@ -8,7 +8,7 @@ instead, and your change stays:
 | --- | --- |
 | An option of a transport, endpoint, AOR, auth, identify or registration | **PBX → Advanced Configuration** |
 | A line in rtp, features, queues, voicemail, musiconhold, cdr, logger, manager, udptl, indications or confbridge | The same page |
-| A PJSIP object AiPBX does not generate, such as a hand-written trunk | The same page |
+| A PJSIP object OwnPBX does not generate, such as a hand-written trunk | The same page |
 | An option of a trunk's endpoint | The trunk's **Custom parameters**, or the page above |
 | The dialplan | **PBX → Custom Dialplan** |
 
@@ -44,7 +44,7 @@ When you edit an entry, the form shows which lines changed from the saved versio
 | All extensions (SIP) | Every extension's SIP object of that type. Browser and mobile objects keep their own settings |
 | All trunks | Every trunk's object of that type |
 | Phone model | The SIP objects of the extensions using that model |
-| New object | Creates an object AiPBX does not generate |
+| New object | Creates an object OwnPBX does not generate |
 
 An extension added later gets its group's options on the next reload. A value set on one object wins over its group.
 
@@ -101,8 +101,8 @@ effect after Apply. The present list is saved first, so a restore can be undone 
 
 ## Generated files changed by hand
 
-If a generated file differs from what AiPBX last wrote, the next regeneration keeps a copy as
-`<file>.edited-<date>` beside it, records it in the audit log and lists it on this page. AiPBX keeps the last five copies
+If a generated file differs from what OwnPBX last wrote, the next regeneration keeps a copy as
+`<file>.edited-<date>` beside it, records it in the audit log and lists it on this page. OwnPBX keeps the last five copies
 of each file. Move what you need to this page or to Custom Dialplan: the hand edit itself is replaced.
 
 Files generated before this feature have no record yet, so a hand edit is noticed from the second regeneration on.

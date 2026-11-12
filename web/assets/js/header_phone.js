@@ -1,7 +1,7 @@
 /**
  * Persistent Header WebRTC Softphone Engine (Powered by JsSIP)
  * Enables Direct WebRTC Calling over WSS (WebSocket) for all users/admins
- * AI PBX — PBX, fax & call center portal
+ * OwnPBX — PBX, fax & call center portal
  */
 
 // Only TURNS (TLS/TCP, 5349) is used — plain STUN/TURN (UDP/plain TCP) was

@@ -1,7 +1,7 @@
 # Roadmap
 
 Planned work, roughly in the order it is expected. Nothing here is a promise of a date; the
-[issues](https://github.com/mahirgul/AiPBX/issues) hold the discussion of each item, and ideas are
+[issues](https://github.com/DanversKara/OwnPBX.org/issues) hold the discussion of each item, and ideas are
 welcome there.
 
 ## Next: after the 1.50 maintenance freeze
@@ -119,7 +119,7 @@ checks.
 
 #### 3.1 Docker: decided against
 
-Docker is not an official way to run AiPBX (decided 2026-11-02). AiPBX manages the whole machine, so a split stack has to leave out the 443 edge, coturn and DHCP/TFTP, and a complete container needs `privileged`. A second installation path would also double what has to be tested. Containers go the way described in 3.2. The work on this in #127, #143 and #144 by @shido6 found real installer faults, fixed in #141 and #142.
+Docker is not an official way to run OwnPBX (decided 2026-11-02). OwnPBX manages the whole machine, so a split stack has to leave out the 443 edge, coturn and DHCP/TFTP, and a complete container needs `privileged`. A second installation path would also double what has to be tested. Containers go the way described in 3.2. The work on this in #127, #143 and #144 by @shido6 found real installer faults, fixed in #141 and #142.
 
 ---
 
@@ -127,9 +127,9 @@ Docker is not an official way to run AiPBX (decided 2026-11-02). AiPBX manages t
 
 **Goal.** One server hosts separate PBXs for separate customers, managed from one super-admin page.
 
-**Status.** Planned, not started. Installing one AiPBX in a container needs no code and already works.
+**Status.** Planned, not started. Installing one OwnPBX in a container needs no code and already works.
 
-**Why system containers.** AiPBX manages the whole machine: systemd, firewall, fail2ban, coturn, the 443 edge, DHCP/TFTP and `aipbx-update`. An Incus/LXD container is a complete Ubuntu, so the unchanged `install.sh` runs inside it, each customer has its own Asterisk, database and files, and there is no second installation path to test. A problem in one customer's Asterisk does not reach the others.
+**Why system containers.** OwnPBX manages the whole machine: systemd, firewall, fail2ban, coturn, the 443 edge, DHCP/TFTP and `aipbx-update`. An Incus/LXD container is a complete Ubuntu, so the unchanged `install.sh` runs inside it, each customer has its own Asterisk, database and files, and there is no second installation path to test. A problem in one customer's Asterisk does not reach the others.
 
 **Network.**
 - Customers share the server's IP, each with its own port block: SIP `5060 + 10 x N`, its own RTP range and its own coturn ports. A port is the same outside and inside the container, so SDP needs no rewriting. Extra IP addresses are used when the server has them.
@@ -144,10 +144,10 @@ Docker is not an official way to run AiPBX (decided 2026-11-02). AiPBX manages t
 - **Health:** the checks and alerts of every customer in one place.
 - **Sign in as a customer's administrator:** every use recorded in an audit log.
 
-**To change in AiPBX first.** Places that assume port 5060: `QrLoginService`, the protected ports in `FirewallService`, the firewall, fail2ban and coturn ports in `install.sh`, the My Phone page text and the local port in the NEC template.
+**To change in OwnPBX first.** Places that assume port 5060: `QrLoginService`, the protected ports in `FirewallService`, the firewall, fail2ban and coturn ports in `install.sh`, the My Phone page text and the local port in the NEC template.
 
 **Order.**
-1. Done: [a guide for installing one AiPBX in Incus/LXD](incus-lxd.md), tried with the end-to-end checks and a video meeting.
+1. Done: [a guide for installing one OwnPBX in Incus/LXD](incus-lxd.md), tried with the end-to-end checks and a video meeting.
 2. The port assumptions above.
 3. A script that creates a customer with its port block, tested with two customers calling at once.
 4. The super-admin page.
@@ -168,7 +168,7 @@ use it.
 #### 3.4 Remote TTS server
 
 The "nefes-0.5" voice (Hugging Face) as a remote engine for announcements; it needs an NVIDIA GPU with
-16 GB, so it runs on a separate machine and AiPBX calls it like a cloud TTS.
+16 GB, so it runs on a separate machine and OwnPBX calls it like a cloud TTS.
 
 #### 3.5 The PBX as a mail server (idea)
 
@@ -179,7 +179,7 @@ and mail-to-fax without an outside mailbox. To weigh first: port 25 is blocked o
 lines, a new server needs a reverse DNS name and a clean IP reputation, and a mail server is a large
 area to secure and keep up to date, so it may suit a community plugin better than the core.
 
-#### 3.6 What other PBX panels have and AiPBX does not (ideas)
+#### 3.6 What other PBX panels have and OwnPBX does not (ideas)
 
 A comparison with Issabel's menu (2026-11-07). Not planned yet; each is checked against the code
 before it is built.
@@ -197,7 +197,7 @@ before it is built.
   (CNAM, #159).
 - **Mail:** see 3.5.
 
-Already in AiPBX under other names: Class of Service (Calling Permissions), Dynamic Routes (IVR data
+Already in OwnPBX under other names: Class of Service (Calling Permissions), Dynamic Routes (IVR data
 steps), Dialplan Injection and Custom Extensions (Custom Dialplan), System Recordings and Music on
 Hold (Sounds), Route Congestion Messages (spoken status). Not planned: DAHDI and IAX, pages for the
 manager interface and log files, a DISA page (Custom Dialplan has a recipe).
@@ -369,7 +369,7 @@ audio part is dropped (too heavy, too weak on Turkish speech). See "Model catalo
    room comes from the calling extension (no need to say it). The scenario of that request runs:
    - an e-mail to housekeeping ("Room 312 — towels, 14:32") with the guest's recording attached,
      so details such as "two" can be heard,
-   - and/or a chat message to a staff group (AiPBX app notification), a web request (webhook) to
+   - and/or a chat message to a staff group (OwnPBX app notification), a web request (webhook) to
      the hotel's own system, a transfer to an extension,
    - and a spoken confirmation by EMA ("Your request has been received").
 
@@ -437,7 +437,7 @@ outbound calls, appointments with calendar and clash checks, confirmation and re
 assistants handing over to each other with the whole conversation, recordings with transcripts,
 asking the panel questions; critical promises are spoken by the system, not the language model)
 and **talku.ai** (inbound voice agents as a service, attached to an existing PBX through a SIP
-address, ~650 ms response, n8n/Zapier, priced per minute). For AiPBX this suggests, in order:
+address, ~650 ms response, n8n/Zapier, priced per minute). For OwnPBX this suggests, in order:
 (1) a destination "external AI assistant (SIP)" so any such service can take calls while
 recording and CDR stay here; (2) transcripts of call recordings in the CDR, searchable;
 (3) an own assistant (cloud language model, local Turkish voice, allowed actions only, hand-over
@@ -509,7 +509,7 @@ phones also get no voicemail lamp: their endpoints have no `mailboxes=`.
 ## 9. Phone provisioning page
 
 **Goal.** A new desk phone works within a minute: plug it in, it fetches its configuration from
-AiPBX and registers with the right extension, keys and settings, without anyone typing on it.
+OwnPBX and registers with the right extension, keys and settings, without anyone typing on it.
 
 **Admin page** (*Provisioning → Phones*):
 
@@ -534,7 +534,7 @@ download is logged. Plain TFTP and HTTP serve only the first step for phones tha
 with HTTPS (see item 10).
 
 **Later:** SIP plug-and-play (Yealink/Fanvil/Snom phones ask the network for their provisioning
-server by multicast; a small listener answers with AiPBX's URL), so even the DHCP option is not
+server by multicast; a small listener answers with OwnPBX's URL), so even the DHCP option is not
 needed.
 
 ## 10. DHCP and TFTP management
@@ -617,8 +617,8 @@ networks, RTP ports), *Phones → Provisioning settings* (addresses for the phon
 and *Network services*. One page collects them:
 
 - **Shows** interfaces, addresses, gateway, DNS servers, host name / FQDN, the detected public
-  address and whether the server is behind NAT, and the networks AiPBX treats as local.
-- **Edits** AiPBX's own network settings in one place: public address, local networks, RTP port
+  address and whether the server is behind NAT, and the networks OwnPBX treats as local.
+- **Edits** OwnPBX's own network settings in one place: public address, local networks, RTP port
   range, the address phones get, allowed networks. The fields move here from the other pages.
 - **Optionally the server's own network** (static address or DHCP, gateway, DNS through
   netplan): with an automatic roll-back, as `netplan try` does: the old settings come back after

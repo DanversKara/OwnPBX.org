@@ -2,7 +2,7 @@
 /**
  * Admin → Help: the documents of docs/ shown in the portal.
  *
- * Why: an AiPBX server is often installed where there is no internet access
+ * Why: an OwnPBX server is often installed where there is no internet access
  * (hospitals, factories, closed networks). Whoever debugs it needs the
  * documentation on the server itself, next to the logs; docs/*.md ships with
  * every installation (/opt/aipbx/docs), so the portal reads them from disk.

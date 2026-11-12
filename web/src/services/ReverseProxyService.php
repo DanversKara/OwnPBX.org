@@ -385,7 +385,7 @@ final class ReverseProxyService
     }
 
     /**
-     * Complete network ports matrix for AiPBX.
+     * Complete network ports matrix for OwnPBX.
      *
      * @return list<array{
      *   port: string,
@@ -554,7 +554,7 @@ final class ReverseProxyService
     {
         return <<<'BASH'
 #!/usr/bin/env bash
-# AiPBX UFW Firewall Rules Setup
+# OwnPBX UFW Firewall Rules Setup
 # Run with root privileges
 
 set -euo pipefail
@@ -565,8 +565,8 @@ ufw default allow outgoing
 
 # 2. Management & Web
 ufw allow 22/tcp comment 'SSH Access'
-ufw allow 80/tcp comment 'AiPBX Web Portal / HTTP-01'
-ufw allow 443/tcp comment 'AiPBX Web Portal / HTTPS'
+ufw allow 80/tcp comment 'OwnPBX Web Portal / HTTP-01'
+ufw allow 443/tcp comment 'OwnPBX Web Portal / HTTPS'
 
 # 3. VoIP Signaling (MUST route directly to server)
 ufw allow 5060/udp comment 'SIP Signaling UDP'
@@ -574,7 +574,7 @@ ufw allow 5060/tcp comment 'SIP Signaling TCP'
 ufw allow 5061/tcp comment 'SIP-TLS Signaling TCP'
 
 # 4. RTP Audio / Video Media Range (Direct UDP)
-ufw allow 10000:20000/udp comment 'AiPBX RTP Media Streams'
+ufw allow 10000:20000/udp comment 'OwnPBX RTP Media Streams'
 
 # 5. WebRTC STUN / TURNS Relay
 ufw allow 3478/udp comment 'STUN / TURN UDP'
@@ -594,7 +594,7 @@ BASH;
     {
         return <<<'BASH'
 #!/usr/bin/env bash
-# AiPBX firewalld Rules Setup (RHEL, Rocky, AlmaLinux, Fedora)
+# OwnPBX firewalld Rules Setup (RHEL, Rocky, AlmaLinux, Fedora)
 # Run with root privileges
 
 set -euo pipefail
@@ -625,7 +625,7 @@ BASH;
     {
         return <<<'BASH'
 #!/usr/bin/env bash
-# AiPBX iptables Stateful Firewall Rules
+# OwnPBX iptables Stateful Firewall Rules
 # Run with root privileges
 
 set -euo pipefail
@@ -706,9 +706,9 @@ BASH;
     private static function reEncryptionNotPossible(string $proxy): string
     {
         return <<<TEXT
-# {$proxy} cannot connect to AiPBX with re-encryption.
+# {$proxy} cannot connect to OwnPBX with re-encryption.
 #
-# Port 443 of AiPBX tells HTTPS from TURNS by the ALPN of the connection, and
+# Port 443 of OwnPBX tells HTTPS from TURNS by the ALPN of the connection, and
 # {$proxy} does not send it on the connections softphones need, so they would
 # fail with 502. Use Edge Termination over a private network, or use HAProxy,
 # which can send ALPN.
@@ -720,7 +720,7 @@ TEXT;
         return <<<NGINX
 # ==============================================================================
 # /etc/nginx/sites-available/aipbx.conf
-# AiPBX Reverse Proxy Configuration (Nginx)
+# OwnPBX Reverse Proxy Configuration (Nginx)
 # External FQDN: {$fqdn}
 # Backend Target: http://{$backendIp}:{$backendPort}
 #
@@ -813,7 +813,7 @@ NGINX;
         return <<<CADDY
 # ==============================================================================
 # /etc/caddy/Caddyfile
-# AiPBX Reverse Proxy Configuration (Caddy)
+# OwnPBX Reverse Proxy Configuration (Caddy)
 # External FQDN: {$fqdn}
 #
 # IMPORTANT: SIP (5060/5061) and RTP (10000-20000 UDP) MUST route directly.
@@ -839,7 +839,7 @@ CADDY;
         return <<<YAML
 # ==============================================================================
 # traefik-dynamic.yaml
-# AiPBX Reverse Proxy Configuration (Traefik Dynamic File Provider)
+# OwnPBX Reverse Proxy Configuration (Traefik Dynamic File Provider)
 # External FQDN: {$fqdn}
 #
 # IMPORTANT: SIP (5060/5061) and RTP (10000-20000 UDP) MUST route directly.
@@ -888,7 +888,7 @@ YAML;
 
         return <<<HAPROXY
 # ==============================================================================
-# /etc/haproxy/haproxy.cfg (Snippet for AiPBX)
+# /etc/haproxy/haproxy.cfg (Snippet for OwnPBX)
 # External FQDN: {$fqdn}
 #
 # IMPORTANT: SIP (5060/5061) and RTP (10000-20000 UDP) MUST route directly.
@@ -927,7 +927,7 @@ HAPROXY;
         return <<<APACHE
 # ==============================================================================
 # /etc/apache2/sites-available/aipbx-reverse-proxy.conf
-# AiPBX Reverse Proxy Configuration (Apache 2.4)
+# OwnPBX Reverse Proxy Configuration (Apache 2.4)
 # External FQDN: {$fqdn}
 #
 # Required modules: a2enmod proxy proxy_http proxy_wstunnel ssl rewrite headers

@@ -1,6 +1,6 @@
 # Scheduled tasks
 
-AiPBX can run background shell, PHP, or Python scripts on a cron schedule: for example to export CDR
+OwnPBX can run background shell, PHP, or Python scripts on a cron schedule: for example to export CDR
 records nightly to an SFTP server, synchronize contacts with an external CRM, run custom maintenance,
 or poll an API.
 
@@ -75,7 +75,7 @@ Clicking **History & Logs** shows:
   messages.
 - **Output capture:** Captures up to the last 64 KB of standard output and standard error from the
   process.
-- **Script versions:** AiPBX automatically records a new version in the version history whenever the
+- **Script versions:** OwnPBX automatically records a new version in the version history whenever the
   script content is changed.
 
 ## Alarms and audit log

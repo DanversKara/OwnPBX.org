@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for AiPBX Plugin Validator (scripts/check_plugins.py)."""
+"""Unit tests for OwnPBX Plugin Validator (scripts/check_plugins.py)."""
 
 from __future__ import annotations
 

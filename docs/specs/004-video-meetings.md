@@ -10,7 +10,7 @@
 ## 1. Problem & Goal (What & Why)
 
 ### 1.1 Problem Statement
-1. **Audio-Only Legacy Conferencing**: AiPBX's `/conferences` interface currently only handles basic voice ConfBridge rooms. In modern work environments, teams require video meetings with gallery/grid view, active speaker detection, and screen sharing.
+1. **Audio-Only Legacy Conferencing**: OwnPBX's `/conferences` interface currently only handles basic voice ConfBridge rooms. In modern work environments, teams require video meetings with gallery/grid view, active speaker detection, and screen sharing.
 2. **Scheduled Meetings & Calendar Gaps**: Users have no built-in way to schedule future video meetings for specific dates and times, or share meeting invites with calendar (`.ics`) attachments.
 3. **No External/Guest Access**: Anyone without an extension or portal account is currently locked out of PBX conferences. Organizations must rely on third-party services (Zoom, Google Meet, Teams) to host meetings with clients, vendors, or external partners.
 4. **Asterisk ConfBridge Video Architecture**: Asterisk 20/22 natively supports Selective Forwarding Unit (SFU) mode (`video_mode=sfu`) and Active Speaker mode (`video_mode=follow_talker`), but endpoints need `max_audio_streams` and `max_video_streams` expanded, and ConfBridge bridge profiles configured.

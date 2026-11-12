@@ -1,6 +1,6 @@
 """EMA Lightning backend: Turkish text-to-speech on ONNX Runtime (ema_engine.py).
 
-The model files are the ONNX export published as the AiPBX release
+The model files are the ONNX export published as the OwnPBX release
 `models-ema-lightning-1` (34 MB, Apache-2.0; NOTICE there). They are
 downloaded once into $AIPBX_AI_DATA/models/ema-lightning and checked against
 the SHA-256 sums below, so a changed file is never loaded.

@@ -282,7 +282,7 @@ CREATE TABLE `sys_did_mappings` (
   `did_extension` varchar(20) DEFAULT NULL,
   `department_name` varchar(100) NOT NULL,
   `notification_email` varchar(120) DEFAULT '',
-  `header_info` varchar(100) DEFAULT 'AI PBX Fax',
+  `header_info` varchar(100) DEFAULT 'OwnPBX Fax',
   `assigned_user_id` int(11) DEFAULT NULL,
   `created_at` datetime DEFAULT current_timestamp(),
   `is_active` tinyint(1) DEFAULT 1,

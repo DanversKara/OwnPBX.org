@@ -3,7 +3,7 @@
 The browser phone and the mobile apps are WebRTC clients: signalling goes over a TLS WebSocket
 (`wss://your-domain/ws`), audio over DTLS-SRTP negotiated with ICE. Almost every *"no audio"*,
 *"only one side hears"* or *"calls start late"* report comes from NAT or a firewall. This page explains
-what AiPBX does about it and what you need to configure.
+what OwnPBX does about it and what you need to configure.
 
 ## How a WebRTC call reaches Asterisk
 
@@ -25,7 +25,7 @@ refreshes them every 30 minutes, so a call-centre tab that stays open all day ke
 
 When the server sits behind NAT (a cloud VM with a private address, a server behind the office
 router), set **External IP Address** and list your **Local Network & VPN Subnets** under
-**System → PBX Settings**, then *Apply*. AiPBX writes:
+**System → PBX Settings**, then *Apply*. OwnPBX writes:
 
 - `external_media_address` / `external_signaling_address` and `local_net` on every PJSIP transport —
   desk phones and trunks outside the local networks are given the public address, phones inside keep
@@ -53,7 +53,7 @@ installer). TURNS connections that arrive through the 443 edge come from `127.0.
 
 coturn relays **only to this server**: `/etc/turnserver.conf` denies private, link-local and CGNAT
 ranges (`denied-peer-ip`) and allows the server's own addresses (`allowed-peer-ip`, every address of
-`hostname -I` at install time). Every AiPBX call goes through Asterisk, so the far end of a relay
+`hostname -I` at install time). Every OwnPBX call goes through Asterisk, so the far end of a relay
 is always this server; TURN credentials also go to anonymous visitors of websites with the call
 widget, and without the rule a relay could reach other hosts of the network. Loopback is denied by
 coturn itself. After the server gets a new IP address run `sudo bash /opt/aipbx/install.sh --upgrade`,

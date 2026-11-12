@@ -10,11 +10,11 @@
 if [[ -d /etc/chrony ]]; then
     mkdir -p /etc/chrony/sources.d /etc/chrony/conf.d
     cat > /etc/chrony/sources.d/aipbx-fallback.sources << 'NTPSRC'
-# AI PBX: plain NTP fallback for networks that block NTS-KE (TCP 4460)
+# OwnPBX: plain NTP fallback for networks that block NTS-KE (TCP 4460)
 pool pool.ntp.org iburst maxsources 4
 NTPSRC
     cat > /etc/chrony/conf.d/aipbx.conf << 'NTPCONF'
-# AI PBX: with NTS unreachable, "mix"/"prefer" never select plain NTP sources
+# OwnPBX: with NTS unreachable, "mix"/"prefer" never select plain NTP sources
 authselectmode ignore
 NTPCONF
     # aipbx-ntp-server.conf (allow lines for the phones) is written by

@@ -1,6 +1,6 @@
 # Inbound Caller ID Blacklist & Spam Blocker
 
-AiPBX provides high-performance inbound spam filtering and caller number blocking designed to intercept nuisance callers, robocalls, and fraud attempts at trunk entry before they tie up extensions, queues, or IVR channels.
+OwnPBX provides high-performance inbound spam filtering and caller number blocking designed to intercept nuisance callers, robocalls, and fraud attempts at trunk entry before they tie up extensions, queues, or IVR channels.
 
 ## Architecture & Sub-Microsecond AstDB Lookup
 

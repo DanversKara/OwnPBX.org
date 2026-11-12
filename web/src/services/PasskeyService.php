@@ -40,7 +40,7 @@ class PasskeyService
      */
     public static function getWebAuthn(): WebAuthn
     {
-        $rpName = function_exists('getSystemSetting') ? getSystemSetting('brand_title', 'AiPBX') : 'AiPBX';
+        $rpName = function_exists('getSystemSetting') ? getSystemSetting('brand_title', 'OwnPBX') : 'OwnPBX';
         $rpId = self::getRpId();
 
         $formats = ['android-key', 'android-safetynet', 'apple', 'fido-u2f', 'none', 'packed', 'tpm'];

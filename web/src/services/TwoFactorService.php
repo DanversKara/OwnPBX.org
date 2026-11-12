@@ -195,7 +195,7 @@ class TwoFactorService
     /**
      * Builds the standard otpauth:// URI for authenticator apps (Google Auth, MS Auth etc.).
      */
-    public static function getOtpAuthUri(string $username, string $secret, string $issuer = 'AiPBX'): string
+    public static function getOtpAuthUri(string $username, string $secret, string $issuer = 'OwnPBX'): string
     {
         $label = rawurlencode($issuer) . ':' . rawurlencode($username);
         $encodedIssuer = rawurlencode($issuer);

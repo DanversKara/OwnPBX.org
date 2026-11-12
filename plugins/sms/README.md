@@ -2,12 +2,12 @@
 
 Text messages on your numbers, sent and received through **Twilio, Vonage, Plivo, Telnyx, Bandwidth,
 Sinch, VoIP.ms or BulkVS**. The users a number is given to read and answer its messages under **Messages**;
-administrators see every number. Needs AiPBX 1.71 or newer (the `user_page` hook). Requested in
-[AiPBX #152](https://github.com/mahirgul/AiPBX/issues/152).
+administrators see every number. Needs OwnPBX 1.71 or newer (the `user_page` hook). Requested in
+[OwnPBX #152](https://github.com/mahirgul/AiPBX/issues/152).
 
 ## Setting up
 
-1. On **Integrations → Plugins** tick **Show community plugins from the catalog** (AiPBX 1.72+) and
+1. On **Integrations → Plugins** tick **Show community plugins from the catalog** (OwnPBX 1.72+) and
    press **Install & Enable** next to SMS / MMS; on 1.71, upload the folder as a `.zip`. Then open **SMS / MMS**.
 2. Fill in the account of your provider at the top. Secrets are stored encrypted.
 3. Under **Numbers** add the number in international form (+15551234567), its provider and its users.

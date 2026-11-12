@@ -1,6 +1,6 @@
-# AiPBX — Server Command-Line Interface (CLI)
+# OwnPBX — Server Command-Line Interface (CLI)
 
-AiPBX provides dedicated command-line utilities in `/usr/local/sbin` and helper scripts in `/opt/aipbx/web/bin` for system administration, lifecycle management, disaster recovery, network configuration, and automated diagnostics.
+OwnPBX provides dedicated command-line utilities in `/usr/local/sbin` and helper scripts in `/opt/aipbx/web/bin` for system administration, lifecycle management, disaster recovery, network configuration, and automated diagnostics.
 
 All management commands are designed with **failsafe rollback mechanisms** and safe execution practices.
 
@@ -10,7 +10,7 @@ All management commands are designed with **failsafe rollback mechanisms** and s
 
 | Command | Purpose | Typical Usage | Requires Root? |
 |---------|---------|---------------|----------------|
-| [`aipbx-update`](#aipbx-update) | Upgrades, checks, or rolls back AiPBX releases | `sudo aipbx-update` | Yes |
+| [`aipbx-update`](#aipbx-update) | Upgrades, checks, or rolls back OwnPBX releases | `sudo aipbx-update` | Yes |
 | [`aipbx-backup`](#aipbx-backup) | Creates full DB and configuration backups | `sudo aipbx-backup --label pre-change` | Yes |
 | [`aipbx-restore`](#aipbx-restore) | Restores system state from backup archives | `sudo aipbx-restore <backup-name>` | Yes |
 | [`aipbx-selftest`](#aipbx-selftest) | Immediate diagnostic check of all subsystems | `sudo aipbx-selftest` | Yes |
@@ -133,7 +133,7 @@ sudo aipbx-cert selfsigned
 
 ## 🌐 `aipbx-readdress` — Server IP Migration Tool
 
-When the physical or virtual IP address of the AiPBX server changes, this tool updates all references across Asterisk transports, PJSIP endpoints, portal configurations, and phone provisioning files.
+When the physical or virtual IP address of the OwnPBX server changes, this tool updates all references across Asterisk transports, PJSIP endpoints, portal configurations, and phone provisioning files.
 
 ```bash
 # Dry run: preview what files and configurations would change without applying
@@ -197,7 +197,7 @@ sudo aipbx-ai-setup remove
 
 ## 🔊 `aipbx-sounds` — Voice Prompts & Music On Hold Packs
 
-Installs or removes official voice sound packages from downloads.asterisk.org and AiPBX Turkish voice prompt packs.
+Installs or removes official voice sound packages from downloads.asterisk.org and OwnPBX Turkish voice prompt packs.
 
 ```bash
 # Install Turkish high-definition prompts (G.722)
@@ -228,7 +228,7 @@ sudo aipbx-phone-discovery
 # Send a DHCPDISCOVER on an interface and list any responding DHCP servers
 sudo aipbx-dhcp-probe eth1
 ```
-Use this before enabling AiPBX's built-in DHCP server (**Network Services**) to verify no conflicting DHCP server is active on the voice VLAN.
+Use this before enabling OwnPBX's built-in DHCP server (**Network Services**) to verify no conflicting DHCP server is active on the voice VLAN.
 
 ---
 
@@ -259,7 +259,7 @@ sudo asterisk -rx "pjsip reload"
 
 ### Service Control & Logs:
 ```bash
-# View status of AiPBX services
+# View status of OwnPBX services
 sudo systemctl status aipbx-chat
 sudo systemctl status aipbx-ai
 sudo systemctl status aipbx-signaling

@@ -6,7 +6,7 @@
         "en": "Website Call Widgets & WordPress Plugin"
     },
     "version": "1.2.0",
-    "author": "AiPBX Official Team",
+    "author": "OwnPBX Official Team",
     "category": "integration",
     "icon": "fas fa-headset",
     "icon_style": "color: #0284c7;",
@@ -30,5 +30,5 @@
         }
     },
     "type": "official",
-    "author_url": "https://github.com/mahirgul/AiPBX"
+    "author_url": "https://github.com/DanversKara/OwnPBX.org"
 }

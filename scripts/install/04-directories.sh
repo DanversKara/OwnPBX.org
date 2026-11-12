@@ -33,9 +33,9 @@ for script in feature_code_action.php widget_claim.php ai_request.php push_dispa
     fi
 done
 
-# AI PBX automated maintenance and queue sync crons
+# OwnPBX automated maintenance and queue sync crons
 cat > /etc/cron.d/aipbx << 'CRON'
-# AI PBX Automated Maintenance & Synchronization Crons
+# OwnPBX Automated Maintenance & Synchronization Crons
 # Asterisk Queue Log to MariaDB DB Synchronization
 * * * * * root /usr/local/bin/sync_queue_logs.php >/dev/null 2>&1
 
@@ -57,7 +57,7 @@ cat > /etc/cron.d/aipbx << 'CRON'
 # Phone files into the TFTP/FTP folder when switched on (PBX -> Phones -> settings)
 */5 * * * * www-data /usr/local/bin/provision_tftp.php >/dev/null 2>&1
 
-# Daily check for a new AiPBX release (shown on the portal's System Update page)
+# Daily check for a new OwnPBX release (shown on the portal's System Update page)
 37 4 * * * root /usr/local/sbin/aipbx-update --check >/dev/null 2>&1
 
 # Daily backup of the database and configuration (/var/backups/aipbx-daily, 14 days)
@@ -180,7 +180,7 @@ done
 if [ -f /etc/apparmor.d/gs ]; then
     mkdir -p /etc/apparmor.d/local
     cat > /etc/apparmor.d/local/gs <<'EOF'
-# AiPBX: Ghostscript converts faxes here (PDF -> TIFF to send, TIFF -> PDF for
+# OwnPBX: Ghostscript converts faxes here (PDF -> TIFF to send, TIFF -> PDF for
 # received faxes). Written by install.sh; rewritten on every upgrade.
 file rw /var/www/faxes/**,
 file rw /var/spool/asterisk/fax/**,

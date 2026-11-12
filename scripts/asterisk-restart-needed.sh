@@ -1,5 +1,5 @@
 #!/bin/bash
-# Does updating from one AiPBX release to another need an Asterisk restart?
+# Does updating from one OwnPBX release to another need an Asterisk restart?
 #
 #   scripts/asterisk-restart-needed.sh <repo> <from-commit> <to-commit>
 #

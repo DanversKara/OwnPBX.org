@@ -6,11 +6,11 @@
 #   aipbx-sounds remove  KIND LANG FORMAT
 #
 #   KIND    core | extra | moh       (moh: LANG is "opsound")
-#   core tr is AiPBX's own Turkish set (GitHub release sounds-tr-<version>,
+#   core tr is OwnPBX's own Turkish set (GitHub release sounds-tr-<version>,
 #   SHA256 verified); install.sh installs it through this script too.
 #   FORMAT  wav | ulaw | alaw | gsm | g722 | sln16
 #
-# Prompts go to /var/lib/asterisk/sounds/<lang> (like AiPBX's Turkish set) and
+# Prompts go to /var/lib/asterisk/sounds/<lang> (like OwnPBX's Turkish set) and
 # /usr/share/asterisk/sounds/<lang>, where Asterisk looks, points there. A
 # language Debian manages with update-alternatives (en, en_US) gets ours as a
 # higher-priority alternative, so the packaged files are never overwritten and

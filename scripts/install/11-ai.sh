@@ -37,7 +37,7 @@ chmod 640 /etc/aipbx/ai.token
 
 cat > /etc/systemd/system/aipbx-ai.service << 'AIUNIT'
 [Unit]
-Description=AiPBX local AI models (AI -> Local models)
+Description=OwnPBX local AI models (AI -> Local models)
 After=network-online.target
 Wants=network-online.target
 ConditionPathExists=/opt/aipbx-ai/venv/bin/python
@@ -91,7 +91,7 @@ if [[ -f "$AI_READY_MARK" ]]; then
         # (downloads; it restarts the service when done).
         systemctl reset-failed aipbx-ai-setup.service >/dev/null 2>&1 || true
         systemd-run --quiet --collect --unit=aipbx-ai-setup \
-            --description="AiPBX AI runtime: install" /usr/local/sbin/aipbx-ai-setup install \
+            --description="OwnPBX AI runtime: install" /usr/local/sbin/aipbx-ai-setup install \
             && info "Local AI runtime is being updated in the background (/var/log/aipbx-ai-setup.log)"
     elif ! is_upgrade || systemctl is-enabled --quiet aipbx-ai.service; then
         # Upgrade: only a service the admin had running is restarted.

@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 /**
- * Privileged plugin schema runner for AiPBX.
+ * Privileged plugin schema runner for OwnPBX.
  *
  * Invoked by root (via aipbx-priv plugin-schema apply|drop <slug>) to apply
  * or drop plugin tables (plg_*) with DDL privileges (MIGRATOR_DB_USER / MIGRATOR_DB_PASS)

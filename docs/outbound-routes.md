@@ -38,7 +38,7 @@ channel limit, the next is tried. Each entry can override the caller ID for that
 
 **No trunk loops:** a call that came in on a trunk is not sent straight back out through the same
 trunk; that trunk counts as congested and the next one of the route is tried. Otherwise a number the
-PBX behind the trunk routes to AiPBX, and AiPBX back, loops thousands of times an hour. Call
+PBX behind the trunk routes to OwnPBX, and OwnPBX back, loops thousands of times an hour. Call
 forwarding of an extension to a number behind the same trunk still works.
 
 **Internal** routes (to another PBX) keep the internal caller ID; external routes send the user's
@@ -47,7 +47,7 @@ external caller ID or the trunk's.
 ## Route groups
 
 Every route belongs to a group (default `1`). Users and trunks with transit routing use the routes of
-one group only. Groups solve conflicting number formats, e.g. two PBXes connected to AiPBX:
+one group only. Groups solve conflicting number formats, e.g. two PBXes connected to OwnPBX:
 
 | PBX | National call arrives as | International call arrives as |
 |-----|--------------------------|-------------------------------|

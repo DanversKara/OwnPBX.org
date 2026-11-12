@@ -2,7 +2,7 @@
 <?php
 /**
  * aipbx-readdress OLD NEW [--yes] (root): moves the server's address from OLD
- * to NEW everywhere AiPBX keeps it (roadmap 12), the same as Network →
+ * to NEW everywhere OwnPBX keeps it (roadmap 12), the same as Network →
  * Network settings → "Apply the new address". Without --yes it only shows
  * what would change. For servers whose portal cannot be reached any more
  * after an IP change.

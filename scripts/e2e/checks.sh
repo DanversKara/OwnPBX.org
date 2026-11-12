@@ -1,5 +1,5 @@
 #!/bin/bash
-# AiPBX end-to-end checks, run as root inside a freshly installed or upgraded
+# OwnPBX end-to-end checks, run as root inside a freshly installed or upgraded
 # test machine (see scripts/e2e/run.sh). They exercise the installed system the
 # way a user does — through the portal over HTTPS, Asterisk and the helpers —
 # so problems that only appear on a real Ubuntu install (Apache sandbox, sudo,
@@ -27,7 +27,7 @@ trap 'rm -f "$JAR"' EXIT
 # The installer restarts Asterisk at the end; wait until it has fully booted.
 asterisk -rx "core waitfullybooted" >/dev/null 2>&1 || true
 
-echo "== AiPBX e2e checks — $(git -C "$INSTALL_DIR" log --oneline -1 2>/dev/null) on $DOMAIN"
+echo "== OwnPBX e2e checks — $(git -C "$INSTALL_DIR" log --oneline -1 2>/dev/null) on $DOMAIN"
 
 # --- Services -----------------------------------------------------------------
 for s in asterisk mariadb nginx apache2 coturn aipbx-chat fail2ban firewalld; do

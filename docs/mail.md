@@ -1,6 +1,6 @@
 # E-mail
 
-AiPBX sends e-mail through the local **postfix**: fax-to-e-mail, voicemail notifications, user
+OwnPBX sends e-mail through the local **postfix**: fax-to-e-mail, voicemail notifications, user
 invitations, password resets and 2FA messages.
 
 ## Relay
@@ -23,7 +23,7 @@ same page.
 
 ## Templates
 
-**System → E-Mail → Templates** holds the text of every e-mail AiPBX sends: the account invitation,
+**System → E-Mail → Templates** holds the text of every e-mail OwnPBX sends: the account invitation,
 the sign-in / password link, password reset, new voicemail, fax received, fax delivered, fax not
 delivered and the test e-mail.
 

@@ -273,7 +273,7 @@ class Fail2banService {
         }
 
         $lines = [];
-        $lines[] = '# Managed by the AI PBX portal (generated, do not edit by hand)';
+        $lines[] = '# Managed by the OwnPBX portal (generated, do not edit by hand)';
         $lines[] = '[DEFAULT]';
         $lines[] = 'ignoreip = ' . implode(' ', $ignoreip);
         $lines[] = '';

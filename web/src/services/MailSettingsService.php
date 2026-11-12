@@ -5,7 +5,7 @@ require_once __DIR__ . '/../priv_helper.php';
 /**
  * Admin → E-mail: SMTP relay settings. The portal does not send mail itself:
  * syncPostfix() configures the local Postfix as a relay through aipbx-priv (postfix
- * relay/tls/sasl/postmap, relay-clear), and every mail of AiPBX goes through Postfix.
+ * relay/tls/sasl/postmap, relay-clear), and every mail of OwnPBX goes through Postfix.
  * sendTestEmail() follows the test message in the Postfix log (aipbx-priv postfix trace) to report
  * whether the relay accepted it.
  */
@@ -37,9 +37,9 @@ class MailSettingsService
         $pass = trim($data['mail_smtp_pass'] ?? '');
 
         $from_address = trim($data['mail_from_address'] ?? 'no-reply@example.com');
-        $from_name = trim($data['mail_from_name'] ?? 'AI PBX');
+        $from_name = trim($data['mail_from_name'] ?? 'OwnPBX');
         $fax_from_address = trim($data['fax_email_from_address'] ?? 'fax@example.com');
-        $fax_from_name = trim($data['fax_email_from_name'] ?? 'AI PBX Fax System');
+        $fax_from_name = trim($data['fax_email_from_name'] ?? 'OwnPBX Fax System');
         $sync_postfix = !empty($data['mail_sync_postfix']) ? 'yes' : 'no';
 
         $db = getDB();

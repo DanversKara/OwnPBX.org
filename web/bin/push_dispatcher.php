@@ -1,7 +1,7 @@
 #!/usr/bin/env php
 <?php
 /**
- * AI PBX background mobile push sender
+ * OwnPBX background mobile push sender
  *
  * The Asterisk dialplan (DialplanBuilders::buildExtensionDialLines) calls it
  * in the background on an incoming call to wake the mobile device:

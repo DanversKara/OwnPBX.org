@@ -208,7 +208,7 @@ function advancedRawText(string $raw, array $known): string
 }
 
 /**
- * The objects AiPBX generates plus those the list itself defines, as "type:name", which entries can
+ * The objects OwnPBX generates plus those the list itself defines, as "type:name", which entries can
  * also add to.
  *
  * @param list<array<string, mixed>> $entries
@@ -235,7 +235,7 @@ function advancedObjectsWithOwn(array $entries, array $objects): array
  * Pure generator. Entries whose object is not in $objects are left out: adding to a section that
  * does not exist stops Asterisk reading the rest of the file. The list's own objects come first so
  * entries can add to them, then groups, so an entry on one object wins over its group. A new object
- * whose name AiPBX now generates too is left out.
+ * whose name OwnPBX now generates too is left out.
  *
  * @param list<array<string, mixed>> $entries
  * @param list<string> $objects
@@ -395,7 +395,7 @@ function advancedFileContents(string $file): array
  *
  * @param array<string, mixed> $e
  * @param list<string> $objects objects with the list's own
- * @param list<string> $generated objects AiPBX generates
+ * @param list<string> $generated objects OwnPBX generates
  * @param array<string, array<string, list<string>>> $groups
  * @param array<string, list<string>> $sections
  */

@@ -1,8 +1,8 @@
-# AI PBX Portal
+# OwnPBX Portal
 
-Official Website & Documentation: [aipbx.bid](https://aipbx.bid)
+Official Website & Documentation: [ownpbx.org](https://ownpbx.org)
 
-A self-hosted PBX / fax / call-center management portal built on **native Asterisk** (PJSIP + AMI + ODBC), **MariaDB**, and plain **PHP** (Modern MVC) — no proprietary GUI (FreePBX, Issabel, etc.) required. Built as a high-performance, modular **AI PBX** infrastructure.
+A self-hosted PBX / fax / call-center management portal built on **native Asterisk** (PJSIP + AMI + ODBC), **MariaDB**, and plain **PHP** (Modern MVC) — no proprietary GUI (FreePBX, Issabel, etc.) required. Built as a high-performance, modular **OwnPBX** infrastructure.
 
 ## Features
 

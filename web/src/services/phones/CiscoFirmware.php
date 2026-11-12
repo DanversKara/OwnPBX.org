@@ -4,7 +4,7 @@
  *
  * A 7900/8800 phone told to run a load it cannot download does not fail
  * politely: it sits at "Upgrading" until somebody fixes the file server. So
- * before AiPBX points a phone at a load, it reads that load's manifest
+ * before OwnPBX points a phone at a load, it reads that load's manifest
  * (`<load>.loads`) and checks that every file the manifest names is in the
  * folder phones fetch from. Nothing here talks to a phone; it only reads.
  *

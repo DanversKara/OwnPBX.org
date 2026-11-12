@@ -11,11 +11,11 @@
 ## 1. Problem & Goal (What & Why)
 
 ### 1.1 Problem Statement
-Deploying AiPBX in modern enterprise infrastructure often requires running behind a front-facing reverse proxy (e.g. Nginx, Caddy, Traefik, HAProxy, or Apache) for TLS termination, shared public IP routing, or cloud edge security. However:
+Deploying OwnPBX in modern enterprise infrastructure often requires running behind a front-facing reverse proxy (e.g. Nginx, Caddy, Traefik, HAProxy, or Apache) for TLS termination, shared public IP routing, or cloud edge security. However:
 1. **VoIP vs Web Multiplexing Confusion**: Administrators frequently attempt to proxy all traffic (including SIP and RTP) through HTTP reverse proxies, causing broken call signaling, one-way audio, and failed WebRTC calls.
 2. **IP Spoofing & Brute-Force Vulnerability**: Reading `X-Forwarded-For` without verifying whether the direct peer connection is a trusted reverse proxy allows external attackers to spoof client IPs and bypass rate limiters or trigger denial-of-service lockouts against arbitrary IPs.
 3. **Internal Server SSL/TLS Barrier**: Let's Encrypt HTTP-01 validation requires public port 80 exposure. PBXs deployed on private LANs, behind restrictive firewalls, or without public DNS A records could not automatically obtain valid certificates, breaking remote WebRTC and TURNS.
-4. **WebSocket & SSO Callback Breaks**: Edge TLS termination (HTTP between proxy and AiPBX, HTTPS between client and proxy) failed to set secure cookies and broke OIDC/SAML OAuth redirect URIs.
+4. **WebSocket & SSO Callback Breaks**: Edge TLS termination (HTTP between proxy and OwnPBX, HTTPS between client and proxy) failed to set secure cookies and broke OIDC/SAML OAuth redirect URIs.
 
 ### 1.2 Proposed Solution
 - Deliver a dedicated **Network → Reverse Proxy** (`/reverse-proxy`) management interface.

@@ -28,7 +28,7 @@ the decision is always made on data that was just read.
 
 | Source | Sends packets? | What it sees | Setting |
 |--------|----------------|--------------|---------|
-| `lease` | no | phones that took an address from AiPBX's own DHCP server | always on |
+| `lease` | no | phones that took an address from OwnPBX's own DHCP server | always on |
 | `arp` | no | anything on the local segment that talked recently (`/proc/net/arp`) | always on |
 | `journal` | no | dnsmasq's DHCP replies, so a phone is still seen after the lease file was rotated or dnsmasq restarted | always on |
 | `sweep` | **yes** | the same as `arp`, but for every address, so an idle phone answers too | `provision_discovery_sweep` + `provision_discovery_networks` |
@@ -45,7 +45,7 @@ out the rest of the network is left for the next run, and the log line says so.
 
 ## Settings
 
-The engine has no configuration file. It reads the same two places as the rest of AiPBX:
+The engine has no configuration file. It reads the same two places as the rest of OwnPBX:
 
 - `/etc/ai-pbx.env` for the database credentials (the file the portal and the signaling daemon
   read), and

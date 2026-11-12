@@ -1,6 +1,6 @@
 # SIP Provider Templates (Plugin)
 
-> 🔌 **Plugin (`provider-templates`)**: Community plugin from the official catalog (`mahirgul/AiPBX-plugins`). Enable it under **Integration → Plugin Catalog** (requires AiPBX 1.60.6 or newer). See [Plugin system & developer guide](plugin-development.md).
+> 🔌 **Plugin (`provider-templates`)**: Community plugin from the official catalog (`mahirgul/AiPBX-plugins`). Enable it under **Integration → Plugin Catalog** (requires OwnPBX 1.60.6 or newer). See [Plugin system & developer guide](plugin-development.md).
 
 **Integration → SIP Provider Templates** (`/plugins/provider-templates`) allows administrators to create pre-configured SIP trunks using community-tested carrier profiles. Instead of researching carrier-specific PJSIP NAT flags, registration expiration, RTP options, codecs, and outbound proxies, you simply select your provider and enter your account credentials.
 
@@ -10,7 +10,7 @@
 
 - **⚡ 1-Click Trunk Setup**: Pre-populates all technical Asterisk PJSIP parameters (UDP/TLS transport, DTMF mode, SIP qualify timers, direct media, PAI/RPID caller ID headers, and carrier match hosts).
 - **🌍 Community Curated**: Templates are maintained as simple JSON files in the community repository. The catalog grows directly with user contributions.
-- **🛡️ Standard AiPBX Trunks**: Trunks created via templates become standard records in your AiPBX trunk table ([Trunks Guide](trunks.md)). You can fine-tune any parameter after creation, and trunks continue functioning normally even if the plugin is uninstalled.
+- **🛡️ Standard OwnPBX Trunks**: Trunks created via templates become standard records in your OwnPBX trunk table ([Trunks Guide](trunks.md)). You can fine-tune any parameter after creation, and trunks continue functioning normally even if the plugin is uninstalled.
 - **🏷️ Real-World Testing Flags**: Each template clearly indicates whether it has been verified with live incoming/outgoing calls or compiled from carrier technical documentation.
 
 ---

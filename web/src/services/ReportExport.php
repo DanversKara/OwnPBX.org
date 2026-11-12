@@ -52,7 +52,7 @@ final class ReportExport
             }
         }
         return [
-            'title' => (string) getSystemSetting('brand_title', 'AiPBX'),
+            'title' => (string) getSystemSetting('brand_title', 'OwnPBX'),
             'sub' => (string) getSystemSetting('brand_sub', ''),
             'color' => strtolower($color),
             'logo' => $logo,

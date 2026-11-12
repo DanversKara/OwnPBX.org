@@ -4,7 +4,7 @@ require_once __DIR__ . '/FileStorageService.php';
 /**
  * PBX files (call recordings, faxes) in the S3 bucket of Admin → File storage
  * (#69). Everything goes through the chat service's internal
- * /api/internal/files — the one S3 client of AiPBX — so the bucket stays
+ * /api/internal/files — the one S3 client of OwnPBX — so the bucket stays
  * private and the portal keeps its own access checks. A file in the bucket is
  * stored in the database as "s3:<key>".
  */

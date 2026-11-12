@@ -21,7 +21,7 @@ $metadataUrl = SamlAuthService::getMetadataUrl();
     <div class="card-header">
         <div class="card-title">
             <i class="fas fa-link" style="color: #0284c7;"></i>
-            <?php echo htmlspecialchars(t('saml.sp_details_title', 'AiPBX Service Provider (SP) Endpoints')); ?>
+            <?php echo htmlspecialchars(t('saml.sp_details_title', 'OwnPBX Service Provider (SP) Endpoints')); ?>
         </div>
     </div>
     <div style="padding: 20px;">
@@ -76,7 +76,7 @@ $metadataUrl = SamlAuthService::getMetadataUrl();
     </div>
     <div style="padding: 20px;">
         <p style="margin-top: 0; color: var(--text-muted); font-size: 13.5px;">
-            <?php echo htmlspecialchars(t('saml.import_idp_desc', 'Paste the XML Federation Metadata downloaded from your Identity Provider. AiPBX will automatically extract the Entity ID, SingleSignOnService URL, and X.509 Certificate and populate the form fields above.')); ?>
+            <?php echo htmlspecialchars(t('saml.import_idp_desc', 'Paste the XML Federation Metadata downloaded from your Identity Provider. OwnPBX will automatically extract the Entity ID, SingleSignOnService URL, and X.509 Certificate and populate the form fields above.')); ?>
         </p>
 
         <form method="POST" style="max-width: 800px;">
@@ -147,7 +147,7 @@ $metadataUrl = SamlAuthService::getMetadataUrl();
                     <li>Client type: <strong>SAML</strong>. Client ID: <code style="word-break: break-all;"><?php echo htmlspecialchars($spEntityId); ?></code></li>
                     <li>Set <strong>Master SAML Processing URL</strong> to: <code style="word-break: break-all;"><?php echo htmlspecialchars($acsUrl); ?></code></li>
                     <li>Enable <strong>Sign Assertions</strong> and <strong>Force POST Binding</strong>.</li>
-                    <li>Export Keycloak SAML keys/metadata into AiPBX.</li>
+                    <li>Export Keycloak SAML keys/metadata into OwnPBX.</li>
                 </ol>
             </div>
 

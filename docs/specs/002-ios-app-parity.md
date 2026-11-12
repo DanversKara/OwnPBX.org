@@ -11,7 +11,7 @@
 
 ### 1.1 Problem Statement
 The native iOS mobile client ([`AiPBX-ios`](https://github.com/mahirgul/AiPBX-ios)) has achieved WebRTC video calling, PushKit VoIP notifications, 23-language localization, CallKit integration, swipe-to-delete call history, and notification inline reply. However:
-1. In chat, tapping a photo currently invokes `UIApplication.shared.open(url)`, ejecting the user out of AiPBX into Mobile Safari instead of opening an in-app full-screen photo viewer (unlike Android's `ImageViewerDialog`).
+1. In chat, tapping a photo currently invokes `UIApplication.shared.open(url)`, ejecting the user out of OwnPBX into Mobile Safari instead of opening an in-app full-screen photo viewer (unlike Android's `ImageViewerDialog`).
 2. Version tags and build numbers across `AiPBX-ios` and `AiPBX-Android` need synchronization with the core PBX repository (`v1.50.35`).
 3. The project roadmap ([`docs/roadmap.md`](../roadmap.md)) still lists iOS video calls and parity features as open, requiring reconciliation.
 
@@ -29,7 +29,7 @@ The native iOS mobile client ([`AiPBX-ios`](https://github.com/mahirgul/AiPBX-io
 
 ### User Stories
 - As an **iOS user**, I want to tap on a photo in chat and view it full-screen with pinch-to-zoom inside the app, so I don't get kicked out into Safari.
-- As an **Administrator**, I want the iOS and Android apps to report the unified version number matching the AiPBX core release (`v1.50.35`).
+- As an **Administrator**, I want the iOS and Android apps to report the unified version number matching the OwnPBX core release (`v1.50.35`).
 
 ### Acceptance Criteria (Definition of Done)
 - [x] **AC-1:** Tapping an image in `ChatMessageBubbleView.swift` opens an in-app full-screen viewer overlay rather than Safari.
@@ -67,5 +67,5 @@ File: `AiPBX-ios/AiPBX/Views/Components/ImageViewerOverlay.swift`
   - [x] Bump `AiPBX-ios/VERSION`, `project.pbxproj`, and `LoginView.swift` to `1.50.35`
   - [x] Bump `AiPBX-Android/VERSION` to `1.50.35`
 - [x] **Phase 3: Roadmap & Index Updates**
-  - [x] Update `docs/roadmap.md` in `AiPBX`
+  - [x] Update `docs/roadmap.md` in `OwnPBX`
   - [x] Update `docs/specs/README.md` index

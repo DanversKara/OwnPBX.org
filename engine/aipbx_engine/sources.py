@@ -5,7 +5,7 @@ Four sources, three of which only read a file:
 ===========================  ==========  ==========================================
 source                       packets?    what it sees
 ===========================  ==========  ==========================================
-``lease``  (dnsmasq leases)  no          phones that took an address from AiPBX's DHCP
+``lease``  (dnsmasq leases)  no          phones that took an address from OwnPBX's DHCP
 ``arp``    (/proc/net/arp)   no          anything on the local segment that talked
 ``journal``(dnsmasq log)     no          phones that asked for DHCP, even after the
                                          lease file was rotated or dnsmasq restarted
@@ -70,7 +70,7 @@ def _device(mac: str, ip: str = "", hostname: str = "", source: str = "") -> dic
 
 
 def read_leases(path: str | None = None) -> list[dict]:
-    """Every address AiPBX's own DHCP server handed out (dnsmasq.leases)."""
+    """Every address OwnPBX's own DHCP server handed out (dnsmasq.leases)."""
     path = path or config.lease_file()
     out: list[dict] = []
     try:

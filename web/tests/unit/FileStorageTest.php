@@ -71,7 +71,7 @@ final class FileStorageTest extends TestCase
             'endpoint with credentials' => [['storage_s3_endpoint' => 'https://user:pass@minio.example.com']],
             'endpoint not http' => [['storage_s3_endpoint' => 'file:///etc/passwd']],
             'bucket too short' => [['storage_s3_bucket' => 'ab']],
-            'bucket upper case' => [['storage_s3_bucket' => 'AiPBX']],
+            'bucket upper case' => [['storage_s3_bucket' => 'OwnPBX']],
             'bucket as an IP' => [['storage_s3_bucket' => '192.168.1.1']],
             'bucket with ..' => [['storage_s3_bucket' => 'a..b']],
             'region' => [['storage_s3_region' => 'eu central']],

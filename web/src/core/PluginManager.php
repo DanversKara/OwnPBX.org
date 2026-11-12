@@ -7,7 +7,7 @@ require_once dirname(__DIR__) . '/secret_box.php';
 require_once dirname(__DIR__) . '/services/ApiTokenService.php';
 
 /**
- * First-Class Plugin Manager for AiPBX.
+ * First-Class Plugin Manager for OwnPBX.
  *
  * Manages:
  * - Official Catalog plugins in `<repo>/plugins/<slug>/plugin.json`
@@ -178,7 +178,7 @@ final class PluginManager
                 'name'            => $name,
                 'description'     => $desc,
                 'version'         => (string)($m['version'] ?? $dbRow['version'] ?? '1.0.0'),
-                'author'          => (string)($m['author'] ?? 'AiPBX Official Team'),
+                'author'          => (string)($m['author'] ?? 'OwnPBX Official Team'),
                 'author_url'      => $authorUrl,
                 'type'            => $type,
                 'category'        => $category,
@@ -451,7 +451,7 @@ final class PluginManager
             throw new \Exception(t('plugins.err_manifest_fields', 'plugin.json must define a valid "slug" (lowercase alphanumeric + hyphens) and "name".'));
         }
 
-        // "requires_aipbx": "1.71.0" — a plugin that needs a newer AiPBX says so instead of failing later.
+        // "requires_aipbx": "1.71.0" — a plugin that needs a newer OwnPBX says so instead of failing later.
         $needs = (string) ($manifest['requires_aipbx'] ?? '');
         if ($needs !== '' && AIPBX_VERSION !== 'dev' && version_compare(AIPBX_VERSION, $needs, '<')) {
             $zip->close();
@@ -1109,7 +1109,7 @@ final class PluginManager
 
     /**
      * The `user_page` hook: a page at /apps/<slug> for signed-in users, not only administrators
-     * (AiPBX 1.71+). The plugin decides who sees it: `user/visible.php` returns
+     * (OwnPBX 1.71+). The plugin decides who sees it: `user/visible.php` returns
      * fn(array $user, array $settings): bool (no file: everyone). Returns the plugin's directory,
      * or null when the plugin is off, has no such page or does not show it to this user.
      */

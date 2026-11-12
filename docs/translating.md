@@ -1,4 +1,4 @@
-# Translating AiPBX
+# Translating OwnPBX
 
 The web portal speaks English (`en`), Turkish (`tr`), Azerbaijani (`az`), Bulgarian (`bg`),
 Czech (`cs`), Danish (`da`), German (`de`), Greek (`el`), Spanish (`es`), Finnish (`fi`),
@@ -29,7 +29,7 @@ new languages are welcome as pull requests.
    them. Do not translate what is inside `<code>`.
 3. **Keep line breaks**: some texts contain `\n` (written as `\\n` in the
    chunk files, because those are JSON strings). Keep them in the same places.
-4. Leave product and protocol names as they are: AiPBX, Asterisk, PJSIP,
+4. Leave product and protocol names as they are: OwnPBX, Asterisk, PJSIP,
    WebRTC, SIP, DID, IVR, T.38, FCM, Let's Encrypt, Microsoft Teams…
 5. Keys starting with `js.` are used in the browser; keys starting with
    `srv_`, `api` or `sync.` are messages from the server. Translate them all
@@ -39,7 +39,7 @@ new languages are welcome as pull requests.
 
 ## Terms that must not vary
 
-Four words carry most of AiPBX's phone vocabulary, and each of them drifts inside a
+Four words carry most of OwnPBX's phone vocabulary, and each of them drifts inside a
 single language: the same concept translated once from its label and then again from
 the sentence around it. In the current files `provisioning` sits as a loanword in
 sixteen German occurrences and twenty Italian ones while the label above them reads
@@ -52,10 +52,10 @@ case — but do not reach for a synonym because one sentence reads better with i
 reader who meets two words for the same button has to work out whether they are two
 things.
 
-| Term | In AiPBX it means | Not to be confused with | The word is fixed by |
+| Term | In OwnPBX it means | Not to be confused with | The word is fixed by |
 | --- | --- | --- | --- |
-| **provisioning** | Writing a phone's configuration file — and the address it fetches that file from — before the phone is used. | Changing settings in the portal, or installing AiPBX. | `phonedisc.state_provisioned`, `phones.settings_title`, `phones.col_url` |
-| **discovery** | Finding phones that are on the network but not in AiPBX yet. | Scanning ports for its own sake; searching the phone list you already have. | `phonedisc.settings_title`, `phonedisc.settings_btn`, `phonedisc.title` |
+| **provisioning** | Writing a phone's configuration file — and the address it fetches that file from — before the phone is used. | Changing settings in the portal, or installing OwnPBX. | `phonedisc.state_provisioned`, `phones.settings_title`, `phones.col_url` |
+| **discovery** | Finding phones that are on the network but not in OwnPBX yet. | Scanning ports for its own sake; searching the phone list you already have. | `phonedisc.settings_title`, `phonedisc.settings_btn`, `phonedisc.title` |
 | **extension** | A person's internal number and the SIP account behind it, e.g. 3010. Reachable without a trunk. | A trunk; a DID; a queue or ring group. | `extensions.col_extension`, `phones.col_extension` |
 | **trunk** | The connection off the box: a provider, a gateway, a SIP peer. | An extension; an outbound route or rule. | `trunks.col_trunk`, `sidebar.item_trunks`, `outbound.add_trunk` |
 
@@ -178,7 +178,7 @@ The Android and iOS apps have their own texts, in the same languages as the port
 a new app language is also added to `L10n.kt` (Android),
 `locales_config.xml` and `AppLanguage` in `Localization.swift` (iOS), and the iOS
 Mobile clients (Android and iOS) are maintained in their respective standalone repositories:
-- Android: [https://github.com/mahirgul/AiPBX-Android](https://github.com/mahirgul/AiPBX-Android)
+- Android: [https://github.com/DanversKara/android.OwnPBX.org](https://github.com/DanversKara/android.OwnPBX.org)
 - iOS: [https://github.com/mahirgul/AiPBX-iOS](https://github.com/mahirgul/AiPBX-iOS)
 
 The server sends its messages to the apps in the app's language when the

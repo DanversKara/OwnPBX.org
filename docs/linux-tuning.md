@@ -1,8 +1,8 @@
 # Linux OS & Kernel Tuning for High-Concurrency VoIP
 
-AiPBX turns a clean Linux server into an enterprise telecommunications appliance. Standard Linux distributions (Ubuntu, Debian) ship with kernel and systemd defaults configured for generic web, database, or batch workloads. Telephony traffic, however, is unique: **RTP audio and video streams demand hard real-time scheduling, zero-packet-loss UDP delivery, and predictable I/O latency**.
+OwnPBX turns a clean Linux server into an enterprise telecommunications appliance. Standard Linux distributions (Ubuntu, Debian) ship with kernel and systemd defaults configured for generic web, database, or batch workloads. Telephony traffic, however, is unique: **RTP audio and video streams demand hard real-time scheduling, zero-packet-loss UDP delivery, and predictable I/O latency**.
 
-AiPBX configures and maintains these optimizations automatically via `install.sh` on fresh installations and on every update via `sudo aipbx-update`. This document outlines each optimization, why it is applied, and how to verify it on a running host.
+OwnPBX configures and maintains these optimizations automatically via `install.sh` on fresh installations and on every update via `sudo aipbx-update`. This document outlines each optimization, why it is applied, and how to verify it on a running host.
 
 ---
 
@@ -10,10 +10,10 @@ AiPBX configures and maintains these optimizations automatically via `install.sh
 
 VoIP audio uses UDP packets arriving every 20 milliseconds (50 packets per second per channel). When dozens or hundreds of calls occur simultaneously, sudden bursts of incoming RTP packets can overwhelm default Linux socket receive queues, causing dropped packets, audio jitter, or robotic voice.
 
-AiPBX applies the following parameters in `/etc/sysctl.d/99-aipbx.conf`:
+OwnPBX applies the following parameters in `/etc/sysctl.d/99-aipbx.conf`:
 
 ```ini
-# Managed by AiPBX: VoIP & Asterisk high-concurrency kernel network tuning
+# Managed by OwnPBX: VoIP & Asterisk high-concurrency kernel network tuning
 net.core.rmem_max = 16777216
 net.core.wmem_max = 16777216
 net.core.rmem_default = 1048576
@@ -57,7 +57,7 @@ Disk swapping introduces random latency spikes ranging from 5 to 50 milliseconds
 
 * **Background:** Linux kernel MultiPath TCP (MPTCP) was designed to split TCP connections across multiple network interfaces. However, VoIP systems (SIP, RTP, WebSockets) rely on direct single-path IP connections and have no use for MPTCP.
 * **Reducing exposure to CVE-2026-98432:** this is a use-after-free race in the Linux IPv4 TCP option handling, and the published exploit uses an MPTCP listener. Turning MPTCP off removes that setup but **not the kernel bug: install your distribution's fixed kernel and reboot.** Furthermore, Go 1.24+ began enabling MPTCP listeners by default on Linux.
-* **AiPBX Defense-in-Depth:**
+* **OwnPBX Defense-in-Depth:**
   1. **Kernel Level:** `net.mptcp.enabled = 0` is enforced in `/etc/sysctl.d/99-aipbx.conf`, closing the MPTCP attack surface entirely across all applications on the server.
   2. **Go Binary Level:** The chat service (`chat/go.mod`) compiles with `godebug multipathtcp=0`, embedding the disablement into the executable's `DefaultGODEBUG`.
   3. **Service Level:** `aipbx-chat.service` runs with `Environment="GODEBUG=multipathtcp=0"`.
@@ -74,10 +74,10 @@ Kernel SIP ALGs attempt to inspect and rewrite SIP headers and SDP payload bodie
 - Breaks SIP over TLS (where the kernel cannot inspect encrypted payloads and mangles port state).
 - Corrupts WebRTC SDP candidates (ICE/STUN/TURN), causing browser webphones to fail to connect.
 
-AiPBX blacklists both modules at installation time:
+OwnPBX blacklists both modules at installation time:
 ```ini
 # /etc/modprobe.d/aipbx-blacklist-sip.conf
-# Managed by AiPBX: disable kernel SIP ALG modules that corrupt VoIP/WebRTC SDP
+# Managed by OwnPBX: disable kernel SIP ALG modules that corrupt VoIP/WebRTC SDP
 blacklist nf_conntrack_sip
 blacklist nf_nat_sip
 ```
@@ -113,9 +113,9 @@ On Debian and Ubuntu, `unattended-upgrades` periodically updates system librarie
 
 In early deployments, `needrestart` restarted Asterisk automatically at 06:35 AM after a glibc update, abruptly dropping all active calls.
 
-AiPBX shields Asterisk by placing an override in `/etc/needrestart/conf.d/aipbx.conf`:
+OwnPBX shields Asterisk by placing an override in `/etc/needrestart/conf.d/aipbx.conf`:
 ```perl
-# Managed by AiPBX install.sh: never restart Asterisk automatically (drops calls).
+# Managed by OwnPBX install.sh: never restart Asterisk automatically (drops calls).
 $nrconf{override_rc}{qr(^asterisk\.service$)} = 0;
 ```
 Asterisk picks up updated system libraries smoothly during the administrator-controlled maintenance window or via `sudo aipbx-update`.
@@ -124,7 +124,7 @@ Asterisk picks up updated system libraries smoothly during the administrator-con
 
 ## 7. Apache / PHP Sandbox & Security Drop-in
 
-Ubuntu and Debian systemd units for Apache isolate `/proc` and `/etc/sudoers`. AiPBX deploys a drop-in unit `/etc/systemd/system/apache2.service.d/override.conf`:
+Ubuntu and Debian systemd units for Apache isolate `/proc` and `/etc/sudoers`. OwnPBX deploys a drop-in unit `/etc/systemd/system/apache2.service.d/override.conf`:
 * `ProcSubset=all` & `ProtectProc=default`: Allows the web portal to monitor CPU/memory statistics (`/proc/meminfo`) and Asterisk health without granting arbitrary root privileges.
 * Sandboxed path exemptions: `/etc/asterisk`, `/etc/postfix`, and `/etc/fail2ban/jail.d` are marked read-write for administrative actions applied through the root helper `aipbx-priv`.
 

@@ -6,7 +6,7 @@
         "en": "Local Lightweight TTS & Speech Runtime"
     },
     "version": "1.1.0",
-    "author": "AiPBX Official Team",
+    "author": "OwnPBX Official Team",
     "category": "ai",
     "icon": "fas fa-microchip",
     "icon_style": "color: var(--purple);",
@@ -26,5 +26,5 @@
         }
     },
     "type": "official",
-    "author_url": "https://github.com/mahirgul/AiPBX"
+    "author_url": "https://github.com/DanversKara/OwnPBX.org"
 }

@@ -189,11 +189,11 @@ class MsTeamsService
                 [
                     'activityTitle'    => t('srv_teams.test_activity'),
                     'activitySubtitle' => t('srv_teams.test_subtitle'),
-                    'activityImage'    => 'https://raw.githubusercontent.com/mahirgul/AiPBX/main/docs/logo.png',
+                    'activityImage'    => 'https://raw.githubusercontent.com/DanversKara/OwnPBX.org/main/docs/logo.png',
                     'facts'            => [
                         ['name' => t('srv_teams.f_status'), 'value' => t('srv_teams.f_status_ok')],
                         ['name' => t('srv_teams.f_time'), 'value' => date('d.m.Y H:i:s')],
-                        ['name' => t('srv_teams.f_server'), 'value' => gethostname() ?: 'AiPBX Gateway'],
+                        ['name' => t('srv_teams.f_server'), 'value' => gethostname() ?: 'OwnPBX Gateway'],
                         ['name' => t('srv_teams.f_type'), 'value' => t('srv_teams.f_type_test')],
                     ],
                     'text'             => t('srv_teams.test_text'),
@@ -367,7 +367,7 @@ class MsTeamsService
 
         $output = [];
         $output[] = "# ==============================================================================";
-        $output[] = "# AiPBX - Microsoft Teams Direct Routing configuration script";
+        $output[] = "# OwnPBX - Microsoft Teams Direct Routing configuration script";
         $output[] = "# Generated: " . date('Y-m-d H:i:s');
         $output[] = "# SBC FQDN: {$domain} (Port: {$port})";
         $output[] = "# ==============================================================================";
@@ -380,7 +380,7 @@ class MsTeamsService
         $output[] = "Write-Host 'Connecting to Microsoft 365...' -ForegroundColor Cyan";
         $output[] = "Connect-MicrosoftTeams";
         $output[] = "";
-        $output[] = "# 2. Define AiPBX SBC gateway";
+        $output[] = "# 2. Define OwnPBX SBC gateway";
         $output[] = "Write-Host 'Defining SBC PSTN gateway: {$domain}:{$port}' -ForegroundColor Cyan";
         $output[] = "\$existingSbc = Get-CsOnlinePSTNGateway -Identity '{$domain}' -ErrorAction SilentlyContinue";
         $output[] = "if (\$null -eq \$existingSbc) {";
@@ -413,7 +413,7 @@ class MsTeamsService
         $output[] = "if (\$null -eq \$existingPolicy) {";
         $output[] = "    New-CsOnlineVoiceRoutingPolicy -Identity '{$voicePolicy}' `";
         $output[] = "        -OnlinePstnUsages '{$pstnUsage}' `";
-        $output[] = "        -Description 'AiPBX Direct Routing PBX Policy'";
+        $output[] = "        -Description 'OwnPBX Direct Routing PBX Policy'";
         $output[] = "}";
         $output[] = "";
         $output[] = "# 4. User and extension mappings";
@@ -445,7 +445,7 @@ class MsTeamsService
         $output[] = "# 5. Status check";
         $output[] = "Write-Host '--- SBC Gateway Status ---' -ForegroundColor Yellow";
         $output[] = "Get-CsOnlinePSTNGateway -Identity '{$domain}' | Format-List Fqdn, SipSignalingPort, Enabled, Status";
-        $output[] = "Write-Host 'Done! Your AiPBX - Teams Direct Routing connection is ready.' -ForegroundColor Green";
+        $output[] = "Write-Host 'Done! Your OwnPBX - Teams Direct Routing connection is ready.' -ForegroundColor Green";
 
         return implode("\n", $output);
     }

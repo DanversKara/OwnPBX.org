@@ -91,7 +91,7 @@ class GoogleAuthController extends BaseController
             return;
         }
 
-        // 6. Find the AiPBX user by email
+        // 6. Find the OwnPBX user by email
         $user = GoogleAuthService::findUserByEmail($email);
         if (!$user) {
             $safeEmail = htmlspecialchars($email);

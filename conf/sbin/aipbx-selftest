@@ -1,5 +1,5 @@
 #!/bin/bash
-# AiPBX self test: runs every health check now and prints the results
+# OwnPBX self test: runs every health check now and prints the results
 # (Admin -> Health checks, docs/health.md). Exit code 1 when a check fails.
 # No e-mails are sent and no alarm state changes.
 #   sudo aipbx-selftest

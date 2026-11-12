@@ -237,7 +237,7 @@ final class NetworkSettingsService
 
     /**
      * Stored addresses that are none of this server's addresses: the sign that
-     * the IP changed. Only addresses AiPBX itself uses as "this server" count
+     * the IP changed. Only addresses OwnPBX itself uses as "this server" count
      * (not the public NAT address, not a phone's NTP server elsewhere).
      *
      * @param list<string>|null $local this server's addresses (tests)

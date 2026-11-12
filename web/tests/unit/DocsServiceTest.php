@@ -29,7 +29,7 @@ final class DocsServiceTest extends TestCase
 
     public function testBareHtmlLineIsDropped(): void
     {
-        $html = DocsService::render("<p align=\"center\"><img src=\"logo.png\" alt=\"AiPBX\" width=\"96\"></p>\n\n# Title");
+        $html = DocsService::render("<p align=\"center\"><img src=\"logo.png\" alt=\"OwnPBX\" width=\"96\"></p>\n\n# Title");
         $this->assertSame("<h1 id=\"title\">Title</h1>\n", $html);
         $this->assertStringContainsString('&lt;b&gt;', DocsService::render('<b>bold</b> text'));
     }
@@ -37,11 +37,11 @@ final class DocsServiceTest extends TestCase
     public function testWebsiteLinkSettings(): void
     {
         DocsService::$docUrl = '/docs/';
-        DocsService::$repoUrl = 'https://github.com/mahirgul/AiPBX/blob/main';
+        DocsService::$repoUrl = 'https://github.com/DanversKara/OwnPBX.org/blob/main';
         try {
             $html = DocsService::inline('[map](system-map.md#logs), [sync](../web/src/sync/SyncTrunks.php)');
             $this->assertStringContainsString('<a href="/docs/system-map#logs">map</a>', $html);
-            $this->assertStringContainsString('href="https://github.com/mahirgul/AiPBX/blob/main/web/src/sync/SyncTrunks.php"', $html);
+            $this->assertStringContainsString('href="https://github.com/DanversKara/OwnPBX.org/blob/main/web/src/sync/SyncTrunks.php"', $html);
         } finally {
             DocsService::$docUrl = '/help?doc=';
             DocsService::$repoUrl = null;

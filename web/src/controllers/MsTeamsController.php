@@ -58,7 +58,7 @@ class MsTeamsController extends BaseController
             $mappings = MsTeamsRepository::allUserMappings();
             $script = MsTeamsService::generatePowerShellScript($settings, $mappings);
 
-            $filename = 'aipbx_teams_setup_' . date('Ymd_His') . '.ps1';
+            $filename = 'ownpbx_teams_setup_' . date('Ymd_His') . '.ps1';
             header('Content-Type: text/plain; charset=utf-8');
             header('Content-Disposition: attachment; filename="' . $filename . '"');
             header('Content-Length: ' . strlen($script));

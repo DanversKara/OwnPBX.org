@@ -1,6 +1,6 @@
 <?php
 /**
- * AI PBX smoke test — a one-command "does nothing blow up?" check.
+ * OwnPBX smoke test — a one-command "does nothing blow up?" check.
  *
  * Usage: php bin/smoke.php [--only=routes|rbac|api|exports|conventions|lint]
  * Exit code: 0 = clean, 1 = at least one failure.

@@ -163,7 +163,7 @@ class PushSettingsService
 
         $payload = [
             'action' => 'test_push',
-            'title' => 'AI PBX Test Bildirimi',
+            'title' => 'OwnPBX Test Bildirimi',
             'body' => sprintf(t('srv_push.test_body'), date('H:i:s')),
             'timestamp' => (string)time()
         ];

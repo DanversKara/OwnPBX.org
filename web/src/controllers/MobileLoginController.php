@@ -34,8 +34,8 @@ class MobileLoginController extends BaseController
         $data = [
             'info' => $info,
             'platform' => $platform,
-            'site_title' => getSystemSetting('site_title', 'AI PBX Portal'),
-            'brand_title' => getSystemSetting('brand_title', 'AI PBX'),
+            'site_title' => getSystemSetting('site_title', 'OwnPBX Portal'),
+            'brand_title' => getSystemSetting('brand_title', 'OwnPBX'),
             'brand_sub' => getSystemSetting('brand_sub', 'PBX & Call Center'),
             'app_url' => ANDROID_APP_URL,
         ];

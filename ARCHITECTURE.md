@@ -1,6 +1,6 @@
-# AI PBX — System Architecture & Design Specification
+# OwnPBX — System Architecture & Design Specification
 
-**AI PBX** is an open-source, enterprise-grade IP PBX and Unified Communications platform integrating:
+**OwnPBX** is an open-source, enterprise-grade IP PBX and Unified Communications platform integrating:
 - **Asterisk 22** as the real-time VoIP & WebRTC telephony engine
 - **Nginx / Apache 2.4** as the high-concurrency ingress, TLS termination, and WebSocket multiplexing layer
 - **PHP 8 MVC** as the strictly layered, secure administration and self-service management portal
@@ -243,10 +243,10 @@ Granular security policies are enforced via the `sys_role_permissions` database 
   - Watchdog race-condition guards preventing spurious `DISCONNECTED` restarts.
   - Foreground Service (`PbxForegroundService`) with ongoing status notification for high-reliability background survival.
   - Firebase Cloud Messaging (FCM) wakeup service with conversation-level notification grouping.
-- **Diagnostics System**: Integrated `AppLogManager` capturing runtime system parameters and Logcat traces with one-click export/sharing (see [AiPBX-Android](https://github.com/mahirgul/AiPBX-Android)).
+- **Diagnostics System**: Integrated `AppLogManager` capturing runtime system parameters and Logcat traces with one-click export/sharing (see [android.OwnPBX.org](https://github.com/DanversKara/android.OwnPBX.org)).
 
 ### 5.2 Android 15 (API 35+) Edge-to-Edge Architectural Standard
-- **Centralized Pattern**: All UI activities strictly extend `BaseActivity` in the [AiPBX-Android repository](https://github.com/mahirgul/AiPBX-Android), which invokes standard `enableEdgeToEdge()` prior to `super.onCreate()`.
+- **Centralized Pattern**: All UI activities strictly extend `BaseActivity` in the [AiPBX-Android repository](https://github.com/DanversKara/android.OwnPBX.org), which invokes standard `enableEdgeToEdge()` prior to `super.onCreate()`.
 - **Zero Deprecation Guarantee**: Direct calls to `Window.setDecorFitsSystemWindows`, `WindowCompat.setDecorFitsSystemWindows`, `setStatusBarColor`, `setNavigationBarColor`, or custom `SystemBarStyle` parameters are strictly forbidden.
 - **Window Insets Management**: Layout roots dynamically dispatch insets with `applyEdgeToEdgeInsets(view, consumeIme)` to preserve padding against status/navigation bars, display cutouts, and IME soft keyboards.
 - **Automated Guardrails**: `EdgeToEdgeComplianceTest` (JUnit) and `android/bin/edge_to_edge_audit.sh` run on every build to halt builds upon any violation.

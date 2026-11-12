@@ -1,5 +1,5 @@
 /**
- * Universal Unified DataTables Enhancer Module (AI PBX)
+ * Universal Unified DataTables Enhancer Module (OwnPBX)
  * Provides instant live search, column sorting, and smart pagination.
  */
 (function() {

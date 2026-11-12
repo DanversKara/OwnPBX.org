@@ -251,7 +251,7 @@ class GoogleAuthService
 
         // The token must have been issued for THIS server's Google client
         // (aud). It used to be unchecked: a Google token obtained for any
-        // other app also signed in to that email's AiPBX account.
+        // other app also signed in to that email's OwnPBX account.
         $clientId = self::getClientId();
         if ($clientId === '' || !hash_equals($clientId, (string)($data['aud'] ?? ''))) {
             return null;

@@ -1,11 +1,11 @@
 # Desk phones (provisioning)
 
 **Provisioning → Phones** sets up SIP desk phones without typing anything on them: the phone fetches its
-configuration over HTTPS from AiPBX and registers with the right extension, keys and settings.
+configuration over HTTPS from OwnPBX and registers with the right extension, keys and settings.
 Supported: **Yealink**, **Grandstream**, **Fanvil**, **Snom** (including the D865), **Cisco SPA**, **Poly** and **NEC** DT700/DT800 (models listed
 on the page).
 Cisco's enterprise **7900/8800 series** (CallManager firmware) are supported too, but they need firmware, an
-Asterisk patch and a folder of shared files that AiPBX cannot ship: see [Cisco 7900 / 8800 series](cisco-callmanager.md).
+Asterisk patch and a folder of shared files that OwnPBX cannot ship: see [Cisco 7900 / 8800 series](cisco-callmanager.md).
 A 7900 that is still running SCCP firmware is switched to Cisco's SIP load as part of provisioning — name the
 load for each model on the settings tab, and restart the phone once so it reads its file.
 
@@ -37,7 +37,7 @@ top of the page; from there a phone is one click, or none at all.
 
 | Source | Sends packets? | What it sees |
 |--------|----------------|--------------|
-| AiPBX's DHCP lease file | no | phones that took an address from AiPBX's own DHCP server |
+| OwnPBX's DHCP lease file | no | phones that took an address from OwnPBX's own DHCP server |
 | the ARP table | no | anything on the local segment that talked recently |
 | dnsmasq's DHCP log | no | phones that asked for DHCP, even after the lease file was rotated or dnsmasq restarted |
 | a bounded ARP sweep | **yes** | the same as the ARP table, but for every address, so an idle phone answers too |
@@ -71,7 +71,7 @@ vendor templates and the TFTP export all keep working the same way.
 On a shell: `php web/bin/aipbx_phone_discovery.php status` shows what the engine saw and what the settings would
 do about it (read-only), and `python3 -m aipbx_engine check` (as `www-data`) verifies the engine could run.
 
-## Pointing a phone at AiPBX
+## Pointing a phone at OwnPBX
 
 **Per-phone URL (works everywhere).** Enter the copied URL as the provisioning / auto-provision
 server in the phone's web interface:
@@ -89,7 +89,7 @@ server in the phone's web interface:
 
 Files are served over both HTTP and HTTPS. **Copy URL** gives the provisioning address of the phone's region (*Provisioning → Regions*); when that is plain HTTP, an **HTTPS** button gives the one under the portal's name. HTTP on an internal address needs nothing from the phone, but the file, with its SIP password, travels unencrypted. HTTPS needs the phone to reach that name and trust its certificate.
 
-The phone then asks for its own file under that URL; AiPBX checks that the MAC in the file name
+The phone then asks for its own file under that URL; OwnPBX checks that the MAC in the file name
 is the phone's:
 
 | Vendor | Per-phone file(s) | Shared file (not served) |
@@ -111,7 +111,7 @@ phone networks (e.g. `192.168.10.0/24`) and hand out `https://<portal>/provision
 *provisioning address*, below) as option 66.
 Phones inside these networks then ask for their MAC-based file directly; a known MAC gets its
 configuration, an unknown one appears under *Waiting phones*.
-AiPBX can also be that DHCP server for a phone network or VLAN, or serve TFTP next to your own
+OwnPBX can also be that DHCP server for a phone network or VLAN, or serve TFTP next to your own
 DHCP server: see [Network services](network-services.md).
 
 ## Server addresses (networks without DNS)
@@ -214,22 +214,22 @@ Limits in this first version:
   the phone's own keys.
 - **NEC:** the file follows NEC's data file template for DT700/DT800 group by group. The phone
   checks every value against its schema and rejects the **whole file** when one is out of range
-  (syslog: *XmlConfig: configuration is invalid*, then it restarts), so AiPBX keeps to the schema:
+  (syslog: *XmlConfig: configuration is invalid*, then it restarts), so OwnPBX keeps to the schema:
   the NTP and syslog servers are written only as IP addresses (a name is left empty), the display
   name is the extension (no spaces allowed), all six codecs get a distinct rank, the time zone is
   whole hours with daylight saving off. The admin password is **not** written: the phone's menu
   takes digits only, so it keeps its own (`6633222` by default). Telnet stays on. Keys are not
   written (the phone keeps its own line key layout). The phone's firmware files are NEC's and are
-  not part of AiPBX. Turkish is not among the phone's languages, English is used instead.
+  not part of OwnPBX. Turkish is not among the phone's languages, English is used instead.
   The phone reads three files: `dt-<mac>.cfg` is its **master file** (as NEC's
   `dt-000000000000.cfg`) and only names the data file `dt-<mac>-phone.cfg`, which holds the
   settings; a data file under the master name is not applied (the phone logs *data config file
   name is unavailable*). Line ends are Unix (LF); the phones read them as well as NEC's CRLF. After
   the data file the phone reads `dt-<mac>-local.cfg`, its *local override* (settings changed on the
-  phone's menu); AiPBX writes it too, in the phone's own format with the same values, so an old
-  local file cannot override AiPBX's settings and the phone does not log a missing file.
+  phone's menu); OwnPBX writes it too, in the phone's own format with the same values, so an old
+  local file cannot override OwnPBX's settings and the phone does not log a missing file.
   The local file starts with `<VERSION Version="n"/>`: the phone applies it only when `n` is higher
-  than the version it applied last. AiPBX keeps `n` per phone and raises it by one whenever any of
+  than the version it applied last. OwnPBX keeps `n` per phone and raises it by one whenever any of
   the three files changes (a setting, the SIP password, the server address …); an unchanged file
   keeps its number. Numbering starts at 3, above the version-2 files the first phones were set up
   with. When files are copied to another file server by hand, copy all three after every change.
@@ -293,7 +293,7 @@ Tried on a live installation (v1.71.1): a Snom desk phone registers over 443 wit
 
 ## Model settings
 
-**Provisioning → Phones → Model settings** adds settings to the files of every phone of one model, one `name = value` per line; `#` starts a comment. A setting AiPBX also writes takes the value given here, whatever its case, and the file holds only that value. On Snom, `name.2` means idx 2 of a setting and `fkey.0` sets a function key. They are kept in the database, so updates keep them. Available for NEC, Yealink, Grandstream and Poly.
+**Provisioning → Phones → Model settings** adds settings to the files of every phone of one model, one `name = value` per line; `#` starts a comment. A setting OwnPBX also writes takes the value given here, whatever its case, and the file holds only that value. On Snom, `name.2` means idx 2 of a setting and `fkey.0` sets a function key. They are kept in the database, so updates keep them. Available for NEC, Yealink, Grandstream and Poly.
 
 Snom models also take Snom's own XML, single lines or a whole file, so you can paste from Snom's documentation. Attributes such as `perm` and a key's `label` reach the phone:
 
@@ -308,4 +308,4 @@ For example, to make NEC phones dial known numbers without waiting:
 line.1.digitmap = [36789]xxx|1[3-9]xxx|0[2-58]xxxxxxxxx|x.T|[*]x.T|[#]x.T
 ```
 
-Names and values go to the phone as they are, so a wrong one can stop a phone working: try a new setting on a model with one phone first where you can. Phones read them when they next fetch their configuration, usually at a restart. Delete the lines to go back to what AiPBX writes.
+Names and values go to the phone as they are, so a wrong one can stop a phone working: try a new setting on a model with one phone first where you can. Phones read them when they next fetch their configuration, usually at a restart. Delete the lines to go back to what OwnPBX writes.

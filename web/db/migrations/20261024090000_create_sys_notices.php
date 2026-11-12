@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Phinx\Migration\AbstractMigration;
 
 /**
- * Open problems raised by parts of AiPBX other than the health checks (a
+ * Open problems raised by parts of OwnPBX other than the health checks (a
  * plugin that sees a trunk losing media, …), shown in the top bar's bell.
  *
  * One row per problem: raising the same key again only updates it, resolving

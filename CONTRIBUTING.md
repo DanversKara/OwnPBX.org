@@ -1,8 +1,8 @@
-# Contributing to AI PBX
+# Contributing to OwnPBX
 
-Thank you for your interest in contributing to **AI PBX**! 🎉
+Thank you for your interest in contributing to **OwnPBX**! 🎉
 
-AI PBX is an open-source enterprise IP PBX and Unified Communications platform created by [Mahir Gül](https://mhrgl.com) ([LinkedIn](https://www.linkedin.com/in/mhrgl/)). We welcome contributions from developers, VoIP engineers, sysadmins, and technical writers worldwide.
+OwnPBX is an open-source enterprise IP PBX and Unified Communications platform created by [Mahir Gül](https://mhrgl.com) ([LinkedIn](https://www.linkedin.com/in/mhrgl/)). We welcome contributions from developers, VoIP engineers, sysadmins, and technical writers worldwide.
 
 ---
 
@@ -17,7 +17,7 @@ By participating in this project, you agree to:
 
 ## 🛠 Project Structure
 
-AI PBX is organized as a unified monorepo:
+OwnPBX is organized as a unified monorepo:
 
 | Directory | Component | Tech Stack |
 |---|---|---|
@@ -40,8 +40,8 @@ AI PBX is organized as a unified monorepo:
 ### 1. Fork &amp; Clone
 ```bash
 git clone https://github.com/<your-username>/AiPBX.git
-cd AiPBX
-git remote add upstream https://github.com/mahirgul/AiPBX.git
+cd OwnPBX
+git remote add upstream https://github.com/DanversKara/OwnPBX.org.git
 ```
 
 ### 2. Testing
@@ -73,7 +73,7 @@ backups, the MP3 converter and migrations.
 # once: a clean Ubuntu 26.04 container with two snapshots
 lxc launch ubuntu:26.04 aipbx-test
 lxc snapshot aipbx-test pristine
-lxc exec aipbx-test -- bash -c 'curl -fsSL https://raw.githubusercontent.com/mahirgul/AiPBX/main/install.sh | AIPBX_REF=v1.0.0 bash'
+lxc exec aipbx-test -- bash -c 'curl -fsSL https://raw.githubusercontent.com/DanversKara/OwnPBX.org/main/install.sh | AIPBX_REF=v1.0.0 bash'
 lxc snapshot aipbx-test installed-200
 
 scripts/e2e/run.sh fresh     # install from scratch
@@ -164,7 +164,7 @@ scripts/render-diagrams.sh <name>   # writes docs/img/<name>.svg (needs Node and
 
 and put `![What it shows](img/<name>.svg)` on a line of its own in the document. Commit the `.mmd`
 and the `.svg` together. The SVG is shown as it is on GitHub, in the portal's Help page (offline)
-and on aipbx.bid/docs; no JavaScript is needed to read it.
+and on GitHub; no JavaScript is needed to read it.
 
 ## 🌍 Translations
 
@@ -197,7 +197,7 @@ asked to be split.
    ```bash
    git push origin feat/your-feature
    ```
-3. Open a Pull Request against the `main` branch of [mahirgul/AiPBX](https://github.com/mahirgul/AiPBX).
+3. Open a Pull Request against the `main` branch of [DanversKara/OwnPBX.org](https://github.com/DanversKara/OwnPBX.org).
 4. Provide a clear description of:
    - What problem this PR solves
    - How it was tested (include screenshots or CLI output if applicable)
@@ -209,7 +209,7 @@ asked to be split.
 
 - **Project Creator & Lead**: Mahir Gül ([mhrgl.com](https://mhrgl.com) · [LinkedIn](https://www.linkedin.com/in/mhrgl/))
 - **Privacy Policy**: [https://www.mhrgl.com/privacy](https://www.mhrgl.com/privacy)
-- **GitHub Issues**: [https://github.com/mahirgul/AiPBX/issues](https://github.com/mahirgul/AiPBX/issues)
-- **GitHub Discussions**: [https://github.com/mahirgul/AiPBX/discussions](https://github.com/mahirgul/AiPBX/discussions)
+- **GitHub Issues**: [https://github.com/DanversKara/OwnPBX.org/issues](https://github.com/DanversKara/OwnPBX.org/issues)
+- **GitHub Discussions**: [https://github.com/DanversKara/OwnPBX.org/discussions](https://github.com/DanversKara/OwnPBX.org/discussions)
 
 Thank you for building the future of open-source enterprise telephony with us!

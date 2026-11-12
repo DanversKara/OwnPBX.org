@@ -179,7 +179,7 @@ class OidcAuthService
             CURLOPT_CONNECTTIMEOUT => 4,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_HTTPHEADER     => ['Accept: application/json'],
-            CURLOPT_USERAGENT      => 'AiPBX-OIDC-Client/1.0',
+            CURLOPT_USERAGENT      => 'OwnPBX-OIDC-Client/1.0',
         ]);
 
         $body = curl_exec($ch);
@@ -320,7 +320,7 @@ class OidcAuthService
         $headers = [
             'Content-Type: application/x-www-form-urlencoded',
             'Accept: application/json',
-            'User-Agent: AiPBX-OIDC-Client/1.0',
+            'User-Agent: OwnPBX-OIDC-Client/1.0',
         ];
 
         // Send client secret both via Basic Auth and post body for maximum IdP compatibility
@@ -414,7 +414,7 @@ class OidcAuthService
             CURLOPT_CONNECTTIMEOUT => 4,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_HTTPHEADER     => ['Accept: application/json'],
-            CURLOPT_USERAGENT      => 'AiPBX-OIDC-Client/1.0',
+            CURLOPT_USERAGENT      => 'OwnPBX-OIDC-Client/1.0',
         ]);
         $body = curl_exec($ch);
         $data = is_string($body) ? json_decode($body, true) : null;
@@ -619,7 +619,7 @@ class OidcAuthService
                 CURLOPT_HTTPHEADER     => [
                     'Authorization: Bearer ' . $accessToken,
                     'Accept: application/json',
-                    'User-Agent: AiPBX-OIDC-Client/1.0',
+                    'User-Agent: OwnPBX-OIDC-Client/1.0',
                 ],
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_TIMEOUT        => 8,

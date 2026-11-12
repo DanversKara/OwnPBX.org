@@ -2,7 +2,7 @@
 
 > **Plugins (`oidc-auth` & `saml-auth`)**: Built-in official plugins for enterprise identity integration. Enable them on demand under **Integration → Plugin Catalog** (`/plugins`). See [Plugin system & developer guide](plugin-development.md).
 
-AiPBX includes native enterprise Single Sign-On (SSO) support through two official plugins:
+OwnPBX includes native enterprise Single Sign-On (SSO) support through two official plugins:
 1. **OpenID Connect (`oidc-auth`)**: Standard OAuth 2.0 / OIDC Core 1.0 authentication profile.
 2. **SAML 2.0 (`saml-auth`)**: Enterprise SAML 2.0 Web Browser SSO profile (Service Provider - SP role) with cryptographic XML signature verification.
 
@@ -25,12 +25,12 @@ Out-of-the-box compatibility has been verified with major enterprise identity an
 
 ## 1. OpenID Connect (OIDC) Plugin (`oidc-auth`)
 
-The OIDC plugin connects AiPBX to any OpenID Provider (OP) implementing discovery and token exchange.
+The OIDC plugin connects OwnPBX to any OpenID Provider (OP) implementing discovery and token exchange.
 
 ### Key Features
 * **Dynamic OpenID Discovery:** Automatically resolves authorization, token, userinfo, and jwks endpoints directly from the provider's discovery URL (e.g. `https://login.microsoftonline.com/{tenant-id}/v2.0/.well-known/openid-configuration`). Discovery metadata is cached in persistent KV storage (`sys_plugin_kv`).
 * **Admin Discovery Tester:** The plugin detail page (`/plugins/detail?slug=oidc-auth`) includes an interactive validation tool to test discovery endpoints and display available token claims in real time.
-* **Security & Token Exchange:** Enforces cryptographically random `state` and `nonce` parameters against Cross-Site Request Forgery (CSRF) and replay attacks. Client secrets are encrypted at rest using AiPBX's `SecretBox`.
+* **Security & Token Exchange:** Enforces cryptographically random `state` and `nonce` parameters against Cross-Site Request Forgery (CSRF) and replay attacks. Client secrets are encrypted at rest using OwnPBX's `SecretBox`.
 
 ### Configuration
 | Setting Key | Description | Example / Default |
@@ -51,7 +51,7 @@ The OIDC plugin connects AiPBX to any OpenID Provider (OP) implementing discover
 The SAML plugin operates as an enterprise **Service Provider (SP)**, receiving and validating SAML 2.0 Assertions sent via HTTP-POST binding.
 
 ### Key Features
-* **SP Metadata Endpoint:** AiPBX publishes standard SAML EntityDescriptor XML at `https://<server>/auth/saml/metadata`.
+* **SP Metadata Endpoint:** OwnPBX publishes standard SAML EntityDescriptor XML at `https://<server>/auth/saml/metadata`.
 * **Assertion Consumer Service (ACS):** Inbound assertion reception at `https://<server>/auth/saml/acs`.
 * **One-Click IdP Metadata XML Importer:** Administrators can paste or upload the federation metadata XML exported from Microsoft Entra ID, Okta, Keycloak, or ADFS. The parser extracts Entity ID, SingleSignOnService URL, and X.509 public signing certificates automatically.
 * **Cryptographic XML-DSig Verification:** Validates SHA-256 and SHA-1 digital signatures using the IdP's public certificate, canonicalizing enveloped XML elements (`C14N`).
@@ -66,12 +66,12 @@ The SAML plugin operates as an enterprise **Service Provider (SP)**, receiving a
 | `idp_x509_cert` | X.509 Public Certificate of the IdP (PEM format) | `-----BEGIN CERTIFICATE-----...` |
 | `nameid_format` | SAML NameID Policy Format | `emailAddress` (`persistent`, `transient`) |
 | `default_role` | Default system role assigned to new users | `user` |
-| `role_attribute` | SAML attribute name mapping to AiPBX roles | `http://schemas.microsoft.com/ws/2008/06/identity/claims/role` |
+| `role_attribute` | SAML attribute name mapping to OwnPBX roles | `http://schemas.microsoft.com/ws/2008/06/identity/claims/role` |
 | `allowed_domains` | Email domain restrictions | `company.com` |
 
 ---
 
-> **Start the sign-in from the AiPBX login page.** A SAML response must answer a request started in the same browser and is accepted once, so a sign-in started from the Identity Provider's own portal (IdP-initiated) is refused. Assertions must carry a bearer subject confirmation and an audience restriction, as the SAML Web Browser SSO profile requires.
+> **Start the sign-in from the OwnPBX login page.** A SAML response must answer a request started in the same browser and is accepted once, so a sign-in started from the Identity Provider's own portal (IdP-initiated) is refused. Assertions must carry a bearer subject confirmation and an audience restriction, as the SAML Web Browser SSO profile requires.
 
 ## Just-In-Time (JIT) Auto-Provisioning & Role Mapping
 
@@ -85,7 +85,7 @@ When a user signs in through corporate SSO for the first time:
 
 ## Mobile Client Deep-Linking
 
-The Android and iOS apps support corporate SSO out of the box. Clicking the SSO login button on a mobile client opens the organization's authentication portal in a secure web tab. Upon successful authentication, AiPBX issues a single-use authorization code and redirects back to the mobile app via deep-linking:
+The Android and iOS apps support corporate SSO out of the box. Clicking the SSO login button on a mobile client opens the organization's authentication portal in a secure web tab. Upon successful authentication, OwnPBX issues a single-use authorization code and redirects back to the mobile app via deep-linking:
 ```
 aipbx://auth?success=1&code=<auth_token>
 ```
@@ -94,8 +94,8 @@ The mobile application exchanges the code for a local session token, enabling co
 ---
 
 ## Security & Best Practices
-* **Keep Certificates Current:** IdP signing certificates typically expire every 1–3 years. When updating certificates in Microsoft Entra ID or Okta, update the certificate in AiPBX before the old certificate expires to prevent sign-in interruptions.
-* **Restricting Access by Group:** For strict access control, assign the AiPBX enterprise application only to designated groups within your corporate IdP directory.
+* **Keep Certificates Current:** IdP signing certificates typically expire every 1–3 years. When updating certificates in Microsoft Entra ID or Okta, update the certificate in OwnPBX before the old certificate expires to prevent sign-in interruptions.
+* **Restricting Access by Group:** For strict access control, assign the OwnPBX enterprise application only to designated groups within your corporate IdP directory.
 * **Audit Logging:** Every successful and failed SSO attempt is recorded in the security audit log (`sys_audit_log`) with client IP address, User-Agent, and detailed diagnostic error messages.
 
 ---
@@ -113,9 +113,9 @@ provider.
 
 ### Single Logout
 
-By default, signing out of AiPBX ends the AiPBX session only. To end the session at the identity provider too:
+By default, signing out of OwnPBX ends the OwnPBX session only. To end the session at the identity provider too:
 
-- **SAML:** enter the provider's **Single Logout URL** in the plugin. The SP metadata then lists `/auth/saml/sls`. The request is not signed, as AiPBX has no signing key, so a provider that requires signed logout requests refuses it. Tested against SimpleSAMLphp.
+- **SAML:** enter the provider's **Single Logout URL** in the plugin. The SP metadata then lists `/auth/saml/sls`. The request is not signed, as OwnPBX has no signing key, so a provider that requires signed logout requests refuses it. Tested against SimpleSAMLphp.
 - **OpenID Connect:** turn on **Single Logout** in the plugin. It uses the `end_session_endpoint` of the provider's discovery document, and you register `/login` there as a post-logout address. Not tested against a real provider.
 
 ### If the identity provider is down

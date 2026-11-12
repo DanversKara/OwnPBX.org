@@ -74,7 +74,7 @@ once made 6 000 calls an hour on one trunk) and toll fraud through a stolen acco
 
 **Allow outbound routing** lets calls arriving on this trunk use the outbound routes of the selected
 **route group** and reach local extensions. A NEC system can then send external calls out through
-the carrier trunk via AiPBX. Without it, only inbound routes are available to the trunk.
+the carrier trunk via OwnPBX. Without it, only inbound routes are available to the trunk.
 
 ## Outbound caller ID normalization
 

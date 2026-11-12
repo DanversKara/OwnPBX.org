@@ -7,7 +7,7 @@ require_once __DIR__ . '/../asterisk_sync.php';
 /**
  * Admin → Appearance: portal name, logos and colours (sys_settings).
  * Uploaded logos are checked by extension and size and stored under uploadDir(),
- * which the web server serves; resetToDefaults() goes back to the AiPBX look.
+ * which the web server serves; resetToDefaults() goes back to the OwnPBX look.
  */
 class BrandSettingsService {
     const UPLOAD_DIR_SUFFIX = '/assets/images/brand';
@@ -16,10 +16,10 @@ class BrandSettingsService {
     public static function defaults(): array
     {
         return [
-            'site_title' => 'AiPBX',
-            'brand_title' => 'AiPBX',
+            'site_title' => 'OwnPBX',
+            'brand_title' => 'OwnPBX',
             'brand_sub' => 'PBX & Call Center',
-            // Empty site_logo_image = the AiPBX default logo (BRAND_DEFAULT_LOGO_URL).
+            // Empty site_logo_image = the OwnPBX default logo (BRAND_DEFAULT_LOGO_URL).
             'site_logo_type' => 'image',
             'site_logo_icon' => 'fa-network-wired',
             'site_logo_image' => '',
@@ -101,7 +101,7 @@ class BrandSettingsService {
     }
 
     /**
-     * Resets all brand settings (titles, logo, favicon, colours) to the AiPBX
+     * Resets all brand settings (titles, logo, favicon, colours) to the OwnPBX
      * defaults and deletes the uploaded logo/favicon files.
      * @return array{success:bool, message?:string, error?:string}
      */

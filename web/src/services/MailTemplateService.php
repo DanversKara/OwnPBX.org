@@ -1,6 +1,6 @@
 <?php
 /**
- * E-mail templates: every mail AiPBX sends (invitation, password reset, test
+ * E-mail templates: every mail OwnPBX sends (invitation, password reset, test
  * mail, voicemail, fax notifications) is built here from an editable template
  * inside one branded frame (logo, title, colour from Brand settings).
  *
@@ -363,7 +363,7 @@ class MailTemplateService
             }
         }
         return $brand = [
-            'title' => (string) getSystemSetting('brand_title', 'AiPBX'),
+            'title' => (string) getSystemSetting('brand_title', 'OwnPBX'),
             'sub' => (string) getSystemSetting('brand_sub', ''),
             'color' => preg_match('/^#[0-9a-fA-F]{6}$/', $color) ? $color : self::DEFAULT_COLOR,
             'logo' => $logo,
@@ -430,10 +430,10 @@ class MailTemplateService
         $clean = fn($s) => preg_replace('/[\r\n]+/', '', (string) $s);
         if ($sender === 'fax') {
             $addr = getSystemSetting('fax_email_from_address', '') ?: getSystemSetting('mail_from_address', 'no-reply@example.com');
-            $name = getSystemSetting('fax_email_from_name', '') ?: getSystemSetting('mail_from_name', 'AiPBX');
+            $name = getSystemSetting('fax_email_from_name', '') ?: getSystemSetting('mail_from_name', 'OwnPBX');
         } else {
             $addr = getSystemSetting('mail_from_address', getSystemSetting('portal_email_from_address', 'no-reply@example.com'));
-            $name = getSystemSetting('mail_from_name', getSystemSetting('portal_email_from_name', 'AiPBX'));
+            $name = getSystemSetting('mail_from_name', getSystemSetting('portal_email_from_name', 'OwnPBX'));
         }
         return [$clean($addr), $clean($name)];
     }
@@ -489,7 +489,7 @@ class MailTemplateService
         $headers = 'From: ' . self::encodeHeader($fromName) . " <{$fromAddress}>\r\n"
             . "Reply-To: {$fromAddress}\r\n"
             . "MIME-Version: 1.0\r\n"
-            . "X-Mailer: AiPBX\r\n";
+            . "X-Mailer: OwnPBX\r\n";
         foreach ($extraHeaders as $h => $v) {
             $headers .= $h . ': ' . preg_replace('/[\r\n]+/', '', $v) . "\r\n";
         }
@@ -512,7 +512,7 @@ class MailTemplateService
                 'mailbox' => '1001', 'caller' => 'John Smith <+43 1 234 5678>', 'caller_name' => 'John Smith', 'caller_number' => '+43 1 234 5678',
                 'date' => date('d.m.Y H:i'), 'duration' => '0:42', 'portal_link' => $link . '/my-phone?tab=voicemail',
                 'department' => 'Sales', 'did' => '19276', 'pages' => '3', 'destination' => '+43 1 999 0000', 'fax_id' => '128',
-                'error' => 'NO ANSWER', 'from_name' => 'AiPBX', 'from_address' => 'no-reply@example.com', 'to' => 'admin@example.com',
+                'error' => 'NO ANSWER', 'from_name' => 'OwnPBX', 'from_address' => 'no-reply@example.com', 'to' => 'admin@example.com',
                 'host' => gethostname() ?: 'pbx',
                 'request' => 'Towels', 'transcript' => 'could I get two more towels please', 'app' => 'Hotel reception',
             ];

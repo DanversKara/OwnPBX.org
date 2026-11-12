@@ -1,8 +1,8 @@
-<p align="center"><img src="logo.png" alt="AiPBX" width="96"></p>
+<p align="center"><img src="logo.png" alt="OwnPBX" width="96"></p>
 
-# AiPBX Documentation
+# OwnPBX Documentation
 
-Administrator documentation for AiPBX on 64-bit Linux (Ubuntu 26.04 LTS+, Debian 13+, Raspberry Pi OS 64-bit, and Armbian on x86_64 & ARM64). Start with the
+Administrator documentation for OwnPBX on 64-bit Linux (Ubuntu 26.04 LTS+, Debian 13+, Raspberry Pi OS 64-bit, and Armbian on x86_64 & ARM64). Start with the
 [installation guide](../INSTALL.md), then use the pages below while configuring the system.
 
 > 🖥️ **Live demo:** [aipbx.bid/demo](https://aipbx.bid/demo/) shows every page of the portal with made-up data, without installing anything.
@@ -40,7 +40,7 @@ Administrator documentation for AiPBX on 64-bit Linux (Ubuntu 26.04 LTS+, Debian
 | 🔢 [How numbers change on a call](number-normalization.md) | The order of every number setting on routes, trunks and normalization pages, with a diagram |
 | 💻 [Custom Dialplan](custom-dialplan.md) | Custom Asterisk context injection, syntax validator, internal aggregator, recipe templates (Intercom, Spy, Paging, DISA) |
 | ☎️ [Desk phones](phones.md) | Provisioning Yealink, Grandstream, Fanvil, Snom, Cisco SPA and Poly phones over HTTPS, CSV import, waiting phones, phones found on the network, key layouts (BLF, speed dial, park), re-provision, regions, SIP over TLS on port 443 |
-| 🔵 [Cisco 7900 / 8800 series](cisco-callmanager.md) | Cisco's enterprise phones (CallManager firmware): the `SEP<MAC>.cnf.xml` AiPBX writes, the firmware, the usecallmanager.nz Asterisk patch and the shared files you provide |
+| 🔵 [Cisco 7900 / 8800 series](cisco-callmanager.md) | Cisco's enterprise phones (CallManager firmware): the `SEP<MAC>.cnf.xml` OwnPBX writes, the firmware, the usecallmanager.nz Asterisk patch and the shared files you provide |
 | 🖧 [Network settings](network-settings.md) | The server's network cards, and moving every address after an IP change in one step |
 | 🔐 [VPN server and client](vpn.md) | WireGuard or OpenVPN: let phones and laptops reach the PBX through a tunnel, and connect the PBX to another network by uploading a profile |
 | 🛡️ [Reverse proxy setup](reverse-proxy.md) | Deploying behind Nginx, Caddy, Traefik, HAProxy, Apache; WebRTC WebSocket proxying, trusted proxies, and SIP/RTP bypass |
@@ -75,7 +75,7 @@ Administrator documentation for AiPBX on 64-bit Linux (Ubuntu 26.04 LTS+, Debian
 
 ## 🔌 Plugins
 
-Optional applications and integrations bundled with AiPBX (`plugins/`: official plugins and community plugins), enabled on demand under **Integration → Plugin Catalog** (`/plugins`):
+Optional applications and integrations bundled with OwnPBX (`plugins/`: official plugins and community plugins), enabled on demand under **Integration → Plugin Catalog** (`/plugins`):
 
 | Page | Plugin slug | What it covers |
 |------|-------------|----------------|
@@ -99,7 +99,7 @@ Optional applications and integrations bundled with AiPBX (`plugins/`: official 
 ## 📱 Mobile apps
 
 The 🤖 **Android** and 🍎 **iOS** apps are built by GitHub Actions and attached to each
-[GitHub Release](https://github.com/mahirgul/AiPBX/releases). Users sign in with their portal
+[GitHub Release](https://github.com/DanversKara/android.OwnPBX.org/releases). Users sign in with their portal
 username and password (plus 2FA when enabled), by scanning the QR code on *My Phone*, or with the
 link in their invitation e-mail.
 

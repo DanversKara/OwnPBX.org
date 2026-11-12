@@ -7,7 +7,7 @@ install -m 0600 -o root -g root /dev/null "$CREDS_FILE"
 
 cat > "$CREDS_FILE" << CREDS
 ================================================================
-  AI PBX — Installation Credentials
+  OwnPBX — Installation Credentials
   Generated: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
   Server: $(hostname) / ${SERVER_IP}
   ⚠  KEEP THIS FILE SECURE — delete it after noting credentials
@@ -63,7 +63,7 @@ chmod 600 "$CREDS_FILE"
 # ============================================================================
 TOOK=$((SECONDS - START_SECONDS))
 echo ""
-box "${I_OK} AiPBX is ready  ${SEP}  $((TOOK / 60)) min $((TOOK % 60)) s" \
+box "${I_OK} OwnPBX is ready  ${SEP}  $((TOOK / 60)) min $((TOOK % 60)) s" \
     "Portal        ${CYAN}https://${PORTAL_DOMAIN}${NC}" \
     "Username      ${YELLOW}admin${NC}" \
     "Password      ${YELLOW}${ADMIN_PASS}${NC}" \

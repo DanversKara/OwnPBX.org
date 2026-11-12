@@ -40,7 +40,7 @@
  * without internet still get a correct clock).
  *
  * Extra DHCP options (netsvc_dhcp_options, "code,value" per line) are added to
- * the ones AiPBX hands out; the same code replaces AiPBX's own (66, 160, 150,
+ * the ones OwnPBX hands out; the same code replaces OwnPBX's own (66, 160, 150,
  * 42, 3, 6). aipbx-priv checks them again: a dnsmasq file can run commands.
  */
 

@@ -100,7 +100,7 @@ final class SyncTransportsCoverageTest extends TestCase
 
         // Configure sys_settings
         $stmtSys = $this->db->prepare('INSERT INTO sys_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)');
-        $stmtSys->execute(['pjsip_user_agent', 'AiPBX Master PBX']);
+        $stmtSys->execute(['pjsip_user_agent', 'OwnPBX Master PBX']);
         $stmtSys->execute(['pjsip_max_forwards', '65']);
         $stmtSys->execute(['pjsip_timer_t1', '600']);
         $stmtSys->execute(['pjsip_timer_b', '35000']);
@@ -115,7 +115,7 @@ final class SyncTransportsCoverageTest extends TestCase
         $this->assertStringContainsString("[system]\ntype=system\ntimer_t1=600\ntimer_b=35000", $conf);
 
         // [global] section
-        $this->assertStringContainsString("[global]\ntype=global\nuser_agent=AiPBX Master PBX\nmax_forwards=65", $conf);
+        $this->assertStringContainsString("[global]\ntype=global\nuser_agent=OwnPBX Master PBX\nmax_forwards=65", $conf);
 
         // [transport-udp] section
         $this->assertStringContainsString("[transport-udp]\ntype=transport\nprotocol=udp\nbind=0.0.0.0:5060", $conf);
@@ -183,7 +183,7 @@ final class SyncTransportsCoverageTest extends TestCase
     {
         // 1. User-agent injection
         $stmtSys = $this->db->prepare('INSERT INTO sys_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)');
-        $stmtSys->execute(['pjsip_user_agent', "AiPBX\nuser_agent=Evil\n[evil_section]\ntype=evil"]);
+        $stmtSys->execute(['pjsip_user_agent', "OwnPBX\nuser_agent=Evil\n[evil_section]\ntype=evil"]);
 
         // 2. Transport fields injection
         $this->setPjsipSettings([

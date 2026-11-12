@@ -2,7 +2,7 @@
 
 The table below is the portal's, not a copy of the public OUI registry:
 `PhoneModels::OUI` in `web/src/services/phones/PhoneModels.php` is the one list
-of vendor prefixes AiPBX knows, because it is also what decides which vendor
+of vendor prefixes OwnPBX knows, because it is also what decides which vendor
 template a phone that asks without a useful User-Agent gets. Two lists would
 drift, so `engine/tests/test_parity.py` reads that PHP file and fails when this
 one no longer matches it.

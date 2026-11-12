@@ -7,7 +7,7 @@ require_once dirname(__DIR__) . '/asterisk_helper.php';
 require_once dirname(__DIR__) . '/asterisk_sync.php';
 
 /**
- * Administrator's own PJSIP options on the sections AiPBX generates (/advanced-config). They are
+ * Administrator's own PJSIP options on the sections OwnPBX generates (/advanced-config). They are
  * added with `[name](+type=...)` by SyncAdvancedPjsip.php.
  *
  * Option names are checked against Asterisk's own documentation before saving, because a mistake
@@ -67,7 +67,7 @@ final class AdvancedPjsipService
         'send_pai' => ['config_file' => 'pjsip', 'target' => 'object', 'object_type' => 'endpoint', 'options' => 'send_pai=yes'],
         'codecs' => ['config_file' => 'pjsip', 'target' => 'object', 'object_type' => 'endpoint', 'options' => "disallow=all\nallow=opus,g722,alaw,ulaw"],
         'voicemail_tz' => ['config_file' => 'voicemail', 'target' => 'object', 'object_name' => 'general', 'options' => 'tz=european'],
-        'trunk' => ['config_file' => 'pjsip', 'target' => 'raw', 'options' => "; Replace USER, PASSWORD and HOST. CONTEXT is your own context from Custom Dialplan: AiPBX makes none for this trunk.\n[mytrunk-auth]\ntype=auth\nauth_type=userpass\nusername=USER\npassword=PASSWORD\n\n[mytrunk]\ntype=aor\ncontact=sip:HOST:5060\nqualify_frequency=60\n\n[mytrunk]\ntype=endpoint\ntransport=transport-udp\ncontext=CONTEXT\ndisallow=all\nallow=alaw,ulaw\naors=mytrunk\noutbound_auth=mytrunk-auth\n\n[mytrunk]\ntype=identify\nendpoint=mytrunk\nmatch=HOST\n"],
+        'trunk' => ['config_file' => 'pjsip', 'target' => 'raw', 'options' => "; Replace USER, PASSWORD and HOST. CONTEXT is your own context from Custom Dialplan: OwnPBX makes none for this trunk.\n[mytrunk-auth]\ntype=auth\nauth_type=userpass\nusername=USER\npassword=PASSWORD\n\n[mytrunk]\ntype=aor\ncontact=sip:HOST:5060\nqualify_frequency=60\n\n[mytrunk]\ntype=endpoint\ntransport=transport-udp\ncontext=CONTEXT\ndisallow=all\nallow=alaw,ulaw\naors=mytrunk\noutbound_auth=mytrunk-auth\n\n[mytrunk]\ntype=identify\nendpoint=mytrunk\nmatch=HOST\n"],
     ];
 
     private const IMPORT_MAX_BYTES = 1048576;
@@ -81,7 +81,7 @@ final class AdvancedPjsipService
 
     /**
      * Options refused here, in lower case: those that run a program or write outside Asterisk's
-     * logs, open AMI to others, or that AiPBX's own pages and firewall depend on. Rollback reads
+     * logs, open AMI to others, or that OwnPBX's own pages and firewall depend on. Rollback reads
      * messages.log, so that channel stays too.
      */
     private const DENIED_OPTIONS = [

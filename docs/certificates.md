@@ -1,6 +1,6 @@
 # Certificates
 
-AiPBX uses **one TLS certificate** for everything that speaks TLS:
+OwnPBX uses **one TLS certificate** for everything that speaks TLS:
 
 | Service | Uses it for |
 |---------|-------------|

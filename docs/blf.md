@@ -2,7 +2,7 @@
 
 Multi-key SIP phones (Yealink, Grandstream, Fanvil, Snom …) and their expansion modules can show
 the state of colleagues on their keys: a receptionist typically watches 10–15 people, an operator
-console many more. AiPBX publishes these states; the keys are set on the phone (by hand today,
+console many more. OwnPBX publishes these states; the keys are set on the phone (by hand today,
 by the provisioning page later — see the [roadmap](roadmap.md)).
 
 ## What a key shows

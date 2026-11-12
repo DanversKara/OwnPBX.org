@@ -1,6 +1,6 @@
-# Architecture — AI PBX Portal
+# Architecture — OwnPBX Portal
 
-This document describes how the AI PBX system is put together: the request lifecycle, the layers, the Asterisk integration, and the conventions a new contributor should know before touching anything.
+This document describes how the OwnPBX system is put together: the request lifecycle, the layers, the Asterisk integration, and the conventions a new contributor should know before touching anything.
 
 ## The core idea
 

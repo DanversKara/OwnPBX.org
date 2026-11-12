@@ -23,7 +23,7 @@ function downloadRecoveryCodes() {
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "aipbx-recovery-codes.txt";
+    a.download = "ownpbx-recovery-codes.txt";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

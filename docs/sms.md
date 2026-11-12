@@ -1,8 +1,8 @@
 # SMS & MMS Messaging (Plugin)
 
-> 🔌 **Plugin (`sms`)**: Community plugin from the official catalog (`mahirgul/AiPBX-plugins`). Enable it under **Integration → Plugin Catalog** (requires AiPBX 1.71.0 or newer). See [Plugin system & developer guide](plugin-development.md).
+> 🔌 **Plugin (`sms`)**: Community plugin from the official catalog (`mahirgul/AiPBX-plugins`). Enable it under **Integration → Plugin Catalog** (requires OwnPBX 1.71.0 or newer). See [Plugin system & developer guide](plugin-development.md).
 
-**Apps → Messages** (`/apps/sms`) adds native, two-way SMS and multimedia MMS messaging to AiPBX. Staff members can send and receive text messages, images, documents, and business cards directly from the web portal and mobile apps using your existing telecom DIDs.
+**Apps → Messages** (`/apps/sms`) adds native, two-way SMS and multimedia MMS messaging to OwnPBX. Staff members can send and receive text messages, images, documents, and business cards directly from the web portal and mobile apps using your existing telecom DIDs.
 
 ---
 
@@ -15,7 +15,7 @@
   Telecom Carrier (Twilio, Telnyx, Vonage, etc.)
         │
         ▼  HTTP POST / Inbound Webhook (Cryptographically Signed)
-  AiPBX Webhook Endpoint (`/api/plugins/sms/webhook/{provider}`)
+  OwnPBX Webhook Endpoint (`/api/plugins/sms/webhook/{provider}`)
         │
         ├── 1. Cryptographic Signature Verification (Twilio HMAC, Vonage SHA256, etc.)
         ├── 2. E.164 Number Normalization & Routing Lookup
@@ -30,7 +30,7 @@
 
 ### 📡 Public Webhook Endpoints
 
-Configure your provider's messaging portal with the matching webhook URL from AiPBX:
+Configure your provider's messaging portal with the matching webhook URL from OwnPBX:
 
 | Provider | Webhook URL Format | Signature / Authentication Method |
 |---|---|---|
@@ -101,8 +101,8 @@ Staff members access their messaging interface under **Apps → Messages**:
 The SMS plugin supports sending and receiving multimedia attachments:
 
 - **Supported Formats**: JPEG, PNG, GIF, WebP, PDF documents, Audio clips (MP3/WAV/OGG), and vCard contacts (`.vcf`).
-- **File Storage**: Attachments are managed through AiPBX's unified storage backend: either on the local server disk or an S3-compatible cloud bucket (AWS S3, MinIO, Wasabi, Cloudflare R2) — see [File Storage](file-storage.md).
-- **🛡️ SSRF Security Shield**: When receiving MMS media from external carrier webhooks, AiPBX validates all media URLs through an SSRF-safe HTTP client. Downloads to internal, private (`10.*`, `192.168.*`, `127.*`), or cloud metadata IPs are strictly forbidden.
+- **File Storage**: Attachments are managed through OwnPBX's unified storage backend: either on the local server disk or an S3-compatible cloud bucket (AWS S3, MinIO, Wasabi, Cloudflare R2) — see [File Storage](file-storage.md).
+- **🛡️ SSRF Security Shield**: When receiving MMS media from external carrier webhooks, OwnPBX validates all media URLs through an SSRF-safe HTTP client. Downloads to internal, private (`10.*`, `192.168.*`, `127.*`), or cloud metadata IPs are strictly forbidden.
 
 ---
 

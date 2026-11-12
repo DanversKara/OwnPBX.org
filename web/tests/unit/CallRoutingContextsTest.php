@@ -11,7 +11,7 @@ require_once dirname(__DIR__, 2) . '/src/services/FaxSendService.php';
 require_once dirname(__DIR__, 2) . '/src/sip_helper.php';
 
 /**
- * Tests for AiPBX call routing contexts and ingress context hierarchies:
+ * Tests for OwnPBX call routing contexts and ingress context hierarchies:
  * - PJSIP per-device contexts (desktop, web, mobile) with client type channel variables
  * - Custom context overrides vs generated PBX context overwrites in sip table
  * - Include chain order in ingress contexts (ortak -> featurecodes -> sub-norm -> outbound)

@@ -136,8 +136,8 @@ class TwoFactorLoginController extends BaseController
         }
 
         $csrf_token = getCSRFToken();
-        $site_title = getSystemSetting('site_title', 'AiPBX');
-        $brand_title = getSystemSetting('brand_title', 'AiPBX');
+        $site_title = getSystemSetting('site_title', 'OwnPBX');
+        $brand_title = getSystemSetting('brand_title', 'OwnPBX');
         $brand_sub = getSystemSetting('brand_sub', 'PBX & Call Center');
         $site_logo_type = getSystemSetting('site_logo_type', 'image');
         $site_logo_icon = getSystemSetting('site_logo_icon', 'fa-network-wired');
