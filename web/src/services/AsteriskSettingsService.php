@@ -299,12 +299,22 @@ class AsteriskSettingsService {
 
         // If the port range CHANGED, a reload is not enough and a full restart
         // is needed — compared with the previous value so the user can be told.
+        $old_rtp_range = getSystemSetting('rtp_start', '10000') . '-' . getSystemSetting('rtp_end', '12999');
         $rtp_range_changed = (getSystemSetting('rtp_start', '10000') !== $new_settings['rtp_start'])
                           || (getSystemSetting('rtp_end', '12999') !== $new_settings['rtp_end']);
 
         $stmt = $db->prepare('INSERT INTO sys_settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)');
         foreach ($new_settings as $k => $v) {
             $stmt->execute([$k, $v]);
+        }
+        // Call audio moved: the firewall follows (new range open, old one closed), otherwise
+        // calls connect without sound until someone opens the new ports by hand.
+        if ($rtp_range_changed) {
+            try {
+                FirewallService::followRtpRange($old_rtp_range, $new_settings['rtp_start'] . '-' . $new_settings['rtp_end']);
+            } catch (\Throwable $e) {
+                error_log('RTP range firewall update: ' . $e->getMessage());
+            }
         }
 
         // Mirror the transport-level settings (port/external IP/local networks) into the pjsipsettings table

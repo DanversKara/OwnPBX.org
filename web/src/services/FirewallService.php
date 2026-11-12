@@ -157,7 +157,7 @@ class FirewallService {
         }
         foreach ($ports as $spec) {
             [$port, $proto] = array_pad(explode('/', $spec, 2), 2, 'tcp');
-            $rules[] = ['kind' => 'port', 'value' => $spec, 'port' => $port, 'protocol' => $proto, 'source' => '', 'use' => self::PORT_USES[$port] ?? ''];
+            $rules[] = ['kind' => 'port', 'value' => $spec, 'port' => $port, 'protocol' => $proto, 'source' => '', 'use' => self::portUse($port)];
         }
         foreach ($rich as $rule) {
             $plain = preg_match('/^rule family="ipv4" source address="([^"]+)" port port="([0-9-]+)" protocol="(tcp|udp)" accept$/', $rule, $m) === 1;
@@ -477,6 +477,37 @@ class FirewallService {
             return ['remove-rich-rule', $rule['value']];
         }
         return empty($rule['custom']) && $rule['source'] !== '' ? ['add-source-rule', $rule['source'], $rule['port'], $rule['protocol']] : null;
+    }
+
+    /**
+     * The call-audio (RTP) range changed in Asterisk settings: every zone that holds the common
+     * rules opens the new range and closes the old one, live and permanent. Nothing happens
+     * without firewalld. Returns the zones changed.
+     */
+    public static function followRtpRange(string $oldRange, string $newRange): array {
+        $valid = static fn(string $r): bool => (bool) preg_match('/^\d{1,5}-\d{1,5}$/', $r);
+        if ($oldRange === $newRange || !$valid($newRange) || !firewalld_is_active()) {
+            return [];
+        }
+        $zones = self::commonZones(self::overview());
+        foreach ($zones as $zone) {
+            self::runLiveAndPermanent(['zone', $zone, 'add-port', $newRange, 'udp']);
+            if ($valid($oldRange)) {
+                // Not open there (closed by hand, never opened): firewalld only warns.
+                self::runLiveAndPermanent(['zone', $zone, 'remove-port', $oldRange, 'udp']);
+            }
+        }
+        writeAuditLog(null, 'firewall', 'rtp', "Call audio ports moved: {$oldRange}/udp -> {$newRange}/udp", 'update', $_SESSION['user_id'] ?? null);
+        return $zones;
+    }
+
+    /** What a port is for, on the Firewall page: the fixed list, or RTP for the current call-audio range. */
+    private static function portUse(string $port): string {
+        if (isset(self::PORT_USES[$port])) {
+            return self::PORT_USES[$port];
+        }
+        $rtp = function_exists('getSystemSetting') ? getSystemSetting('rtp_start', '10000') . '-' . getSystemSetting('rtp_end', '12999') : '';
+        return $port === $rtp ? 'RTP' : '';
     }
 
     /** Zones that hold common rules: the default one and every network card's own copy. */
