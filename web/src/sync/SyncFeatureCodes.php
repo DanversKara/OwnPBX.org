@@ -270,20 +270,17 @@ function __syncFeatureCodesBody() {
                 // live call on the phones. While listening: * = next call, <ext># = that extension's
                 // call, # = louder/quieter. The extension is announced on each switch.
                 $conf .= " same => n,GotoIf(\$[\"\${SPYTARGET}\" = \"\"]?spy_scan)\n";
-                // Only spy on an active (bridged) call. The hint for the
-                // extension lives in from-internal-pbx-ortak; INUSE/BUSY
-                // (string or numeric) means it is on a call, anything else
-                // (idle, ringing, unavailable) means there is nothing to
-                // listen to — play a beep and hang up.
+                // The chosen extension's call when it is on one (the hint lives in
+                // from-internal-pbx-ortak; INUSE/BUSY, as a word or a number). When it is idle,
+                // and when that call ends or * is pressed, listening moves on to scanning.
                 $conf .= " same => n,Set(SPYSTATE=\${EXTENSION_STATE(\${SPYTARGET}@from-internal-pbx-ortak)})\n";
                 $conf .= " same => n,GotoIf(\$[\"\${SPYSTATE}\" = \"INUSE\" | \"\${SPYSTATE}\" = \"BUSY\" | \"\${SPYSTATE}\" = \"1\" | \"\${SPYSTATE}\" = \"2\"]?spy_spy)\n";
                 $conf .= " same => n,Playback(beep)\n";
-                $conf .= " same => n,Hangup()\n";
-                // Pressing * on the chosen extension (or its call ending) moves on to scanning.
+                $conf .= " same => n,Goto(spy_scan)\n";
                 $conf .= " same => n(spy_spy),ChanSpy(PJSIP/\${SPYTARGET}-,bsSE)\n";
-                $conf .= " same => n(spy_scan),ChanSpy(PJSIP/,bsSg(aipbxext))\n";
-                // S: nothing (more) to listen to.
-                $conf .= " same => n,Playback(beep)\n";
+                // Scanning has no S option: with no call to listen to it stays on the line and
+                // picks up the next call that starts, until the listener hangs up.
+                $conf .= " same => n(spy_scan),ChanSpy(PJSIP/,bsg(aipbxext))\n";
                 $conf .= " same => n,Hangup()\n";
                 // Direct dial: *90<ext> in one go (e.g. *901000) — set the
                 // target and jump to the base code.
