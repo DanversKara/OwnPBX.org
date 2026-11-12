@@ -68,7 +68,7 @@ class ExtensionService {
             // made it impossible to turn the box off (#2). A caller that does
             // not send a switch keeps the stored value (new extension: on).
             $current = $user_id > 0
-                ? ($db->query('SELECT voicemail_enabled, voicemail_email_notify, voicemail_attach_audio FROM sys_users WHERE id = ' . $user_id)->fetch(PDO::FETCH_ASSOC) ?: [])
+                ? ($db->query('SELECT voicemail_enabled, voicemail_email_notify, voicemail_attach_audio, vm_on_noanswer, vm_on_busy, vm_on_unavail, vm_always FROM sys_users WHERE id = ' . $user_id)->fetch(PDO::FETCH_ASSOC) ?: [])
                 : [];
             $vmSwitch = fn(string $k): int => isset($data[$k]) ? (intval($data[$k]) ? 1 : 0) : (int)($current[$k] ?? 1);
             $voicemail_enabled = $vmSwitch('voicemail_enabled');
@@ -88,14 +88,16 @@ class ExtensionService {
             }
             $voicemail_email = trim($data['voicemail_email'] ?? '');
             $voicemail_attach_audio = $vmSwitch('voicemail_attach_audio');
-            $vm_on_noanswer = isset($data['vm_on_noanswer']) ? intval($data['vm_on_noanswer']) : 0;
-            $vm_on_busy = isset($data['vm_on_busy']) ? intval($data['vm_on_busy']) : 0;
+            // When voicemail catches calls: on by default for a new extension (a voicemail box
+            // that no call ever reaches is useless); a caller that leaves a switch out keeps it.
+            $vm_on_noanswer = $vmSwitch('vm_on_noanswer');
+            $vm_on_busy = $vmSwitch('vm_on_busy');
             // The "when unreachable" box on the form was never read: the
             // variable was defined only in the fax branch, and saving a SIP
             // extension failed with "vm_on_unavail cannot be null" because the
             // column is NOT NULL.
-            $vm_on_unavail = isset($data['vm_on_unavail']) ? intval($data['vm_on_unavail']) : 0;
-            $vm_always = isset($data['vm_always']) ? intval($data['vm_always']) : 0;
+            $vm_on_unavail = $vmSwitch('vm_on_unavail');
+            $vm_always = isset($data['vm_always']) ? (intval($data['vm_always']) ? 1 : 0) : (int)($current['vm_always'] ?? 0);
 
             if ($extension_type === 'fax') {
                 $voicemail_enabled = 0;

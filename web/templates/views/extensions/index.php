@@ -319,18 +319,22 @@
                         </div>
                         <div class="u-d-flex u-gap-12 u-wrap u-mt-12 u-fs-11-5">
                             <label class="u-d-inline-flex u-ai-center u-gap-4 u-pointer">
-                                <input type="checkbox" name="vm_on_noanswer" id="modal_vm_on_noanswer" value="1" class="u-accent">
+                                <input type="hidden" name="vm_on_noanswer" value="0">
+                                <input type="checkbox" name="vm_on_noanswer" id="modal_vm_on_noanswer" value="1" checked class="u-accent">
                                 <span><?php echo t('extensions.vm_noanswer'); ?></span>
                             </label>
                             <label class="u-d-inline-flex u-ai-center u-gap-4 u-pointer">
-                                <input type="checkbox" name="vm_on_busy" id="modal_vm_on_busy" value="1" class="u-accent">
+                                <input type="hidden" name="vm_on_busy" value="0">
+                                <input type="checkbox" name="vm_on_busy" id="modal_vm_on_busy" value="1" checked class="u-accent">
                                 <span><?php echo t('extensions.vm_busy'); ?></span>
                             </label>
                             <label class="u-d-inline-flex u-ai-center u-gap-4 u-pointer">
-                                <input type="checkbox" name="vm_on_unavail" id="modal_vm_on_unavail" value="1" class="u-accent">
+                                <input type="hidden" name="vm_on_unavail" value="0">
+                                <input type="checkbox" name="vm_on_unavail" id="modal_vm_on_unavail" value="1" checked class="u-accent">
                                 <span><?php echo t('extensions.vm_unavail'); ?></span>
                             </label>
                             <label class="u-d-inline-flex u-ai-center u-gap-4 u-pointer">
+                                <input type="hidden" name="vm_always" value="0">
                                 <input type="checkbox" name="vm_always" id="modal_vm_always" value="1" class="u-accent">
                                 <span><?php echo t('extensions.vm_always'); ?></span>
                             </label>

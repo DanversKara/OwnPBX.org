@@ -126,11 +126,11 @@ function openCreateExtensionModal() {
     const vmEmail = document.getElementById('modal_voicemail_email');
     if (vmEmail) vmEmail.value = '';
     const vmNa = document.getElementById('modal_vm_on_noanswer');
-    if (vmNa) vmNa.checked = false;
+    if (vmNa) vmNa.checked = true;
     const vmBusy = document.getElementById('modal_vm_on_busy');
-    if (vmBusy) vmBusy.checked = false;
+    if (vmBusy) vmBusy.checked = true;
     const vmUnavail = document.getElementById('modal_vm_on_unavail');
-    if (vmUnavail) vmUnavail.checked = false;
+    if (vmUnavail) vmUnavail.checked = true;
     const vmAlways = document.getElementById('modal_vm_always');
     if (vmAlways) vmAlways.checked = false;
 

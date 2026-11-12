@@ -50,9 +50,21 @@ final class ExtensionVoicemailTest extends TestCase
 
     public function testUncheckedOptionIsStoredAsZero(): void
     {
+        // The form sends a hidden 0 before each box, so an unticked box arrives as '0'.
+        $res = $this->save(['vm_on_unavail' => '0', 'vm_on_busy' => '0', 'vm_on_noanswer' => '0']);
+        $this->assertTrue($res['success'], $res['error'] ?? '');
+        $row = $this->db->query("SELECT vm_on_unavail, vm_on_busy, vm_on_noanswer FROM sys_users WHERE extension = '7401'")->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame([0, 0, 0], array_map('intval', array_values($row)));
+    }
+
+    public function testNewExtensionCatchesMissedCallsByDefault(): void
+    {
+        // A caller that leaves the switches out (API, older form): a new box catches
+        // unanswered, busy and offline calls, and "always voicemail" stays off.
         $res = $this->save([]);
         $this->assertTrue($res['success'], $res['error'] ?? '');
-        $this->assertSame(0, (int) $this->db->query("SELECT vm_on_unavail FROM sys_users WHERE extension = '7401'")->fetchColumn());
+        $row = $this->db->query("SELECT vm_on_noanswer, vm_on_busy, vm_on_unavail, vm_always FROM sys_users WHERE extension = '7401'")->fetch(PDO::FETCH_ASSOC);
+        $this->assertSame([1, 1, 1, 0], array_map('intval', array_values($row)));
     }
 
     private function row(): array
