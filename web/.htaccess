@@ -1,0 +1,11 @@
+# The website call widget is loaded by other sites under a fixed address. Without this a CDN
+# (Cloudflare caches .js by default) or the visitor's browser keeps an old copy for hours after
+# an update. "no-cache" means: keep it, but ask the PBX each time whether it changed (a cheap
+# 304 when it did not).
+<IfModule mod_headers.c>
+    <Files "widget.js">
+        Header set Cache-Control "no-cache, max-age=0"
+        Header set CDN-Cache-Control "no-store"
+        Header set Cloudflare-CDN-Cache-Control "no-store"
+    </Files>
+</IfModule>
