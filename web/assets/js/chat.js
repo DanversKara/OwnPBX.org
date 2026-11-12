@@ -291,6 +291,16 @@ function handleWsEvent(evt) {
 }
 
 // 3. Fetch conversations and the directory
+// The count next to Chat in the menu follows the list at once (the menu also refreshes it every 30 s).
+// The open conversation counts as read: its messages are marked read as they arrive.
+function updateChatMenuCount() {
+    const el = document.querySelector('#app-sidebar .nav-count[data-badge-url^="/chat"]');
+    if (!el) return;
+    const n = conversations.reduce((sum, c) => sum + (c.id === currentConvId ? 0 : (c.unread_count || 0)), 0);
+    el.textContent = n > 99 ? '99+' : String(n);
+    el.style.display = n > 0 ? '' : 'none';
+}
+
 async function loadConversations() {
     try {
         const res = await fetch('/chat/api/conversations', {
@@ -300,6 +310,7 @@ async function loadConversations() {
         if (json.success) {
             conversations = json.conversations || [];
             renderConversationsList();
+            updateChatMenuCount();
         }
     } catch (e) {
         console.error('Could not fetch conversations:', e);
@@ -468,6 +479,7 @@ async function startDirectChatWith(targetExt, targetName) {
 async function openConversation(conv, pushHistory = true) {
     currentConvId = conv.id;
     currentReceipts = { read: 0, delivered: 0 };
+    updateChatMenuCount();
     currentConv = conv;
     currentTargetExt = conv.target_ext || '';
     const isGroup = conv.type === 'group';

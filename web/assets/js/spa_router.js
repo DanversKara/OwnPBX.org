@@ -302,6 +302,7 @@
             setTimeout(() => {
                 updateActiveSidebarNav(url);
                 updatePendingSyncBadge(pageData);
+                refreshNavCounts();
                 if (pageData && pageData.getAttribute('data-menu-changed') === '1') {
                     refreshSidebarMenu(url);
                 }
@@ -473,6 +474,24 @@
 
         return Promise.all(loadPromises);
     }
+
+    // Menu counts (e.g. unread texts next to Messages): each .nav-count asks its page for the
+    // current number every 30 s while the tab is visible, and after every page change.
+    function refreshNavCounts() {
+        document.querySelectorAll('#app-sidebar .nav-count[data-badge-url]').forEach(el => {
+            fetch(el.dataset.badgeUrl, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+                .then(res => (res.ok ? res.json() : null))
+                .then(data => {
+                    if (!data || typeof data.count !== 'number') return;
+                    el.textContent = data.count > 99 ? '99+' : String(data.count);
+                    el.style.display = data.count > 0 ? '' : 'none';
+                })
+                .catch(() => {});
+        });
+    }
+    setInterval(() => { if (!document.hidden) refreshNavCounts(); }, 30000);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshNavCounts(); });
+    window.refreshNavCounts = refreshNavCounts;
 
     // Expose SPA function
     window.loadSPAPage = loadSPAPage;

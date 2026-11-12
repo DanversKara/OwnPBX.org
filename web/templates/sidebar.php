@@ -99,6 +99,9 @@ $is_collapsed_cookie = isset($_COOKIE['sidebar_collapsed']) && $_COOKIE['sidebar
                         <li>
                             <a href="<?php echo $item['href']; ?>" class="nav-link <?php echo $is_active($item) ? 'active' : ''; ?>" title="<?php echo $sidebar_label($item['title'] ?? $item['label']); ?>">
                                 <?php echo $sidebar_icon($item); ?> <span class="nav-text"><?php echo $sidebar_label($item['label']); ?></span>
+                                <?php if (array_key_exists('badge', $item) && $item['badge'] !== null): ?>
+                                    <span class="nav-count" data-badge-url="<?php echo htmlspecialchars($item['href'] . '?badge=1', ENT_QUOTES); ?>" style="margin-left: auto; min-width: 20px; padding: 1px 7px; border-radius: 10px; background: var(--danger, #dc2626); color: #fff; font-size: 11px; font-weight: 700; text-align: center; line-height: 18px;<?php echo (int) $item['badge'] > 0 ? '' : ' display: none;'; ?>"><?php echo (int) $item['badge']; ?></span>
+                                <?php endif; ?>
                             </a>
                         </li>
                     <?php endforeach; ?>

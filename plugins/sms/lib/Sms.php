@@ -552,6 +552,21 @@ final class Sms
 
     // --- reading ---
 
+    /** Unread incoming texts per number: [number_id => count], numbers with none left out. */
+    public static function unreadByNumber(array $numberIds): array
+    {
+        if ($numberIds === []) {
+            return [];
+        }
+        $in = implode(',', array_map('intval', $numberIds));
+        $out = [];
+        foreach (getDB()->query("SELECT number_id, COUNT(*) AS n FROM plg_sms_messages
+            WHERE number_id IN ({$in}) AND direction = 'in' AND is_read = 0 GROUP BY number_id")->fetchAll(PDO::FETCH_ASSOC) as $r) {
+            $out[(int) $r['number_id']] = (int) $r['n'];
+        }
+        return $out;
+    }
+
     /** Conversations of these numbers, newest first: number_id, peer, last text, time, unread count. */
     public static function threads(array $numberIds): array
     {

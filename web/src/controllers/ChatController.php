@@ -12,6 +12,28 @@ require_once __DIR__ . '/../services/ChatSettingsService.php';
  */
 class ChatController extends BaseController
 {
+    /**
+     * Unread chat messages of an extension, all its conversations together: the same count the
+     * chat shows per conversation (chat/db.go GetConversations). The menu shows it next to Chat.
+     */
+    public static function unreadCount(string $ext): int
+    {
+        if ($ext === '') {
+            return 0;
+        }
+        try {
+            $q = getDB()->prepare("SELECT COUNT(*) FROM chat_participants p
+                JOIN chat_conversations c ON c.id = p.conversation_id AND c.is_deleted = 0
+                JOIN chat_messages m ON m.conversation_id = p.conversation_id AND m.id > p.last_read_message_id
+                    AND m.sender_ext != p.extension AND m.is_deleted = 0
+                WHERE p.extension = ? AND p.left_at IS NULL");
+            $q->execute([$ext]);
+            return (int) $q->fetchColumn();
+        } catch (\Throwable $e) {
+            return 0; // chat tables not there yet
+        }
+    }
+
     public static function index(): void
     {
         requireLogin();
@@ -19,6 +41,10 @@ class ChatController extends BaseController
 
         $user = getCurrentUser();
         $ext = trim($user['extension'] ?? '');
+
+        if (isset($_GET['badge']) && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+            static::json(['count' => static::unreadCount($ext)]);
+        }
 
         if ($ext === '') {
             static::notifyError(t('chat.err_no_extension'));

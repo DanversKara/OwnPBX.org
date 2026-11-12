@@ -1144,6 +1144,26 @@ final class PluginManager
         return $dir;
     }
 
+    /**
+     * The count shown next to a plugin's user page in the menu (e.g. unread texts): the plugin's
+     * `user/badge.php` returns fn(string $slug, array $settings, array $user): int. 0 when the
+     * plugin has none, the user may not open the page, or it fails.
+     */
+    public static function userBadge(string $slug, array $user): int
+    {
+        $dir = self::userPageDir($slug, $user);
+        if ($dir === null || !is_file($dir . '/user/badge.php')) {
+            return 0;
+        }
+        try {
+            $fn = require $dir . '/user/badge.php';
+            return is_callable($fn) ? max(0, (int) $fn($slug, self::getAllSettings($slug, false), $user)) : 0;
+        } catch (\Throwable $e) {
+            error_log("plugin {$slug} user/badge.php: " . $e->getMessage());
+            return 0;
+        }
+    }
+
     /** Sidebar items of the plugins' user pages this user may open. */
     public static function userSidebarItems(array $user): array
     {
@@ -1154,8 +1174,10 @@ final class PluginManager
             if (!$p['enabled'] || !is_array($hook) || self::userPageDir($p['slug'], $user) === null) {
                 continue;
             }
+            $dir = (string) self::userPageDir($p['slug'], $user);
             $items[] = [
                 'href'  => '/apps/' . $p['slug'],
+                'badge' => is_file($dir . '/user/badge.php') ? self::userBadge($p['slug'], $user) : null,
                 'icon'  => (string) ($hook['icon'] ?? $p['icon']),
                 'label' => ['plugin.user.' . $p['slug'], (string) ($hook['label_i18n'][$lang] ?? $hook['label'] ?? $p['name'])],
                 'show'  => true,

@@ -19,6 +19,7 @@ $messages = $peer !== '' ? Sms::thread($nid, $peer) : [];
 $link = static fn(int $n, string $p = ''): string => '/apps/sms?' . http_build_query(array_filter(['n' => $n, 'peer' => $p]));
 $numberName = static fn(array $n): string => $n['number'] . ($n['label'] !== '' ? ' · ' . $n['label'] : '');
 $contacts = Sms::contacts($nid);
+$unread = Sms::unreadByNumber(array_keys($numbers));
 
 echo uiPageHeader('fas fa-comment-sms', 'Messages');
 ?>
@@ -47,12 +48,14 @@ echo uiPageHeader('fas fa-comment-sms', 'Messages');
 .sms-emojis button { font-size: 20px; background: none; border: 0; cursor: pointer; border-radius: 6px; padding: 4px 0; }
 .sms-emojis button:hover { background: var(--bg-subtle); }
 .sms-gifs { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; max-height: 260px; overflow-y: auto; margin-top: 8px; }
+.sms-tab { position: relative; }
+.sms-tab-count { position: absolute; top: -8px; right: -8px; min-width: 20px; padding: 1px 6px; border-radius: 10px; background: var(--danger, #dc2626); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center; }
 .sms-gifs img { width: 100%; height: 90px; object-fit: cover; border-radius: 6px; cursor: pointer; }
 </style>
 <?php if (count($numbers) > 1): ?>
-<div class="u-flex-gap u-mb-20">
+<div class="u-flex-gap u-mb-20" id="smsTabs">
     <?php foreach ($numbers as $n): ?>
-        <a class="btn <?php echo (int) $n['id'] === $nid ? 'btn-primary' : 'btn-secondary'; ?>" href="<?php echo $h($link((int) $n['id'])); ?>"><?php echo $h($numberName($n)); ?></a>
+        <a class="btn sms-tab <?php echo (int) $n['id'] === $nid ? 'btn-primary' : 'btn-secondary'; ?>" href="<?php echo $h($link((int) $n['id'])); ?>"><?php echo $h($numberName($n)); ?><?php if (($unread[(int) $n['id']] ?? 0) > 0): ?><span class="sms-tab-count" title="Unread"><?php echo $unread[(int) $n['id']] > 99 ? '99+' : (int) $unread[(int) $n['id']]; ?></span><?php endif; ?></a>
     <?php endforeach; ?>
 </div>
 <?php endif; ?>
@@ -197,7 +200,9 @@ echo uiPageHeader('fas fa-comment-sms', 'Messages');
         const now = document.getElementById(id), fresh = doc.getElementById(id);
         if (now && fresh) { now.innerHTML = fresh.innerHTML; }
     };
-    setInterval(function () {
+    const timer = setInterval(function () {
+        // Left the page (the portal swaps pages without reloading): stop asking.
+        if (!document.getElementById('smsThreads')) { clearInterval(timer); return; }
         if (document.hidden) { return; }
         const body = new URLSearchParams({ csrf_token: <?php echo json_encode($csrf_token); ?>, sms_action: 'poll' });
         fetch(location.href, { method: 'POST', body: body, credentials: 'same-origin' })
@@ -208,8 +213,10 @@ echo uiPageHeader('fas fa-comment-sms', 'Messages');
                 return fetch(location.href, { credentials: 'same-origin' }).then((r) => r.text()).then((html) => {
                     const doc = new DOMParser().parseFromString(html, 'text/html');
                     const atEnd = !box || box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+                    swap(doc, 'smsTabs');
                     swap(doc, 'smsThreads');
                     swap(doc, 'smsMsgs');
+                    if (window.refreshNavCounts) { window.refreshNavCounts(); }
                     if (box && atEnd) { box.scrollTop = box.scrollHeight; }
                 });
             })

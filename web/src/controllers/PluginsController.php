@@ -148,6 +148,10 @@ class PluginsController extends BaseController
             static::renderPage('errors/404', [], ['title' => '404']);
             return;
         }
+        if (!static::isPost() && isset($_GET['badge'])) {
+            // The menu refreshes its count (unread texts) without loading the page.
+            static::json(['count' => PluginManager::userBadge($slug, $user)]);
+        }
         $settings = PluginManager::getAllSettings($slug, false);
         $message = $error = '';
         if (static::isPost() && is_file($dir . '/user/action.php')) {
