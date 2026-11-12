@@ -216,6 +216,17 @@ function buildTrunkCallerIdLine($trunk_entry, $is_internal) {
 }
 
 /**
+ * The caller-side transfer option (T) of a Dial or Queue: on for calls placed by people on the PBX,
+ * off for a website visitor (widget calls carry __AIPBX_WIDGET=1). With T a visitor could press #
+ * and blind-transfer whoever answered to any extension or outside number the call's dialplan
+ * reaches (a forward or an outbound route reaches all of them). The callee's own t stays.
+ */
+function callerXferOpt(): string
+{
+    return '${IF($["${AIPBX_WIDGET}" = "1"]?:T)}';
+}
+
+/**
  * The jitter buffer line before a Dial (PBX settings → Tuning): nothing when
  * switched off, Asterisk's defaults unless a size was changed, and never for
  * a fax (it reshapes the modem's timing).

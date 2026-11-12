@@ -131,12 +131,12 @@ function __syncGeneralDialplanBody() {
                     if ($bg_strategy === 'sequential') {
                         $sec_step = max(5, intval($bg_timeout / max(1, count($sec_channels))));
                         foreach ($sec_channels as $sc) {
-                            $conf .= " same => n,Dial({$sc},{$sec_step},tT)\n";
+                            $conf .= " same => n,Dial({$sc},{$sec_step},t" . callerXferOpt() . ")\n";
                             $conf .= " same => n,GotoIf(\$[\"\${DIALSTATUS}\" = \"ANSWER\"]?sec_ans_{$ext})\n";
                         }
                     } else {
                         $sec_dial_str = implode('&', $sec_channels);
-                        $conf .= " same => n,Dial({$sec_dial_str},{$bg_timeout},tT)\n";
+                        $conf .= " same => n,Dial({$sec_dial_str},{$bg_timeout},t" . callerXferOpt() . ")\n";
                         $conf .= " same => n,GotoIf(\$[\"\${DIALSTATUS}\" = \"ANSWER\"]?sec_ans_{$ext})\n";
                     }
                     $conf .= " same => n,Set(__SKIP_VM=0)\n";
@@ -161,7 +161,7 @@ function __syncGeneralDialplanBody() {
         $conf .= " same => n,Set(DIAL_CONTACTS=\${C_SIP}\${IF(\$[\"\${C_SIP}\" != \"\" & \"\${C_WEB}\" != \"\"]?&)}\${C_WEB})\n";
         $conf .= " same => n,Set(DIAL_CONTACTS=\${DIAL_CONTACTS}\${IF(\$[\"\${DIAL_CONTACTS}\" != \"\" & \"\${C_MOB}\" != \"\"]?&)}\${C_MOB})\n";
         $conf .= " same => n,GotoIf(\$[\"\${DIAL_CONTACTS}\" = \"\"]?unavail)\n";
-        $conf .= " same => n,Dial(\${DIAL_CONTACTS},{$internal_dial_timeout},tT)\n";
+        $conf .= " same => n,Dial(\${DIAL_CONTACTS},{$internal_dial_timeout},t" . callerXferOpt() . ")\n";
         $conf .= " same => n,Hangup()\n";
         $conf .= " same => n(unavail),NoOp(No registered contacts for \${EXTEN})\n";
         $conf .= " same => n,Hangup()\n";

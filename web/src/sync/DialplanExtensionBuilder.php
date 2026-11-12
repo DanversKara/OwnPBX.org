@@ -257,7 +257,7 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
     if (($jb = rtrim(jitterBufferLine())) !== '') {
         $lines[] = $jb;
     }
-    $lines[] = " same => n,Dial(\${DIAL_CONTACTS},{$dialTimeout},tTb(sub-callee-jb^s^1))";
+    $lines[] = " same => n,Dial(\${DIAL_CONTACTS},{$dialTimeout},t" . callerXferOpt() . "b(sub-callee-jb^s^1))";
 
     // 5. Post-Dial status routing
     $lines[] = " same => n,GotoIf(\$[\"\${DIALSTATUS}\" = \"BUSY\"]?lbl_busy_{$lbl})";

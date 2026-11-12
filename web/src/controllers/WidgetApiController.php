@@ -19,6 +19,11 @@ class WidgetApiController
         $action = trim(substr($path, strlen('/widget-api')), '/');
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
         $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+        // Browsers send no Origin on a same-origin GET (the portal's own "Try it" page): the
+        // browser's Sec-Fetch-Site says it came from this very site, so that site is the origin.
+        if ($origin === '' && ($_SERVER['HTTP_SEC_FETCH_SITE'] ?? '') === 'same-origin' && !empty($_SERVER['HTTP_HOST'])) {
+            $origin = 'https://' . (string) $_SERVER['HTTP_HOST'];
+        }
         $ip = getClientIP();
         $ua = (string) ($_SERVER['HTTP_USER_AGENT'] ?? '');
         $publicId = (string) ($_GET['w'] ?? $_POST['w'] ?? '');

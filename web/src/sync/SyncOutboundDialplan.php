@@ -233,7 +233,7 @@ function __syncOutboundDialplanBody() {
                 $conf .= " same => n,Gosub(sub-guest-gate,s,1(\${AIPBX_TRUNK_DIAL},\${EXTEN}))\n";
                 // Billing (plugin): minutes left; refuses at none, sets BILL_OPT=L(...) to cut the call off.
                 $conf .= " same => n,Gosub(sub-billing-gate,s,1(\${AIPBX_TRUNK_DIAL}))\n";
-                $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$t['trunk_name']},{$external_dial_timeout},Tb(sub-callee-jb^s^1)\${BILL_OPT})\n";
+                $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$t['trunk_name']},{$external_dial_timeout}," . callerXferOpt() . "b(sub-callee-jb^s^1)\${BILL_OPT})\n";
                 if ($limited) {
                     $conf .= " same => n,Goto(afterdial{$step})\n";
                     $conf .= " same => n(trunkfull{$step}),NoOp(Trunk {$t['trunk_name']} over its limit: \${TRUNK_LIMIT})\n";
@@ -291,7 +291,7 @@ function __syncOutboundDialplanBody() {
                 $conf .= " same => n,Gosub(sub-guest-gate,s,1(\${AIPBX_TRUNK_DIAL},\${EXTEN}))\n";
                 // Billing (plugin): minutes left; refuses at none, sets BILL_OPT=L(...) to cut the call off.
                 $conf .= " same => n,Gosub(sub-billing-gate,s,1(\${AIPBX_TRUNK_DIAL}))\n";
-                $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$fallback_trunk},{$external_dial_timeout},T\${BILL_OPT})\n";
+                $conf .= " same => n,Dial(PJSIP/\${AIPBX_TRUNK_DIAL}@{$fallback_trunk},{$external_dial_timeout}," . callerXferOpt() . "\${BILL_OPT})\n";
                 $conf .= " same => n,Goto(sub-outbound-status,\${IF($[\"\${DIALSTATUS}\" != \"\"]?\${DIALSTATUS}:NOANSWER)},1)\n";
                 $conf .= " same => n(refused),Goto(sub-outbound-status,CONGESTION,1)\n\n";
             }

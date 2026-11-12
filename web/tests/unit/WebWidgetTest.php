@@ -295,7 +295,48 @@ final class WebWidgetTest extends TestCase
     public function testPublicConfigHasNoSecrets(): void
     {
         $cfg = WebWidgetService::publicConfig($this->widget());
-        $this->assertSame(['call', 'callback', 'button_text', 'color', 'position', 'language', 'ask_name', 'max_seconds', 'jssip'], array_keys($cfg));
+        $this->assertSame(['call', 'callback', 'button_text', 'color', 'position', 'language', 'ask_name', 'layout', 'controls', 'max_seconds', 'jssip'], array_keys($cfg));
         $this->assertSame('https://pbx.test.example/assets/js/jssip.min.js', $cfg['jssip']);
+    }
+
+    public function testLayoutAndControlsAreCleanedAndSaved(): void
+    {
+        $w = $this->widget([
+            'layout_mode' => 'inline', 'layout_offset_x' => '9999', 'layout_shape' => 'evil',
+            'layout_show_icon' => '0', 'layout_text_color' => 'red;}', 'layout_title' => '<b>Hi</b>',
+            'ctl_mute' => '0', 'ctl_hold' => '1', 'ctl_keypad_keys' => 'all', 'ctl_name' => 'required',
+        ]);
+        $layout = WebWidgetService::layout($w);
+        $this->assertSame('inline', $layout['mode']);
+        $this->assertSame(400, $layout['offset_x']);
+        $this->assertSame('pill', $layout['shape']);
+        $this->assertFalse($layout['show_icon']);
+        $this->assertSame('#ffffff', $layout['text_color']);
+        $this->assertStringNotContainsString('<', $layout['title']);
+        $controls = WebWidgetService::controls($w);
+        $this->assertFalse($controls['mute']);
+        $this->assertTrue($controls['hold']);
+        $this->assertSame('all', $controls['keypad_keys']);
+        $this->assertSame('required', $controls['name']);
+        $this->assertSame(1, (int) $w['ask_name']);
+        // In the page: the code carries the box the widget goes in.
+        $this->assertStringContainsString('<div id="ownpbx-call-' . $w['public_id'] . '"></div>', WebWidgetService::embedCode($w));
+        // A widget saved before the builder existed gets the defaults (and its old name setting).
+        $this->assertSame('floating', WebWidgetService::layout(['layout_json' => null])['mode']);
+        $this->assertSame('optional', WebWidgetService::controls(['controls_json' => null, 'ask_name' => 1])['name']);
+    }
+
+    public function testVisitorLegCannotTransfer(): void
+    {
+        $w = $this->widget();
+        $pjsip = buildWidgetPjsipConf([$w]);
+        $dialplan = buildWidgetDialplan([$w]);
+        $this->assertStringContainsString('allow_transfer=no', $pjsip);
+        $this->assertStringContainsString('send_connected_line=no', $pjsip);
+        $this->assertStringContainsString('trust_id_inbound=no', $pjsip);
+        $this->assertStringContainsString('Set(__AIPBX_WIDGET=1)', $dialplan);
+        $this->assertStringContainsString('Set(TRANSFER_CONTEXT=widget-no-transfer)', $dialplan);
+        // Everywhere else a caller may transfer, but not a widget's visitor.
+        $this->assertSame('${IF($["${AIPBX_WIDGET}" = "1"]?:T)}', callerXferOpt());
     }
 }

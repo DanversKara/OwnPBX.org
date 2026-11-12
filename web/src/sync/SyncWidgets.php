@@ -75,6 +75,15 @@ function buildWidgetPjsipConf(array $widgets): string {
         $conf .= "transport=transport-ws\n";
         $conf .= "identify_by=auth_username,username\n";
         $conf .= "dtmf_mode=rfc4733\n";
+        // A website visitor never transfers (SIP REFER) and is never told who answered or
+        // where the call was forwarded (connected-line updates, PAI/RPID).
+        $conf .= "allow_transfer=no\n";
+        $conf .= "send_connected_line=no\n";
+        $conf .= "send_pai=no\n";
+        $conf .= "send_rpid=no\n";
+        $conf .= "trust_id_inbound=no\n";
+        $conf .= "trust_id_outbound=no\n";
+        $conf .= "allow_subscribe=no\n";
         $conf .= "rtp_timeout=30\n";
         $conf .= "rtp_timeout_hold=300\n";
         $conf .= "webrtc=yes\n";
@@ -130,7 +139,8 @@ function buildWidgetDialplan(array $widgets): string {
             $conf .= " same => n,Set(WIDGET_RES=\${SHELL(/usr/local/bin/widget_claim.php {$id} \${FILTER(0-9a-f,\${EXTEN:1})})})\n";
             $conf .= " same => n,GotoIf(\$[\"\${CUT(WIDGET_RES,|,1)}\" != \"OK\"]?deny)\n";
             $conf .= " same => n,Set(CALLERID(num)={$number})\n";
-            $conf .= " same => n,Set(CALLERID(name)=\${IF(\$[\"\${CUT(WIDGET_RES,|,2)}\" != \"\"]?\${CUT(WIDGET_RES,|,2)}:{$name})})\n";
+            // A typed name is marked "(web)" so a visitor cannot pass for a colleague.
+            $conf .= " same => n,Set(CALLERID(name)=\${IF(\$[\"\${CUT(WIDGET_RES,|,2)}\" != \"\"]?\${CUT(WIDGET_RES,|,2)} (web):{$name})})\n";
             $conf .= " same => n,Goto(widget-{$id}-route,s,1)\n";
             $conf .= " same => n(deny),NoOp(Web widget {$id}: refused \${WIDGET_RES})\n";
             $conf .= " same => n,Hangup(21)\n\n";
@@ -142,6 +152,10 @@ function buildWidgetDialplan(array $widgets): string {
         // 2. Routing shared by browser calls and answered call-backs.
         $conf .= "[widget-{$id}-route]\n";
         $conf .= "exten => s,1,NoOp(Web widget {$id}: {$name})\n";
+        // Website caller: no caller-side transfer anywhere this call goes (callerXferOpt()
+        // reads the inherited tag), and a transfer started from this leg finds nothing.
+        $conf .= " same => n,Set(__AIPBX_WIDGET=1)\n";
+        $conf .= " same => n,Set(TRANSFER_CONTEXT=widget-no-transfer)\n";
         $conf .= " same => n,Set(GROUP(aipbx_widget)=w{$id})\n";
         $conf .= " same => n,GotoIf(\$[\${GROUP_COUNT(w{$id}@aipbx_widget)} > {$max}]?widget_busy)\n";
         $conf .= " same => n,Set(TIMEOUT(absolute)={$seconds})\n";
@@ -179,6 +193,12 @@ function buildWidgetDialplan(array $widgets): string {
             $conf .= " same => n,Goto(widget-{$id}-route,s,1)\n\n";
         }
     }
+
+    // Transfers started by a website caller look numbers up here: nothing a keypad can dial
+    // exists, so the transfer fails and the call goes on (a matching extension would send the
+    // person who answered there).
+    $conf .= "[widget-no-transfer]\n";
+    $conf .= "exten => no-transfer,1,Hangup()\n\n";
 
     if ($widgets === []) {
         $conf .= "; No active widgets\n";

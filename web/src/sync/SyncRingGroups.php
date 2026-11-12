@@ -89,7 +89,7 @@ function __syncRingGroupsBody() {
         } elseif ($strategy === 'sequential') {
             $step_timeout = max(5, intval($timeout / max(1, count($channels))));
             foreach ($channels as $idx => $chan) {
-                $conf .= " same => n,Dial({$chan},{$step_timeout},tT)\n";
+                $conf .= " same => n,Dial({$chan},{$step_timeout},t" . callerXferOpt() . ")\n";
                 $conf .= " same => n,GotoIf(\$[\"\${DIALSTATUS}\" = \"ANSWER\"]?rg_done_{$id})\n";
             }
         } elseif ($strategy === 'random' && count($channels) > 1) {
@@ -105,7 +105,7 @@ function __syncRingGroupsBody() {
             }
             foreach ($channels as $idx => $chan) {
                 $pick = $idx + 1;
-                $conf .= " same => n(rg_rand_{$id}_{$pick}),Dial({$chan},{$timeout},tT)\n";
+                $conf .= " same => n(rg_rand_{$id}_{$pick}),Dial({$chan},{$timeout},t" . callerXferOpt() . ")\n";
                 $conf .= " same => n,GotoIf(\$[\"\${DIALSTATUS}\" = \"ANSWER\"]?rg_done_{$id})\n";
                 $conf .= " same => n,Goto(rg_missed_{$id})\n";
             }
@@ -113,7 +113,7 @@ function __syncRingGroupsBody() {
         } else {
             // 'ringall' (default: ring all targets at the same time)
             $dial_str = implode('&', $channels);
-            $conf .= " same => n,Dial({$dial_str},{$timeout},tT)\n";
+            $conf .= " same => n,Dial({$dial_str},{$timeout},t" . callerXferOpt() . ")\n";
             $conf .= " same => n,GotoIf(\$[\"\${DIALSTATUS}\" = \"ANSWER\"]?rg_done_{$id})\n";
         }
 

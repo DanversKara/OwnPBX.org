@@ -44,6 +44,30 @@ class WebWidgetService
 
     public const POSITIONS = ['right', 'left'];
 
+    /**
+     * How the widget looks (Web widgets -> Look & layout). widget.js has the same defaults.
+     * mode: floating button or a card in the page; vertical/offsets: where the button sits;
+     * size/shape: the button; panel_width/radius/theme: the call panel; delay: seconds before
+     * the button appears.
+     */
+    public const LAYOUT_DEFAULTS = [
+        'mode' => 'floating', 'vertical' => 'bottom', 'offset_x' => 20, 'offset_y' => 20,
+        'size' => 'medium', 'shape' => 'pill', 'show_icon' => true, 'show_text' => true,
+        'text_color' => '#ffffff', 'panel_width' => 320, 'radius' => 16, 'theme' => 'light',
+        'title' => '', 'greeting' => '', 'show_on_mobile' => true, 'delay' => 0,
+    ];
+
+    /**
+     * What a visitor may do during a call (Web widgets -> Visitor controls). Transferring the call,
+     * adding people, recording, video and seeing who answered are never offered: a website visitor
+     * is a stranger (see docs/web-widgets.md, "What visitors can and cannot do").
+     * keypad_keys: 'digits' (0-9, for menus) or 'all' (also * and #). name: off/optional/required.
+     */
+    public const CONTROLS_DEFAULTS = [
+        'mute' => true, 'keypad' => true, 'keypad_keys' => 'digits', 'hold' => false,
+        'volume' => false, 'timer' => true, 'name' => 'off',
+    ];
+
     /** Seconds a call token stays valid after the click. */
     public const TOKEN_TTL = 300;
 
@@ -219,8 +243,89 @@ class WebWidgetService
             'color' => $color,
             'position' => $position,
             'language' => $language,
-            'ask_name' => !empty($d['ask_name']) ? 1 : 0,
+            'ask_name' => in_array((string) ($d['ctl_name'] ?? ''), ['optional', 'required'], true) ? 1 : (!empty($d['ask_name']) ? 1 : 0),
+            'layout_json' => (string) json_encode(self::cleanLayout(self::prefixed($d, 'layout_'))),
+            'controls_json' => (string) json_encode(self::cleanControls(self::prefixed($d, 'ctl_'), $d)),
         ];
+    }
+
+    /** Form fields that start with $prefix, without it (layout_size -> size). */
+    private static function prefixed(array $d, string $prefix): array
+    {
+        $out = [];
+        foreach ($d as $k => $v) {
+            if (is_string($k) && str_starts_with($k, $prefix)) {
+                $out[substr($k, strlen($prefix))] = $v;
+            }
+        }
+        return $out;
+    }
+
+    /** A checkbox in the form (hidden 0 + box 1) or a stored boolean. */
+    private static function flag(array $in, string $k, bool $default): bool
+    {
+        if (!array_key_exists($k, $in)) {
+            return $default;
+        }
+        $v = $in[$k];
+        return is_bool($v) ? $v : in_array((string) $v, ['1', 'true', 'on', 'yes'], true);
+    }
+
+    /** Only known keys, each checked: what comes back is safe to hand to any website. */
+    public static function cleanLayout(array $in): array
+    {
+        $D = self::LAYOUT_DEFAULTS;
+        $pick = static fn(string $k, array $allowed) => in_array((string) ($in[$k] ?? ''), $allowed, true) ? (string) $in[$k] : $D[$k];
+        $num = static fn(string $k, int $min, int $max): int => array_key_exists($k, $in) && is_numeric($in[$k]) ? max($min, min($max, (int) $in[$k])) : $D[$k];
+        $text = static fn(string $k, int $len): string => mb_substr(trim(preg_replace('/[\x00-\x1F\x7F<>]/u', '', (string) ($in[$k] ?? '')) ?? ''), 0, $len);
+        $color = strtolower(trim((string) ($in['text_color'] ?? '')));
+        return [
+            'mode' => $pick('mode', ['floating', 'inline']),
+            'vertical' => $pick('vertical', ['bottom', 'top']),
+            'offset_x' => $num('offset_x', 0, 400),
+            'offset_y' => $num('offset_y', 0, 400),
+            'size' => $pick('size', ['small', 'medium', 'large']),
+            'shape' => $pick('shape', ['pill', 'square', 'round']),
+            'show_icon' => self::flag($in, 'show_icon', $D['show_icon']),
+            'show_text' => self::flag($in, 'show_text', $D['show_text']),
+            'text_color' => preg_match('/^#[0-9a-f]{6}$/', $color) ? $color : $D['text_color'],
+            'panel_width' => $num('panel_width', 240, 560),
+            'radius' => $num('radius', 0, 32),
+            'theme' => $pick('theme', ['light', 'dark', 'auto']),
+            'title' => $text('title', 60),
+            'greeting' => $text('greeting', 200),
+            'show_on_mobile' => self::flag($in, 'show_on_mobile', $D['show_on_mobile']),
+            'delay' => $num('delay', 0, 60),
+        ];
+    }
+
+    public static function cleanControls(array $in, array $legacy = []): array
+    {
+        $D = self::CONTROLS_DEFAULTS;
+        $name = in_array((string) ($in['name'] ?? ''), ['off', 'optional', 'required'], true)
+            ? (string) $in['name'] : (!empty($legacy['ask_name']) ? 'optional' : $D['name']);
+        return [
+            'mute' => self::flag($in, 'mute', $D['mute']),
+            'keypad' => self::flag($in, 'keypad', $D['keypad']),
+            'keypad_keys' => in_array((string) ($in['keypad_keys'] ?? ''), ['digits', 'all'], true) ? (string) $in['keypad_keys'] : $D['keypad_keys'],
+            'hold' => self::flag($in, 'hold', $D['hold']),
+            'volume' => self::flag($in, 'volume', $D['volume']),
+            'timer' => self::flag($in, 'timer', $D['timer']),
+            'name' => $name,
+        ];
+    }
+
+    /** The stored layout with defaults for anything missing (widgets made before the builder). */
+    public static function layout(array $w): array
+    {
+        $j = json_decode((string) ($w['layout_json'] ?? ''), true);
+        return self::cleanLayout(is_array($j) ? $j : []);
+    }
+
+    public static function controls(array $w): array
+    {
+        $j = json_decode((string) ($w['controls_json'] ?? ''), true);
+        return self::cleanControls(is_array($j) ? $j : [], $w);
     }
 
     public static function deleteWidget(int $id, string $csrf): array
@@ -254,8 +359,14 @@ class WebWidgetService
     /** The one line the website owner pastes into their pages. */
     public static function embedCode(array $w): string
     {
-        return '<script src="' . ForgotPasswordService::portalUrl() . '/widget.js" data-widget="'
-            . $w['public_id'] . '" async></script>';
+        $src = ForgotPasswordService::portalUrl() . '/widget.js';
+        if (self::layout($w)['mode'] === 'inline') {
+            // In the page: the card goes into this element, wherever the site places it.
+            $box = 'ownpbx-call-' . $w['public_id'];
+            return '<div id="' . $box . '"></div>' . "\n"
+                . '<script src="' . $src . '" data-widget="' . $w['public_id'] . '" data-target="#' . $box . '" async></script>';
+        }
+        return '<script src="' . $src . '" data-widget="' . $w['public_id'] . '" async></script>';
     }
 
     public static function recentSessions(int $limit = 50): array
@@ -318,6 +429,8 @@ class WebWidgetService
             'position' => (string) $w['position'],
             'language' => (string) $w['language'],
             'ask_name' => (int) $w['ask_name'] === 1,
+            'layout' => self::layout($w),
+            'controls' => self::controls($w),
             'max_seconds' => (int) $w['max_call_seconds'],
             'jssip' => ForgotPasswordService::portalUrl() . '/assets/js/jssip.min.js',
         ];

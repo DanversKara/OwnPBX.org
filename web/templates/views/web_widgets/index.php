@@ -148,7 +148,7 @@ $resultBadges = [
 <?php if ($canEdit): ?>
 <!-- Modal: add / edit widget -->
 <div class="modal-overlay" id="widgetModal">
-    <div class="modal-card u-maxw-720">
+    <div class="modal-card u-maxw-720 web-widgets-modal">
         <div class="modal-header">
             <h3 class="u-title" id="widgetModalTitle"><i class="fas fa-headset u-primary"></i> <?php echo t('web_widgets.add'); ?></h3>
             <button class="btn btn-icon btn-secondary u-btn-pad" onclick="UIHelper.closeOverlayModal('widgetModal')"><i class="fas fa-times"></i></button>
@@ -245,32 +245,146 @@ $resultBadges = [
                 </div>
 
                 <h4 class="web-widgets-section"><?php echo t('web_widgets.section_look'); ?></h4>
-                <div class="web-widgets-limits">
-                    <div class="form-group">
-                        <label class="form-label"><?php echo t('web_widgets.button_text'); ?></label>
-                        <input type="text" name="button_text" id="widget_button_text" class="form-control" maxlength="60" placeholder="<?php echo t('web_widgets.button_text_ph'); ?>">
+                <div class="web-widgets-builder">
+                    <div class="web-widgets-builder-fields">
+                        <div class="web-widgets-limits">
+                            <div class="form-group">
+                                <label class="form-label">Where</label>
+                                <select name="layout_mode" id="widget_layout_mode" class="form-control ww-live">
+                                    <option value="floating">Floating button</option>
+                                    <option value="inline">In the page (a card)</option>
+                                </select>
+                            </div>
+                            <div class="form-group ww-floating">
+                                <label class="form-label"><?php echo t('web_widgets.position'); ?></label>
+                                <select name="position" id="widget_position" class="form-control ww-live">
+                                    <option value="right"><?php echo t('web_widgets.position_right'); ?></option>
+                                    <option value="left"><?php echo t('web_widgets.position_left'); ?></option>
+                                </select>
+                            </div>
+                            <div class="form-group ww-floating">
+                                <label class="form-label">Top or bottom</label>
+                                <select name="layout_vertical" id="widget_layout_vertical" class="form-control ww-live">
+                                    <option value="bottom">Bottom</option>
+                                    <option value="top">Top</option>
+                                </select>
+                            </div>
+                            <div class="form-group ww-floating">
+                                <label class="form-label">From the side (px)</label>
+                                <input type="number" name="layout_offset_x" id="widget_layout_offset_x" class="form-control ww-live" min="0" max="400">
+                            </div>
+                            <div class="form-group ww-floating">
+                                <label class="form-label">From the edge (px)</label>
+                                <input type="number" name="layout_offset_y" id="widget_layout_offset_y" class="form-control ww-live" min="0" max="400">
+                            </div>
+                            <div class="form-group ww-floating">
+                                <label class="form-label">Button size</label>
+                                <select name="layout_size" id="widget_layout_size" class="form-control ww-live">
+                                    <option value="small">Small</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="large">Large</option>
+                                </select>
+                            </div>
+                            <div class="form-group ww-floating">
+                                <label class="form-label">Button shape</label>
+                                <select name="layout_shape" id="widget_layout_shape" class="form-control ww-live">
+                                    <option value="pill">Pill</option>
+                                    <option value="square">Rounded square</option>
+                                    <option value="round">Round (icon only)</option>
+                                </select>
+                            </div>
+                            <div class="form-group ww-floating">
+                                <label class="form-label"><?php echo t('web_widgets.button_text'); ?></label>
+                                <input type="text" name="button_text" id="widget_button_text" class="form-control ww-live" maxlength="60" placeholder="<?php echo t('web_widgets.button_text_ph'); ?>">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><?php echo t('web_widgets.color'); ?></label>
+                                <input type="color" name="color" id="widget_color" class="form-control ww-live">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Text colour</label>
+                                <input type="color" name="layout_text_color" id="widget_layout_text_color" class="form-control ww-live">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Panel width (px)</label>
+                                <input type="number" name="layout_panel_width" id="widget_layout_panel_width" class="form-control ww-live" min="240" max="560" step="10">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Corner rounding (px)</label>
+                                <input type="number" name="layout_radius" id="widget_layout_radius" class="form-control ww-live" min="0" max="32">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Theme</label>
+                                <select name="layout_theme" id="widget_layout_theme" class="form-control ww-live">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                    <option value="auto">Follow the visitor (light/dark)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label"><?php echo t('web_widgets.language'); ?></label>
+                                <select name="language" id="widget_language" class="form-control ww-live">
+                                    <?php foreach (WebWidgetService::LANGUAGES as $code): ?>
+                                        <option value="<?php echo $code; ?>"><?php echo htmlspecialchars(UI_LANGUAGES[$code] ?? $code); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="form-group ww-floating">
+                                <label class="form-label">Show after (seconds)</label>
+                                <input type="number" name="layout_delay" id="widget_layout_delay" class="form-control ww-live" min="0" max="60">
+                            </div>
+                        </div>
+                        <div class="u-grid-2">
+                            <div class="form-group">
+                                <label class="form-label">Panel title <span class="text-muted">(empty: "Talk to us")</span></label>
+                                <input type="text" name="layout_title" id="widget_layout_title" class="form-control ww-live" maxlength="60">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Message above the button <span class="text-muted">(empty: the standard hint)</span></label>
+                                <input type="text" name="layout_greeting" id="widget_layout_greeting" class="form-control ww-live" maxlength="200">
+                            </div>
+                        </div>
+                        <div class="u-flex-gap u-wrap">
+                            <label class="u-check-label-6 ww-floating"><input type="hidden" name="layout_show_icon" value="0"><input type="checkbox" name="layout_show_icon" id="widget_layout_show_icon" value="1" class="u-accent ww-live"> Phone icon on the button</label>
+                            <label class="u-check-label-6 ww-floating"><input type="hidden" name="layout_show_text" value="0"><input type="checkbox" name="layout_show_text" id="widget_layout_show_text" value="1" class="u-accent ww-live"> Text on the button</label>
+                            <label class="u-check-label-6"><input type="hidden" name="layout_show_on_mobile" value="0"><input type="checkbox" name="layout_show_on_mobile" id="widget_layout_show_on_mobile" value="1" class="u-accent ww-live"> Show on phones</label>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label class="form-label"><?php echo t('web_widgets.color'); ?></label>
-                        <input type="color" name="color" id="widget_color" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><?php echo t('web_widgets.position'); ?></label>
-                        <select name="position" id="widget_position" class="form-control">
-                            <option value="right"><?php echo t('web_widgets.position_right'); ?></option>
-                            <option value="left"><?php echo t('web_widgets.position_left'); ?></option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label"><?php echo t('web_widgets.language'); ?></label>
-                        <select name="language" id="widget_language" class="form-control">
-                            <?php foreach (WebWidgetService::LANGUAGES as $code): ?>
-                                <option value="<?php echo $code; ?>"><?php echo htmlspecialchars(UI_LANGUAGES[$code] ?? $code); ?></option>
-                            <?php endforeach; ?>
-                        </select>
+                    <div class="web-widgets-preview">
+                        <div class="text-muted u-fs-11 u-mb-4">Live preview (calls are not placed here)</div>
+                        <iframe id="widgetPreview" title="Widget preview" sandbox="allow-scripts allow-same-origin" src="about:blank"></iframe>
                     </div>
                 </div>
-                <label class="u-check-label-6"><input type="checkbox" name="ask_name" id="widget_ask_name" value="1" class="u-accent"> <?php echo t('web_widgets.ask_name'); ?></label>
+
+                <h4 class="web-widgets-section">Visitor controls during a call</h4>
+                <div class="u-flex-gap u-wrap">
+                    <label class="u-check-label-6"><input type="hidden" name="ctl_mute" value="0"><input type="checkbox" name="ctl_mute" id="widget_ctl_mute" value="1" class="u-accent ww-live"> Mute</label>
+                    <label class="u-check-label-6"><input type="hidden" name="ctl_hold" value="0"><input type="checkbox" name="ctl_hold" id="widget_ctl_hold" value="1" class="u-accent ww-live"> Hold</label>
+                    <label class="u-check-label-6"><input type="hidden" name="ctl_volume" value="0"><input type="checkbox" name="ctl_volume" id="widget_ctl_volume" value="1" class="u-accent ww-live"> Volume slider</label>
+                    <label class="u-check-label-6"><input type="hidden" name="ctl_timer" value="0"><input type="checkbox" name="ctl_timer" id="widget_ctl_timer" value="1" class="u-accent ww-live"> Call timer</label>
+                    <label class="u-check-label-6"><input type="hidden" name="ctl_keypad" value="0"><input type="checkbox" name="ctl_keypad" id="widget_ctl_keypad" value="1" class="u-accent ww-live"> Keypad</label>
+                </div>
+                <div class="u-grid-2 u-mt-10">
+                    <div class="form-group">
+                        <label class="form-label">Keypad keys</label>
+                        <select name="ctl_keypad_keys" id="widget_ctl_keypad_keys" class="form-control ww-live">
+                            <option value="digits">0-9 only (enough for menus)</option>
+                            <option value="all">0-9, * and #</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Visitor's name</label>
+                        <select name="ctl_name" id="widget_ctl_name" class="form-control ww-live">
+                            <option value="off">Don't ask</option>
+                            <option value="optional">Ask (optional)</option>
+                            <option value="required">Ask (required)</option>
+                        </select>
+                        <div class="text-muted u-fs-11">Shown to you as the caller name, marked "(web)".</div>
+                    </div>
+                </div>
+                <div class="alert alert-info u-fs-12">
+                    <strong>Never available to website visitors</strong>, whatever is ticked: transferring the call (to an extension or an outside number), adding people / conference, call recording, video, star codes, and seeing who answered or where the call was forwarded. A visitor is a stranger: these would let them move your call to another number, run up your trunk, or learn your private numbers.
+                </div>
                 <label class="u-check-label-6"><input type="checkbox" name="is_active" id="widget_is_active" value="1" class="u-accent"> <?php echo t('web_widgets.is_active'); ?></label>
 
                 <?php echo uiModalFooter("UIHelper.closeOverlayModal('widgetModal')", t('common.save'), '', 'fa-save'); ?>

@@ -2,3 +2,12 @@
 
 .web-widgets-section { margin: 18px 0 8px; font-size: 13px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; }
 .web-widgets-limits { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+
+/* The editor is wider than the usual modal: settings on the left, live preview on the right. */
+.modal-card.web-widgets-modal:not(#u):not(#u) { max-width: 1100px; width: 96vw; }
+.web-widgets-builder { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+.web-widgets-preview { position: sticky; top: 0; }
+.web-widgets-preview iframe { display: block; width: 100%; height: 480px; border: 1px solid var(--border-color, #d0d5dd); border-radius: 10px; background: #f5f6f8; }
+@media (max-width: 900px) {
+    .web-widgets-builder { grid-template-columns: 1fr; }
+}

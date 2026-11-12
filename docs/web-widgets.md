@@ -39,10 +39,28 @@ route and a **daily limit are required**.
 | Max. call length | Seconds; the call is hung up after it |
 | Requests per IP per hour | Requests from one visitor address; more are refused (not logged) |
 | Calls per day | Connected calls and call-backs since midnight; 0 = no limit (only without an outside line) |
-| Look | Button text, colour, corner (bottom right / left), language (English, Turkish, German, French, Spanish), asking for the visitor's name (shown as the caller name) |
+| Look | Floating button or a card in the page; corner, distance from the edges, size, shape, icon and text, colours, panel width, rounding, light/dark theme, title, message, language, showing on phones, delay before showing. The live preview beside the settings shows the result as you change it (it never places calls) |
+| Visitor controls | What the visitor gets during a call: mute, hold, volume slider, call timer, keypad (digits only, or with `*` and `#`), and asking for their name (off, optional, required; shown to you with "(web)" after it) |
 
 Save, then press **Apply** (pending changes): the widget's WebRTC endpoint and dialplan are written
 then. **Switch off** (the power button) refuses new calls at once, before Apply.
+
+## What visitors can and cannot do
+
+A visitor is a stranger with a microphone, so the widget is locked down whatever is ticked:
+
+| Never possible | How |
+|----------------|-----|
+| Transfer the call (blind `#` or attended), to an extension or an outside number | The visitor's leg is dialled without the caller-transfer option (`T`) everywhere (extensions, ring groups, queues, follow-me, outbound routes) when `AIPBX_WIDGET=1` is set on the channel; any transfer lands in the empty `widget-no-transfer` context; the WebRTC endpoint refuses SIP REFER (`allow_transfer=no`) |
+| Star codes, voicemail of others, other extensions or outbound routes | The endpoint's context is `widget-<id>-route`, which only goes to the chosen destination |
+| See who answered, or the number a call was forwarded to (e.g. a mobile) | Connected-line, P-Asserted-Identity and Remote-Party-ID updates are not sent to the visitor (`send_connected_line=no`, `send_pai=no`, `send_rpid=no`, `trust_id_outbound=no`) |
+| Pretend to be someone (caller ID spoofing) | Identity headers from the browser are ignored (`trust_id_inbound=no`); the name they type is marked "(web)" |
+| Video, recording, conferencing, presence | Not offered by the endpoint (`allow_subscribe=no`, audio only) |
+| Run up costs | Max. concurrent calls, max. call length, per-IP and per-day limits, call-back number prefixes |
+
+The keypad sends 0-9 by default, which is enough for IVR menus; `*` and `#` can be allowed for
+menus that need them. Staff who answer keep their own transfer key (`t`), so they can still pass
+the visitor on.
 
 ## Putting it on a website
 
@@ -53,6 +71,11 @@ then. **Switch off** (the power button) refuses new calls at once, before Apply.
 ```
 
 Paste it before `</body>` on the website, and add the site to the widget's allowed websites.
+With **In the page** chosen, the code also has a `<div>`: the widget appears where the `<div>` is.
+
+The script does not slow the page: it is loaded `async`, starts only after the page has finished
+loading (and the browser is idle), keeps its settings for 5 minutes per visitor, and loads the
+phone library only when the visitor presses *Call*.
 **Try it** (▶) opens a page on the portal with the same code.
 
 **WordPress**: the plugin is in [`plugins/web-widgets/wordpress/aipbx-call-widget`](../plugins/web-widgets/wordpress/aipbx-call-widget).
