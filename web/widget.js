@@ -635,12 +635,21 @@
     }
 
     function start() {
+        // Show the remembered settings at once, but always ask the PBX too: a change made in
+        // Web Widgets (say, "in the page" instead of a floating button) shows on the next load.
         var c = cached();
         if (c) {
             apply(c);
-            return;
         }
         api('config', { w: WIDGET_ID }, 'GET').then(function (res) {
+            if (c && res && res.success && JSON.stringify(res) === JSON.stringify(c)) {
+                return;
+            }
+            if ((!res || !res.success || (!res.call && !res.callback)) && host && !session) {
+                host.remove(); // switched off or no longer allowed here since it was remembered
+                host = null;
+                try { sessionStorage.removeItem(CACHE_KEY); } catch (e) { /* storage off */ }
+            }
             if (!res || !res.success) {
                 warn('the PBX refused: ' + ((res && res.error) || 'unknown') + (res && res.error === 'not_found' ? ' (wrong widget id, or the widget is switched off)' : ''));
                 return;
