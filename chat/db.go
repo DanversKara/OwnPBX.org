@@ -74,6 +74,14 @@ type Message struct {
 	Status string `json:"status,omitempty"`
 	// Deleted by its sender: text and attachment are cleared (message_delete.go).
 	IsDeleted bool `json:"is_deleted,omitempty"`
+	// The message this one replies to (0 = not a reply): the quoted sender,
+	// text and type come from the replied-to row (see messageSelect).
+	ReplyTo         int64  `json:"reply_to,omitempty"`
+	ReplySenderExt  string `json:"reply_sender_ext,omitempty"`
+	ReplySenderName string `json:"reply_sender_name,omitempty"`
+	ReplyMessage    string `json:"reply_message,omitempty"`
+	ReplyMsgType    string `json:"reply_msg_type,omitempty"`
+	ReplyIsDeleted  bool   `json:"reply_is_deleted,omitempty"`
 }
 
 type Contact struct {
@@ -418,6 +426,91 @@ func GetOrCreateDirectConversation(ext1, ext2, creatorExt string) (*Conversation
 	return &cv, nil
 }
 
+// messageSelect loads one chat message with the message it replies to: the
+// quoted sender, text and type come from the replied-to row through the LEFT
+// JOIN, or stay empty when the message is not a reply. A deleted target keeps
+// its row, so the quote renders as deleted instead of vanishing.
+const messageSelect = `
+	SELECT m.id, m.conversation_id, m.sender_ext, COALESCE(u.full_name, u.username, m.sender_ext) AS sender_name,
+	       m.msg_type, COALESCE(m.message, ''), COALESCE(m.attachment_url, ''),
+	       COALESCE(m.file_name, ''), m.file_size, COALESCE(m.mime_type, ''),
+	       COALESCE(m.system_event, ''), COALESCE(m.system_meta, ''), m.created_at, m.is_deleted,
+	       COALESCE(m.reply_to, 0), COALESCE(q.sender_ext, ''),
+	       COALESCE(qu.full_name, qu.username, q.sender_ext, ''),
+	       COALESCE(q.message, ''), COALESCE(q.msg_type, ''), COALESCE(q.is_deleted, 0)
+	FROM chat_messages m
+	LEFT JOIN sys_users u ON u.extension = m.sender_ext
+	LEFT JOIN chat_messages q ON q.id = m.reply_to
+	LEFT JOIN sys_users qu ON qu.extension = q.sender_ext`
+
+// rowScanner is *sql.Row or *sql.Rows.
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
+// scanMessageRow reads one messageSelect row. A quoted picture, file or voice
+// message has no text of its own, so the quote shows the same label the
+// conversation preview uses for it (see SaveMessage).
+func scanMessageRow(row rowScanner) (Message, error) {
+	var m Message
+	var createdAt time.Time
+	var replyDeleted int
+	err := row.Scan(
+		&m.ID, &m.ConversationID, &m.SenderExt, &m.SenderName,
+		&m.MsgType, &m.Message, &m.AttachmentURL,
+		&m.FileName, &m.FileSize, &m.MimeType,
+		&m.SystemEvent, &m.SystemMeta, &createdAt, &m.IsDeleted,
+		&m.ReplyTo, &m.ReplySenderExt, &m.ReplySenderName,
+		&m.ReplyMessage, &m.ReplyMsgType, &replyDeleted,
+	)
+	if err != nil {
+		return m, err
+	}
+	m.CreatedAt = fmtTime(createdAt)
+	m.ReplyIsDeleted = replyDeleted != 0
+	if m.ReplyTo > 0 && !m.ReplyIsDeleted && m.ReplyMessage == "" {
+		switch m.ReplyMsgType {
+		case "image":
+			m.ReplyMessage = "📷 [Fotoğraf]"
+		case "file":
+			m.ReplyMessage = "📎 [Dosya]"
+		case "audio":
+			m.ReplyMessage = "🎤 [Ses Kaydı]"
+		}
+	}
+	return m, nil
+}
+
+// GetMessageByID loads one message with its quote, for the send path.
+func GetMessageByID(id int64) (*Message, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database not connected")
+	}
+	m, err := scanMessageRow(db.QueryRow(messageSelect+" WHERE m.id = ? LIMIT 1", id))
+	if err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+// ReplyTargetInConversation reports whether the message being replied to
+// exists in this conversation. A deleted target still counts: the quote
+// renders as deleted.
+func ReplyTargetInConversation(replyTo int64, convID int) (bool, error) {
+	if db == nil {
+		return false, fmt.Errorf("database not connected")
+	}
+	var one int
+	err := db.QueryRow("SELECT 1 FROM chat_messages WHERE id = ? AND conversation_id = ? LIMIT 1", replyTo, convID).Scan(&one)
+	if err == sql.ErrNoRows {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func GetMessages(convID int, limit int, beforeID int64) ([]Message, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
@@ -427,31 +520,17 @@ func GetMessages(convID int, limit int, beforeID int64) ([]Message, error) {
 	var err error
 
 	if beforeID > 0 {
-		query := `
-			SELECT m.id, m.conversation_id, m.sender_ext, COALESCE(u.full_name, u.username, m.sender_ext) AS sender_name,
-			       m.msg_type, COALESCE(m.message, ''), COALESCE(m.attachment_url, ''),
-			       COALESCE(m.file_name, ''), m.file_size, COALESCE(m.mime_type, ''),
-			       COALESCE(m.system_event, ''), COALESCE(m.system_meta, ''), m.created_at, m.is_deleted
-			FROM chat_messages m
-			LEFT JOIN sys_users u ON u.extension = m.sender_ext
+		rows, err = db.Query(messageSelect+`
 			WHERE m.conversation_id = ? AND m.id < ?
 			ORDER BY m.id DESC
 			LIMIT ?
-		`
-		rows, err = db.Query(query, convID, beforeID, limit)
+		`, convID, beforeID, limit)
 	} else {
-		query := `
-			SELECT m.id, m.conversation_id, m.sender_ext, COALESCE(u.full_name, u.username, m.sender_ext) AS sender_name,
-			       m.msg_type, COALESCE(m.message, ''), COALESCE(m.attachment_url, ''),
-			       COALESCE(m.file_name, ''), m.file_size, COALESCE(m.mime_type, ''),
-			       COALESCE(m.system_event, ''), COALESCE(m.system_meta, ''), m.created_at, m.is_deleted
-			FROM chat_messages m
-			LEFT JOIN sys_users u ON u.extension = m.sender_ext
+		rows, err = db.Query(messageSelect+`
 			WHERE m.conversation_id = ?
 			ORDER BY m.id DESC
 			LIMIT ?
-		`
-		rows, err = db.Query(query, convID, limit)
+		`, convID, limit)
 	}
 
 	if err != nil {
@@ -461,16 +540,8 @@ func GetMessages(convID int, limit int, beforeID int64) ([]Message, error) {
 
 	var list []Message
 	for rows.Next() {
-		var m Message
-		var createdAt time.Time
-		err := rows.Scan(
-			&m.ID, &m.ConversationID, &m.SenderExt, &m.SenderName,
-			&m.MsgType, &m.Message, &m.AttachmentURL,
-			&m.FileName, &m.FileSize, &m.MimeType,
-			&m.SystemEvent, &m.SystemMeta, &createdAt, &m.IsDeleted,
-		)
+		m, err := scanMessageRow(rows)
 		if err == nil {
-			m.CreatedAt = fmtTime(createdAt)
 			list = append(list, m)
 		}
 	}
@@ -483,7 +554,7 @@ func GetMessages(convID int, limit int, beforeID int64) ([]Message, error) {
 	return list, nil
 }
 
-func SaveMessage(convID int, senderExt, msgType, message, attachmentURL, fileName string, fileSize int, mimeType string) (*Message, error) {
+func SaveMessage(convID int, senderExt, msgType, message, attachmentURL, fileName string, fileSize int, mimeType string, replyTo int64) (*Message, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -491,9 +562,9 @@ func SaveMessage(convID int, senderExt, msgType, message, attachmentURL, fileNam
 	defer tx.Rollback()
 
 	res, err := tx.Exec(`
-		INSERT INTO chat_messages (conversation_id, sender_ext, msg_type, message, attachment_url, file_name, file_size, mime_type, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
-	`, convID, senderExt, msgType, message, attachmentURL, fileName, fileSize, mimeType)
+		INSERT INTO chat_messages (conversation_id, sender_ext, msg_type, message, attachment_url, file_name, file_size, mime_type, reply_to, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULLIF(?, 0), NOW())
+	`, convID, senderExt, msgType, message, attachmentURL, fileName, fileSize, mimeType, replyTo)
 	if err != nil {
 		return nil, err
 	}
@@ -536,6 +607,13 @@ func SaveMessage(convID int, senderExt, msgType, message, attachmentURL, fileNam
 
 	if err := tx.Commit(); err != nil {
 		return nil, err
+	}
+
+	// Reload with the quoted message (and the sender name) for the broadcast.
+	if reloaded, err := GetMessageByID(msgID); err == nil {
+		return reloaded, nil
+	} else {
+		log.Printf("[DB] GetMessageByID(%d) after save: %v", msgID, err)
 	}
 
 	senderName := senderExt

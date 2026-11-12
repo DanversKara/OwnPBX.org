@@ -337,6 +337,7 @@ type InMessage struct {
 	MimeType       string `json:"mime_type"`
 	LastMessageID  int64  `json:"last_message_id"`
 	MessageID      int64  `json:"message_id"`
+	ReplyTo        int64  `json:"reply_to"`
 	IsTyping       bool   `json:"is_typing"`
 	TargetExt      string `json:"target_ext"`
 	Active         *bool  `json:"active"`
@@ -471,7 +472,20 @@ func (h *Hub) SendMessage(user *User, in *InMessage) (*Message, *sendError) {
 		return nil, &sendError{http.StatusForbidden, "You may not send messages to this conversation."}
 	}
 
-	saved, err := SaveMessage(convID, user.Extension, msgType, textMsg, in.AttachmentURL, in.FileName, in.FileSize, in.MimeType)
+	// A reply must answer a message in this same conversation. A deleted
+	// target still counts: the quote renders as deleted.
+	if in.ReplyTo > 0 {
+		ok, err := ReplyTargetInConversation(in.ReplyTo, convID)
+		if err != nil {
+			log.Printf("[Hub] reply target check (conversation %d): %v", convID, err)
+			return nil, &sendError{http.StatusInternalServerError, "The message could not be saved."}
+		}
+		if !ok {
+			return nil, &sendError{http.StatusBadRequest, "You can only reply to a message in this conversation."}
+		}
+	}
+
+	saved, err := SaveMessage(convID, user.Extension, msgType, textMsg, in.AttachmentURL, in.FileName, in.FileSize, in.MimeType, in.ReplyTo)
 	if err != nil {
 		log.Printf("[Hub] message not saved (conversation %d): %v", convID, err)
 		return nil, &sendError{http.StatusInternalServerError, "The message could not be saved."}

@@ -149,7 +149,7 @@ func TestDeletedGroupIsClosed(t *testing.T) {
 
 	// The preview is cut at 250 characters; a byte cut inside "ş" failed the
 	// whole message under strict SQL mode.
-	if _, err := SaveMessage(conv.ID, a, "text", strings.Repeat("ş", 300), "", "", 0, ""); err != nil {
+	if _, err := SaveMessage(conv.ID, a, "text", strings.Repeat("ş", 300), "", "", 0, "", 0); err != nil {
 		t.Fatalf("a long Turkish message must be stored: %v", err)
 	}
 

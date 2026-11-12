@@ -128,7 +128,7 @@ func TestDeleteMessageEndToEnd(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	msg, err := SaveMessage(convID, a, "image", "caption", url, "photo.jpg", 3, "image/jpeg")
+	msg, err := SaveMessage(convID, a, "image", "caption", url, "photo.jpg", 3, "image/jpeg", 0)
 	if err != nil {
 		t.Fatalf("SaveMessage: %v", err)
 	}
@@ -221,7 +221,7 @@ func TestDeleteWindowSetting(t *testing.T) {
 	hub := NewHub()
 	hub.uploadDir = t.TempDir()
 	oldMessage := func() int64 {
-		m, err := SaveMessage(convID, a, "text", "hello", "", "", 0, "")
+		m, err := SaveMessage(convID, a, "text", "hello", "", "", 0, "", 0)
 		if err != nil {
 			t.Fatalf("SaveMessage: %v", err)
 		}
