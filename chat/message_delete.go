@@ -176,11 +176,11 @@ func DeleteMessage(msgID int64, ext string, windowMinutes int) (int, time.Time, 
 			prevPreview := prevMsg
 			switch prevType {
 			case "image":
-				prevPreview = "📷 [Fotoğraf]"
+				prevPreview = "📷 [Photo]"
 			case "file":
 				prevPreview = "📎 [Dosya] " + prevFile
 			case "audio":
-				prevPreview = "🎤 [Ses Kaydı]"
+				prevPreview = "🎤 [Voice message]"
 			}
 			prevPreview = truncateRunes(prevPreview, 250)
 			_, _ = tx.Exec("UPDATE chat_conversations SET last_message_text = ?, last_message_at = ?, updated_at = NOW() WHERE id = ?",

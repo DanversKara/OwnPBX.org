@@ -143,6 +143,9 @@ $delete_window = (int) ($delete_window ?? 0);
                         <button id="active-group-info-btn" class="btn btn-sm btn-outline-secondary u-r-8" title="<?php echo t('chat.group_info'); ?>" style="display: none;" onclick="openGroupInfoModal()">
                             <i class="fas fa-info-circle"></i> <span class="d-none d-md-inline u-ml-4"><?php echo t('chat.group'); ?></span>
                         </button>
+                        <button id="active-delete-chat-btn" class="btn btn-sm btn-outline-danger u-r-8" title="<?php echo htmlspecialchars(t('chat.delete_chat', 'Delete this chat from your list')); ?>" onclick="deleteCurrentConversation()">
+                            <i class="fas fa-trash-alt"></i> <span class="d-none d-md-inline u-ml-4"><?php echo t('chat.delete_chat_short', 'Delete'); ?></span>
+                        </button>
                     </div>
                 </div>
 

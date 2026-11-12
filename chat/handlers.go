@@ -666,7 +666,7 @@ func (s *Server) HandleCreateGroup(w http.ResponseWriter, r *http.Request, user 
 		// FCM notification to the added members ("you were added to the group")
 		if ext != user.Extension {
 			pushTitle := conv.Title
-			pushBody := fmt.Sprintf("%s sizi \"%s\" grubuna ekledi", user.FullName, conv.Title)
+			pushBody := fmt.Sprintf("%s added you to the group \"%s\"", user.FullName, conv.Title)
 			TriggerFcmPush(ext, pushTitle, pushBody, "group_created", map[string]string{
 				"conversation_id":   strconv.Itoa(conv.ID),
 				"conversation_type": "group",
@@ -852,7 +852,7 @@ func (s *Server) HandleAddGroupMembers(w http.ResponseWriter, r *http.Request, u
 		title = conv.Title
 	}
 	for _, ext := range added {
-		pushBody := fmt.Sprintf("%s sizi \"%s\" grubuna ekledi", user.FullName, title)
+		pushBody := fmt.Sprintf("%s added you to the group \"%s\"", user.FullName, title)
 		TriggerFcmPush(ext, title, pushBody, "group_member_added", map[string]string{
 			"conversation_id":   strconv.Itoa(body.ConversationID),
 			"conversation_type": "group",

@@ -1577,6 +1577,35 @@ async function confirmLeaveGroup() {
     }
 }
 
+// Delete a chat from MY list (direct or group). The other people keep theirs; it comes back
+// when a new message arrives. A group admin deletes the group for everyone under Group info.
+async function deleteCurrentConversation() {
+    if (!currentConv) return;
+    const name = currentConv.type === 'group' ? (currentConv.title || '') : (currentConv.target_name || currentConv.target_ext || '');
+    if (!confirm(__('js.chat.confirm_delete_chat', name))) {
+        return;
+    }
+    try {
+        const res = await fetch('/chat/api/conversations/delete', {
+            method: 'POST',
+            headers: {
+                'Authorization': 'Bearer ' + window.CHAT_TOKEN,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ conversation_id: currentConv.id })
+        });
+        const json = await res.json();
+        if (json.success) {
+            closeActiveConversation();
+            loadConversations();
+        } else {
+            alert(__('js.chat.err_delete', json.error || __('js.chat.error')));
+        }
+    } catch (e) {
+        alert(__('js.chat.err_request', e.message));
+    }
+}
+
 async function confirmDeleteGroup() {
     if (!currentConv) return;
     if (!confirm(__('js.chat.confirm_delete', currentConv.title))) {

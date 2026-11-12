@@ -473,11 +473,11 @@ func scanMessageRow(row rowScanner) (Message, error) {
 	if m.ReplyTo > 0 && !m.ReplyIsDeleted && m.ReplyMessage == "" {
 		switch m.ReplyMsgType {
 		case "image":
-			m.ReplyMessage = "📷 [Fotoğraf]"
+			m.ReplyMessage = "📷 [Photo]"
 		case "file":
 			m.ReplyMessage = "📎 [Dosya]"
 		case "audio":
-			m.ReplyMessage = "🎤 [Ses Kaydı]"
+			m.ReplyMessage = "🎤 [Voice message]"
 		}
 	}
 	return m, nil
@@ -578,16 +578,15 @@ func SaveMessage(convID int, senderExt, msgType, message, attachmentURL, fileNam
 
 	lastPreview := message
 	// User-visible texts stored in the database (conversation preview, group system
-	// messages below) are still Turkish: the apps and the web chat show them as they are.
-	// Translating them needs the clients to render a structured event in their own
-	// language; until then they stay as they are (changing them would show English to
-	// Turkish users).
+	// messages below) are English: the apps and the web chat show them as they are.
+	// Showing them in each reader's language needs the clients to render a structured
+	// event (system_event + system_meta) themselves.
 	if msgType == "image" {
-		lastPreview = "📷 [Fotoğraf]"
+		lastPreview = "📷 [Photo]"
 	} else if msgType == "file" {
 		lastPreview = "📎 [Dosya] " + fileName
 	} else if msgType == "audio" {
-		lastPreview = "🎤 [Ses Kaydı]"
+		lastPreview = "🎤 [Voice message]"
 	}
 	lastPreview = truncateRunes(lastPreview, 250)
 
@@ -920,7 +919,7 @@ func CreateGroupConversation(title, creatorExt, avatarURL, description string, m
 	if u, _ := GetUserByExt(creatorExt); u != nil {
 		creatorName = u.FullName
 	}
-	sysMsgText := fmt.Sprintf("%s \"%s\" grubunu oluşturdu", creatorName, title)
+	sysMsgText := fmt.Sprintf("%s created the group \"%s\"", creatorName, title)
 	sysMeta := systemMeta(map[string]string{"actor": creatorExt, "value": title})
 
 	sRes, err := tx.Exec(`
@@ -1100,7 +1099,7 @@ func AddGroupMembers(convID int, actorExt string, exts []string) ([]string, *Mes
 		targetNames = append(targetNames, nm)
 	}
 
-	sysMsgText := fmt.Sprintf("%s, %s kullanıcısını gruba ekledi", actorName, strings.Join(targetNames, ", "))
+	sysMsgText := fmt.Sprintf("%s added %s to the group", actorName, strings.Join(targetNames, ", "))
 	sysMeta := systemMeta(map[string]string{"actor": actorExt, "target": strings.Join(added, ",")})
 
 	sRes, err := tx.Exec(`
@@ -1177,7 +1176,7 @@ func RemoveGroupMember(convID int, actorExt, targetExt string) (*Message, error)
 		targetName = u.FullName
 	}
 
-	sysMsgText := fmt.Sprintf("%s, %s kullanıcısını gruptan çıkardı", actorName, targetName)
+	sysMsgText := fmt.Sprintf("%s removed %s from the group", actorName, targetName)
 	sysMeta := systemMeta(map[string]string{"actor": actorExt, "target": targetExt})
 	sysMsg, err := SaveSystemMessage(convID, "member_removed", actorExt, targetExt, sysMsgText, sysMeta)
 	if err != nil {
@@ -1268,7 +1267,7 @@ func LeaveGroup(convID int, ext string) (*Message, error) {
 	if u, _ := GetUserByExt(ext); u != nil {
 		userName = u.FullName
 	}
-	sysMsgText := fmt.Sprintf("%s gruptan ayrıldı", userName)
+	sysMsgText := fmt.Sprintf("%s left the group", userName)
 	sysMeta := systemMeta(map[string]string{"actor": ext})
 	sysMsg, _ := SaveSystemMessage(convID, "member_left", ext, "", sysMsgText, sysMeta)
 
@@ -1304,7 +1303,7 @@ func UpdateGroupInfo(convID int, actorExt, title, avatarURL, description string)
 	if u, _ := GetUserByExt(actorExt); u != nil {
 		actorName = u.FullName
 	}
-	sysMsgText := fmt.Sprintf("%s grup bilgilerini güncelledi", actorName)
+	sysMsgText := fmt.Sprintf("%s updated the group info", actorName)
 	sysMeta := systemMeta(map[string]string{"actor": actorExt, "value": title})
 	sysMsg, _ := SaveSystemMessage(convID, "group_updated", actorExt, "", sysMsgText, sysMeta)
 

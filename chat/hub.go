@@ -515,15 +515,15 @@ func (h *Hub) SendMessage(user *User, in *InMessage) (*Message, *sendError) {
 
 	senderTitle := user.FullName
 	if senderTitle == "" {
-		senderTitle = "Dahili " + user.Extension
+		senderTitle = "Extension " + user.Extension
 	}
 	bodyPreview := saved.Message
 	if saved.MsgType == "image" {
-		bodyPreview = "📷 [Fotoğraf]" // user-visible, Turkish on purpose (see the note in db.go)
+		bodyPreview = "📷 [Photo]" // user-visible
 	} else if saved.MsgType == "file" {
 		bodyPreview = "📎 [Dosya] " + saved.FileName
 	} else if saved.MsgType == "audio" {
-		bodyPreview = "🎤 [Ses Kaydı]"
+		bodyPreview = "🎤 [Voice message]"
 	}
 	bodyPreview = truncateRunes(bodyPreview, 100)
 
