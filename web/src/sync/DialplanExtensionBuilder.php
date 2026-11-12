@@ -153,12 +153,15 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
     if ($isGuest && empty($u['guest_inbound'])) {
         $lines[] = " same => n,GotoIf(\$[\"\${AIPBX_FROM_TRUNK}\" != \"1\"]?guest_in_ok_{$lbl})";
         $lines[] = " same => n,NoOp(Guest {$ext}: outside callers are off - not ringing)";
+        // In a ring group (SKIP_VM=1) the guest's mailbox must not answer: it would take the
+        // call from the members who do ring. The guest just does not ring.
+        $lines[] = " same => n,GotoIf(\$[\"\${SKIP_VM}\" = \"1\" & \"\${BLINDTRANSFER}\" = \"\"]?guest_in_end_{$lbl})";
         if (!empty($u['voicemail_enabled'])) {
             $lines[] = " same => n,VoiceMail({$ext}@default,u)";
         } else {
             array_push($lines, ...statusPromptLines('busy', $ext));
         }
-        $lines[] = " same => n,Hangup(17)";
+        $lines[] = " same => n(guest_in_end_{$lbl}),Hangup(17)";
         $lines[] = " same => n(guest_in_ok_{$lbl}),NoOp()";
     }
 
@@ -359,6 +362,8 @@ function statusPromptLines(string $case, string $ext): array
         return [];
     }
     $digits = preg_replace('/[^0-9]/', '', $ext);
-    return [" same => n,Gosub(sub-status-prompt,s,1({$case},{$digits}))"];
+    // Not inside a ring group (SKIP_VM=1): the announcement answers the call, which would stop
+    // the other members ringing.
+    return [" same => n,GosubIf(\$[\"\${SKIP_VM}\" != \"1\"]?sub-status-prompt,s,1({$case},{$digits}))"];
 }
 

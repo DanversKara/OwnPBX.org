@@ -744,16 +744,16 @@ final class SyncGeneratorTest extends TestCase
             syncGeneralDialplan();
             $conf = (string) file_get_contents(ASTERISK_PBX_DIR . '/extensions_general.conf');
             $this->assertStringContainsString('[sub-status-prompt]', $conf);
-            $this->assertStringNotContainsString('Gosub(sub-status-prompt', $conf, 'off by default: tones only');
+            $this->assertStringNotContainsString('?sub-status-prompt,s,1', $conf, 'off by default: tones only');
 
             foreach (['busy', 'noanswer', 'unavail'] as $case) {
                 $set->execute(['status_prompt_' . $case, '1']);
             }
             syncGeneralDialplan();
             $conf = (string) file_get_contents(ASTERISK_PBX_DIR . '/extensions_general.conf');
-            $this->assertStringContainsString("Gosub(sub-status-prompt,s,1(busy,7088))\n same => n,Hangup(17)", $conf);
-            $this->assertStringContainsString("Gosub(sub-status-prompt,s,1(noanswer,7088))\n same => n,Hangup()", $conf);
-            $this->assertStringContainsString("Gosub(sub-status-prompt,s,1(unavail,7088))\n same => n,Hangup()", $conf);
+            $this->assertStringContainsString("GosubIf(\$[\"\${SKIP_VM}\" != \"1\"]?sub-status-prompt,s,1(busy,7088))\n same => n,Hangup(17)", $conf);
+            $this->assertStringContainsString("GosubIf(\$[\"\${SKIP_VM}\" != \"1\"]?sub-status-prompt,s,1(noanswer,7088))\n same => n,Hangup()", $conf);
+            $this->assertStringContainsString("GosubIf(\$[\"\${SKIP_VM}\" != \"1\"]?sub-status-prompt,s,1(unavail,7088))\n same => n,Hangup()", $conf);
             $this->assertStringContainsString('ExecIf($["${CHANNEL(state)}" != "Up"]?Progress())', $conf, 'early media: a trunk call is not answered');
         } finally {
             $db->exec("DELETE FROM sys_settings WHERE setting_key LIKE 'status_prompt_%'");
