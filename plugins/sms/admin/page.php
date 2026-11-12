@@ -7,6 +7,15 @@ require_once dirname(__DIR__) . '/lib/Sms.php';
 
 $h = static fn($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
 $providers = Sms::providers();
+// The form starts on a provider that is set up (the first one listed would quietly move a number
+// to a provider with no settings when the number is added again to change its users).
+$defaultProvider = (string) array_key_first($providers);
+foreach ($providers as $pid => $pclass) {
+    if ((new $pclass($settings))->configured()) {
+        $defaultProvider = (string) $pid;
+        break;
+    }
+}
 $numbers = Sms::numbers();
 $users = getDB()->query("SELECT id, full_name, username, extension FROM sys_users ORDER BY full_name")->fetchAll(PDO::FETCH_ASSOC);
 $userName = [];
@@ -62,6 +71,9 @@ foreach ($users as $u) {
                 <td><?php echo $h($n['label']); ?></td>
                 <td><?php echo $h(implode(', ', array_map(static fn(int $id): string => $userName[$id] ?? '#' . $id, $n['user_ids']))); ?></td>
                 <td class="u-nowrap">
+                    <button type="button" class="btn btn-secondary btn-sm sms-edit-number" title="Edit"
+                        data-number="<?php echo $h($n['number']); ?>" data-provider="<?php echo $h($n['provider']); ?>"
+                        data-label="<?php echo $h($n['label']); ?>" data-users="<?php echo $h(implode(',', $n['user_ids'])); ?>"><i class="fas fa-pen"></i></button>
                     <form method="post" class="u-inline" onsubmit="return confirm('Delete this number and all its messages?');">
                         <input type="hidden" name="csrf_token" value="<?php echo $h($csrf_token); ?>">
                         <input type="hidden" name="sms_action" value="delete_number">
@@ -73,7 +85,7 @@ foreach ($users as $u) {
         <?php endforeach; ?>
         <?php echo uiTableClose(); ?>
 
-        <form method="post" class="u-mt-10">
+        <form method="post" class="u-mt-10" id="smsNumberForm">
             <input type="hidden" name="csrf_token" value="<?php echo $h($csrf_token); ?>">
             <input type="hidden" name="sms_action" value="save_number">
             <div class="u-grid-2">
@@ -84,7 +96,7 @@ foreach ($users as $u) {
                 <div class="form-group">
                     <label class="form-label">Provider</label>
                     <select name="provider" class="form-control">
-                        <?php foreach ($providers as $id => $class): ?><option value="<?php echo $h($id); ?>"><?php echo $h($class::label()); ?></option><?php endforeach; ?>
+                        <?php foreach ($providers as $id => $class): ?><option value="<?php echo $h($id); ?>"<?php echo (string) $id === $defaultProvider ? ' selected' : ''; ?>><?php echo $h($class::label()); ?></option><?php endforeach; ?>
                     </select>
                 </div>
                 <div class="form-group">
@@ -96,10 +108,25 @@ foreach ($users as $u) {
                     <select name="user_ids[]" class="form-control" multiple size="5">
                         <?php foreach ($userName as $id => $name): ?><option value="<?php echo $id; ?>"><?php echo $h($name); ?></option><?php endforeach; ?>
                     </select>
-                    <small class="u-hint">Adding a number that is already listed changes its provider, name and users.</small>
+                    <small class="u-hint">To change a number, use its <i class="fas fa-pen"></i> button: the form fills in with its current provider, name and users.</small>
                 </div>
             </div>
-            <div class="form-actions"><button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Add number</button></div>
+            <div class="form-actions"><button type="submit" class="btn btn-primary" id="smsNumberSubmit"><i class="fas fa-plus"></i> Add number</button></div>
         </form>
+        <script>
+        // Edit: fill the form with the number's current values, so saving changes only what you change.
+        document.querySelectorAll('.sms-edit-number').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                const f = document.getElementById('smsNumberForm');
+                f.elements['number'].value = btn.dataset.number;
+                f.elements['provider'].value = btn.dataset.provider;
+                f.elements['label'].value = btn.dataset.label;
+                const users = btn.dataset.users ? btn.dataset.users.split(',') : [];
+                Array.from(f.elements['user_ids[]'].options).forEach(function (o) { o.selected = users.indexOf(o.value) !== -1; });
+                document.getElementById('smsNumberSubmit').innerHTML = '<i class="fas fa-save"></i> Save number';
+                f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+        });
+        </script>
     </div>
 </div>
