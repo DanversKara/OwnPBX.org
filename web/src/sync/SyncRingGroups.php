@@ -83,6 +83,11 @@ function __syncRingGroupsBody() {
         }
         $channels = array_values(array_unique($channels));
         $conf .= " same => n,ExecIf(\$[\"\${CHANNEL(state)}\" != \"Up\"]?Ringing())\n";
+        // A member's own voicemail must not take the group's call: with one member on DND,
+        // unreachable or "always voicemail", its mailbox answered at once and the other phones
+        // stopped ringing. Members ring or don't; the group's own "not answered" destination
+        // (which can be a voicemail box) decides what happens next.
+        $conf .= " same => n,Set(__SKIP_VM=1)\n";
 
         if (empty($channels)) {
             $conf .= " same => n,NoOp(Ring group {$id} has no numbers to ring)\n";
@@ -119,6 +124,7 @@ function __syncRingGroupsBody() {
 
         // Fallback Hedefi
         $fallback = buildDestinationLines($rg['fallback_dest_type'] ?? 'hangup', $rg['fallback_dest_id'] ?? 'busy');
+        $conf .= " same => n,Set(__SKIP_VM=0)\n";
         $conf .= " same => n,NoOp(Ring group {$id} not answered -> fallback)\n";
         $conf .= $fallback . "\n";
         $conf .= " same => n(rg_done_{$id}),Hangup()\n\n";
