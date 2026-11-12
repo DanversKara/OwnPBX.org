@@ -24,12 +24,13 @@
         return;
     }
     var PREVIEW = script.hasAttribute('data-preview');
-    if (!PREVIEW && window.__aipbxWidgetLoaded) {
+    var WIDGET_ID = script.getAttribute('data-widget') || '';
+    // The same widget twice on a page (a site that adds the code again) shows once. A page that
+    // re-inserts the code after removing the old one (dashboards, start pages, SPAs) gets it back.
+    if (!PREVIEW && document.querySelector('[data-ownpbx-widget="' + WIDGET_ID.replace(/[^\w-]/g, '') + '"]')) {
         return;
     }
-    window.__aipbxWidgetLoaded = true;
 
-    var WIDGET_ID = script.getAttribute('data-widget') || '';
     var BASE = new URL(script.src, document.baseURI).origin;
     var TARGET = script.getAttribute('data-target') || '';
     var CACHE_KEY = 'ownpbx-widget-' + WIDGET_ID;
@@ -256,7 +257,7 @@
         }
         ui = {};
         var inline = L.mode === 'inline';
-        host = el('div', { id: 'aipbx-widget' });
+        host = el('div', { id: 'aipbx-widget', 'data-ownpbx-widget': WIDGET_ID });
         var root = host.attachShadow ? host.attachShadow({ mode: 'open' }) : host;
         var style = el('style');
         style.textContent = css();
@@ -602,8 +603,11 @@
         L = merge(LAYOUT_DEFAULTS, res.layout);
         C = merge(CONTROLS_DEFAULTS, res.controls);
         T = merge(merge(TEXTS.en, EXTRA.en), merge(TEXTS[cfg.language] || {}, EXTRA[cfg.language] || {}));
-        if (cfg.call && !PREVIEW && !(window.RTCPeerConnection && navigator.mediaDevices)) {
+        // No navigator.mediaDevices on a plain http:// page: still show the widget, and Call says
+        // why the microphone cannot be used there (err_mic_insecure) instead of vanishing.
+        if (cfg.call && !PREVIEW && !window.RTCPeerConnection) {
             cfg.call = false;
+            warn('this browser cannot make calls (no WebRTC); only the call-back form is shown');
         }
         if (!cfg.call && !cfg.callback) {
             return;
@@ -613,6 +617,12 @@
         }
         var delay = PREVIEW ? 0 : Math.max(0, Math.min(60, +L.delay || 0)) * 1000;
         setTimeout(build, delay);
+    }
+
+    function warn(text) {
+        if (window.console && console.warn) {
+            console.warn('[OwnPBX widget ' + WIDGET_ID + '] ' + text);
+        }
     }
 
     function cached() {
@@ -631,12 +641,21 @@
             return;
         }
         api('config', { w: WIDGET_ID }, 'GET').then(function (res) {
-            if (!res || !res.success || (!res.call && !res.callback)) {
+            if (!res || !res.success) {
+                warn('the PBX refused: ' + ((res && res.error) || 'unknown') + (res && res.error === 'not_found' ? ' (wrong widget id, or the widget is switched off)' : ''));
+                return;
+            }
+            if (!res.call && !res.callback) {
+                warn('neither Browser call nor Call-back form is turned on for this widget');
                 return;
             }
             try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ t: Date.now(), cfg: res })); } catch (e) { /* storage off */ }
             apply(res);
-        }).catch(function () { /* not allowed on this site, or the PBX is unreachable */ });
+        }).catch(function () {
+            // A refused origin gets no CORS header, so the browser hides the answer: say what it usually is.
+            warn('could not load its settings from ' + BASE + '. Add "' + location.hostname
+                + '" to the widget\'s Allowed websites in the PBX (Web Widgets > Edit), or check that the PBX is reachable.');
+        });
     }
 
     // Preview (the PBX's own widget editor): the page sends the settings being edited.
