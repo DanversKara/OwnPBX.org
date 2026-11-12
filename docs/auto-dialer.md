@@ -8,7 +8,7 @@
 
 ## 🗄️ Database Tables (`plg_` Sandbox)
 
-When the `auto-dialer` plugin is enabled, `PluginManager` automatically applies [`plugins/auto-dialer/schema.sql`](https://github.com/mahirgul/aipbx-plugins/blob/main/plugins/community/auto-dialer/schema.sql) and creates two isolated `plg_*` tables:
+When the `auto-dialer` plugin is enabled, `PluginManager` automatically applies [`plugins/auto-dialer/schema.sql`](https://github.com/DanversKara/plugins.OwnPBX.org/blob/main/plugins/community/auto-dialer/schema.sql) and creates two isolated `plg_*` tables:
 
 | Table | Purpose |
 |---|---|

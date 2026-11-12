@@ -229,7 +229,7 @@ release first; `aipbx-update` does both steps in one run. See [INSTALL.md](INSTA
 - **1-to-1 and group chat** (Go WebSocket service `aipbx-chat`), group admins, member management
 - **Photos and files** with thumbnails; access limited to the conversation's participants
 - **Presence, typing indicators, read receipts**; push notifications on mobile
-- **SMS / MMS on your numbers (community plugin, v1.71+)** — Twilio, Vonage, Plivo, Telnyx, Bandwidth, Sinch or VoIP.ms; the users a number is given read and answer its messages under *Messages* ([`sms`](https://github.com/mahirgul/aipbx-plugins/tree/main/plugins/community/sms) in the plugin catalog)
+- **SMS / MMS on your numbers (community plugin, v1.71+)** — Twilio, Vonage, Plivo, Telnyx, Bandwidth, Sinch or VoIP.ms; the users a number is given read and answer its messages under *Messages* ([`sms`](https://github.com/DanversKara/plugins.OwnPBX.org/tree/main/plugins/community/sms) in the plugin catalog)
 
 ### 📱 Mobile Apps
 

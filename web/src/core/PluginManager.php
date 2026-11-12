@@ -602,12 +602,12 @@ final class PluginManager
         return sprintf(t('plugins.msg_uploaded', 'Custom plugin "%s" (v%s) uploaded and enabled.'), $name, $version);
     }
 
-    // --- Community catalog (github.com/mahirgul/aipbx-plugins) ---
+    // --- Community catalog (github.com/DanversKara/plugins.OwnPBX.org, a reviewed fork of mahirgul/aipbx-plugins) ---
     // That repository's CI publishes every community plugin as a .zip, with catalog.json listing
     // them (slug, name, version, sha256, size), on its release "catalog". An administrator opts in
     // on /plugins; installing downloads the .zip, checks its SHA-256 and installs it as an upload.
 
-    public const CATALOG_BASE = 'https://github.com/mahirgul/aipbx-plugins/releases/download/catalog/';
+    public const CATALOG_BASE = 'https://github.com/DanversKara/plugins.OwnPBX.org/releases/download/catalog/';
 
     public static function communityCatalogOn(): bool
     {

@@ -67,6 +67,6 @@ is what lands), `action=changes`, `action=rollback`, `action=echo`.
 
 ## Separate community API assistant
 
-The community [AI Assistant plugin](https://github.com/mahirgul/aipbx-plugins/tree/main/plugins/community/ai-assistant) by Gregory Merriweather (shido6) has its own console at `/plugins/ai-assistant` and previews REST API requests. It is separate from this core `/assistant` dialplan editor. The next upgrade migrates existing bundled copies without changing their enabled state, settings, API tokens, drafts or history; new installations install it from the community catalog.
+The community [AI Assistant plugin](https://github.com/DanversKara/plugins.OwnPBX.org/tree/main/plugins/community/ai-assistant) by Gregory Merriweather (shido6) has its own console at `/plugins/ai-assistant` and previews REST API requests. It is separate from this core `/assistant` dialplan editor. The next upgrade migrates existing bundled copies without changing their enabled state, settings, API tokens, drafts or history; new installations install it from the community catalog.
 
 Legacy assistant tokens retain their values and expiry during migration. Tokens with PBX read/write rights gain the matching queue read/write scope required by the queue API; a read-only token does not gain queue write access.

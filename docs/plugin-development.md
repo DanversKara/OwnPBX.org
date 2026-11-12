@@ -207,7 +207,7 @@ version it needs, instead of the plugin failing at its first missing hook.
 ---
 
 ### From the community catalog (OwnPBX 1.72+)
-Community plugins live in [mahirgul/aipbx-plugins](https://github.com/mahirgul/aipbx-plugins) under
+Community plugins live in [DanversKara/plugins.OwnPBX.org](https://github.com/DanversKara/plugins.OwnPBX.org) under
 `plugins/community/<slug>/`. Its CI builds each one as `<slug>.zip` (the `tests/` folder left out) with
 `catalog.json` (slug, name, version, SHA-256) on the release `catalog`. On **Integration → Plugin Catalog**,
 **Show community plugins from the catalog** (off by default) lists them with **Install & Enable**, and
