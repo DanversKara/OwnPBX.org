@@ -317,6 +317,26 @@ if ($isFaxUser && ($currentTab ?? '') === 'voicemail') {
 
         <!-- TAB: Call settings (general, forwarding, voicemail) -->
         <div id="tab-pane-calls" class="my-phone-settings-grid" data-tab-pane="calls"<?php echo $currentTab === 'calls' ? '' : ' hidden'; ?>>
+            <?php if (!empty($callerIds)): ?>
+            <!-- Card: the number outside calls show (own form: changes the endpoint, not the dialplan) -->
+            <form method="POST" action="/my-phone" class="card u-p-24 u-r-12">
+                <input type="hidden" name="action" value="save_caller_id">
+                <input type="hidden" name="csrf_token" value="<?php echo getCSRFToken(); ?>">
+                <h3 class="u-fs-16 u-fw-700 u-mb-16 u-text-main u-d-flex u-ai-center u-gap-8">
+                    <i class="fas fa-id-card u-primary"></i> Calling from
+                </h3>
+                <small class="u-muted u-fs-12 u-lh-1-4 u-d-block u-mb-12">The number people see when you call outside. You can also pick another one for a single call in the web phone and the app.</small>
+                <select name="caller_id" class="form-control u-mb-12">
+                    <?php $hasDefault = false; foreach ($callerIds as $c) { $hasDefault = $hasDefault || $c['default']; } ?>
+                    <?php if (!$hasDefault): ?><option value="" selected>The line's own number</option><?php endif; ?>
+                    <?php foreach ($callerIds as $c): ?>
+                        <option value="<?php echo htmlspecialchars($c['number']); ?>"<?php echo $c['default'] ? ' selected' : ''; ?>><?php echo htmlspecialchars($c['number'] . ($c['title'] !== '' ? ' — ' . $c['title'] : '')); ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <div class="form-actions"><button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> <?php echo t('my_phone.btn_save_settings'); ?></button></div>
+            </form>
+            <?php endif; ?>
+
             <!-- Settings cards share one form (display: contents) so any Save stores every setting. -->
             <form method="POST" action="/my-phone" class="my-phone-settings-form">
                 <input type="hidden" name="action" value="save_settings">

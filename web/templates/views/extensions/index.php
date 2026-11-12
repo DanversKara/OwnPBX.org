@@ -196,6 +196,21 @@
                     <small class="u-muted u-fs-11 u-mt-8-2 u-mb-12" style="display: block;"><?php echo t('extensions.cid_help'); ?></small>
 
                     <div class="form-group u-mt-12">
+                        <label class="form-label">Outgoing numbers <span class="u-muted u-fs-11">(the person can pick one as default, or per call in the web phone and the app)</span></label>
+                        <input type="hidden" name="caller_ids_sent" value="1">
+                        <?php if (empty($caller_id_dids)): ?>
+                            <div class="u-muted u-fs-12">No DIDs yet: add your numbers under Inbound Routes (DIDs) first.</div>
+                        <?php else: ?>
+                            <div id="modal_caller_ids" class="u-flex-gap u-wrap" style="max-height: 140px; overflow-y: auto;">
+                                <?php foreach ($caller_id_dids as $d): ?>
+                                    <label class="u-check-label-6"><input type="checkbox" name="caller_ids[]" value="<?php echo htmlspecialchars($d['number']); ?>" class="u-accent"> <?php echo htmlspecialchars($d['number']); ?><?php if ($d['title'] !== ''): ?> <span class="u-muted">(<?php echo htmlspecialchars($d['title']); ?>)</span><?php endif; ?></label>
+                                <?php endforeach; ?>
+                            </div>
+                            <small class="u-muted u-fs-11">The same number can be ticked on several extensions. "External CID" above stays the default until the person picks another.</small>
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="form-group u-mt-12">
                         <label class="form-label u-check-label">
                             <input type="checkbox" name="is_active" id="modal_is_active" value="1" checked class="u-check">
                             <span class="u-fw-600"><?php echo t('extensions.field_active'); ?></span>

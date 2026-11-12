@@ -35,6 +35,20 @@ $is_collapsed_cookie = $is_collapsed_cookie ?? (isset($_COOKIE['sidebar_collapse
         <div class="header-quick-dial-wrapper" id="header-phone-controls">
             <!-- 1. IDLE / READY STATE CONTROLS -->
             <div id="header-idle-controls" style="display: flex; align-items: center; gap: 6px;">
+                <?php
+                // "Call from": the outgoing numbers the administrator gave this extension (sent per call as X-OwnPBX-CID).
+                require_once dirname(__DIR__) . '/src/services/CallerIdService.php';
+                $topbarCallerIds = CallerIdService::assigned((int) ($_SESSION['user_id'] ?? 0)) === [] ? [] : CallerIdService::choices((int) ($_SESSION['user_id'] ?? 0));
+                ?>
+                <?php if (count($topbarCallerIds) > 0): ?>
+                    <select id="header-cid-select" class="form-control" title="Call from (the number people see)" style="padding: 2px 8px; font-size: 11px; height: 26px; max-width: 150px; border-radius: 13px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-main); cursor: pointer;">
+                        <?php $topbarHasDefault = false; foreach ($topbarCallerIds as $c) { $topbarHasDefault = $topbarHasDefault || $c['default']; } ?>
+                        <?php if (!$topbarHasDefault): ?><option value="" selected>Line number</option><?php endif; ?>
+                        <?php foreach ($topbarCallerIds as $c): ?>
+                            <option value="<?php echo htmlspecialchars($c['number']); ?>"<?php echo $c['default'] ? ' selected' : ''; ?>><?php echo htmlspecialchars($c['number'] . ($c['title'] !== '' ? ' · ' . $c['title'] : '')); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                <?php endif; ?>
                 <!-- Quick Dial Input & Autocomplete Dropdown -->
                 <input type="text" id="header-quick-dial-input" class="header-quick-dial-input" placeholder="<?php echo t('topbar.quick_dial_placeholder'); ?>" autocomplete="off" onkeydown="handleHeaderQuickDialKeydown(event)" oninput="handleHeaderQuickDialInput(this.value)">
                 <div class="header-autocomplete-dropdown" id="header-autocomplete-dropdown" style="display: none;"></div>

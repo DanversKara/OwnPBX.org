@@ -166,6 +166,20 @@ function buildTrunkCidNormalizeLine($norm) {
  * setting and are always nameless — a separate origination path outside the
  * scope of this function.
  */
+/**
+ * The number the caller picked for this call (web phone / app: SIP header X-OwnPBX-CID)
+ * becomes CID_EXTERNAL for this call, when it is one of the extension's outgoing numbers
+ * (CID_ALLOWED, "-digits-digits-", set on its endpoint). Anything else is ignored, so nobody
+ * can show a number they were not given. Only read on a PJSIP channel (a Local channel has
+ * no headers), so the priority is skipped otherwise.
+ */
+function buildCallerIdPickLines(): string {
+    return " same => n,GotoIf(\$[\"\${CHANNEL(channeltype)}\" != \"PJSIP\" | \"\${CID_ALLOWED}\" = \"\"]?cidpick)\n"
+        . " same => n,Set(CID_PICK=\${FILTER(0-9+,\${PJSIP_HEADER(read,X-OwnPBX-CID)})})\n"
+        . " same => n,ExecIf(\$[\"\${CID_PICK}\" != \"\" & \${REGEX(\"-\${FILTER(0-9,\${CID_PICK})}-\" \${CID_ALLOWED})}]?Set(CID_EXTERNAL=\${CID_PICK}))\n"
+        . " same => n(cidpick),NoOp()\n";
+}
+
 function buildTrunkCallerIdLine($trunk_entry, $is_internal) {
     $lines = '';
     // A carrier may want the leading + (A1, Twilio).

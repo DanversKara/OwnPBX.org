@@ -232,6 +232,16 @@ class ExtensionService {
                 markPendingSync('permissions', 'permissions', 'all', "Permission groups ({$extension})", 'update', $_SESSION['user_id'] ?? null);
                 $msg = sprintf(t('srv_ext.created'), $extension);
             }
+            // Outgoing numbers (only when the form sent the list: imports and the API keep theirs).
+            if (array_key_exists('caller_ids_sent', $data)) {
+                require_once __DIR__ . '/CallerIdService.php';
+                $uid = (int) DBHelper::fetchColumn('SELECT id FROM sys_users WHERE extension = ?', [$extension]);
+                $before = CallerIdService::assigned($uid);
+                CallerIdService::assign($uid, (array) ($data['caller_ids'] ?? []));
+                if ($before !== CallerIdService::assigned($uid)) {
+                    markPendingSync('extensions', 'extension', $extension, "Outgoing numbers ({$extension})", 'update', $_SESSION['user_id'] ?? null);
+                }
+            }
             return $msg;
         });
     }

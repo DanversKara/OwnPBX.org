@@ -39,6 +39,10 @@ class ExtensionController extends BaseController
             'pjsip_statuses' => $pjsip_statuses,
             'permission_groups' => $permission_groups,
             'boss_secretary_groups' => $boss_secretary_groups,
+            'caller_id_dids' => (function () {
+                require_once dirname(__DIR__) . '/services/CallerIdService.php';
+                return CallerIdService::allDids();
+            })(),
         ], ['title' => $page_title] + $notices);
     }
 }

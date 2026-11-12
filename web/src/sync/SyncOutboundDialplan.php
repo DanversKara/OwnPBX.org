@@ -166,6 +166,9 @@ function __syncOutboundDialplanBody() {
             // The CID of the first trunk to try is applied before the recording file name is set.
             // The original caller number is restored before every trunk attempt,
             // so a fallback trunk's normalization does not stack on the previous one.
+            if (!$is_internal) {
+                $conf .= buildCallerIdPickLines();
+            }
             $conf .= " same => n,Set(AIPBX_SRC_CID=\${CALLERID(num)})\n";
             $conf .= buildTrunkCallerIdLine($trunk_chain[0], $is_internal);
             $conf .= buildTrunkCidNormalizeLine($trunk_cid_norm[$trunk_chain[0]['trunk_name']] ?? null);

@@ -101,6 +101,25 @@ class MyPhoneController extends BaseController
             return;
         }
 
+        // The number outside calls show by default: one of the numbers the administrator gave them.
+        if (static::isPost() && ($_POST['action'] ?? '') === 'save_caller_id') {
+            if (!static::verifyCsrf()) {
+                static::notifyError(t('my_phone.msg_csrf_error'));
+            } else {
+                require_once dirname(__DIR__) . '/services/CallerIdService.php';
+                try {
+                    $picked = (string) ($_POST['caller_id'] ?? '');
+                    CallerIdService::setDefault($userId, $picked);
+                    writeAuditLog(null, 'user_settings', 'phone', 'Default caller ID: ' . ($picked !== '' ? $picked : 'line number'), 'update', $userId);
+                    static::notifySuccess(t('my_phone.msg_settings_saved'));
+                } catch (\InvalidArgumentException $e) {
+                    static::notifyError($e->getMessage());
+                }
+            }
+            static::redirect('/my-phone?tab=calls');
+            return;
+        }
+
         if (static::isPost() && ($_POST['action'] ?? '') === 'save_voicemail') {
             if (!static::verifyCsrf()) {
                 static::notifyError(t('my_phone.msg_csrf_error'));
@@ -173,6 +192,10 @@ class MyPhoneController extends BaseController
             'webrtcStatus' => $webrtcStatus,
             'mobileStatus' => $mobileStatus,
             'mobileDevices' => MyPhoneRepository::getUserMobileDevices($userId),
+            'callerIds' => (function () use ($userId) {
+                require_once dirname(__DIR__) . '/services/CallerIdService.php';
+                return CallerIdService::assigned($userId) === [] ? [] : CallerIdService::choices($userId);
+            })(),
             'voicemailMessages' => $voicemailMessages,
         ], ['title' => $page_title]);
     }

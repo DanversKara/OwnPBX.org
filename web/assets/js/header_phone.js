@@ -665,6 +665,11 @@ function headerPhoneMakeCall(withVideo) {
                     peerconnection: (e) => attachPeerConnectionHandlers(e.peerconnection)
                 }
             };
+            // "Call from": the number picked for this call (the PBX accepts only the extension's own numbers).
+            const cidSel = document.getElementById("header-cid-select");
+            if (cidSel && cidSel.value) {
+                options.extraHeaders = ["X-OwnPBX-CID: " + cidSel.value.replace(/[^0-9+]/g, "")];
+            }
             headerJsSipSession = headerJsSipUA.call(targetUri, options);
             headerVideoPeer = target;
             if (withVideo) headerShowVideoPanel(target);

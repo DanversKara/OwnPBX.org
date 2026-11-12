@@ -331,6 +331,13 @@ function __syncAllExtensionsBody() {
         // Whose call this is (billing counts outside minutes against it; forwards and
         // click-to-call set it too). Inherited through Local channels and ring groups.
         $set_vars .= "set_var=__AIPBX_USER_EXT={$ext}\n";
+        // Outgoing numbers this extension may pick per call (X-OwnPBX-CID from the web phone or
+        // the app): the outbound routes accept a picked number only when it is in this list.
+        require_once dirname(__DIR__) . '/services/CallerIdService.php';
+        $cid_allowed = CallerIdService::allowedVar((int) ($u['id'] ?? 0), $cid_external);
+        if ($cid_allowed !== '') {
+            $set_vars .= "set_var=CID_ALLOWED={$cid_allowed}\n";
+        }
         // Listen-in (*90 with no extension) cycles through phone calls only: ChanSpy's g() option
         // matches this tag, so the trunk side of a call is never offered as a second "call".
         $set_vars .= "set_var=SPYGROUP=aipbxext\n";

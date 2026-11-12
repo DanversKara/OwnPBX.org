@@ -94,6 +94,7 @@ function openCreateExtensionModal() {
     if (obEl) obEl.value = '1';
     document.getElementById('modal_cid_internal').value = '';
     document.getElementById('modal_cid_external').value = '';
+    document.querySelectorAll('#modal_caller_ids input[type=checkbox]').forEach(c => { c.checked = false; });
     const actEl = document.getElementById('modal_is_active');
     if (actEl) actEl.checked = true;
 
@@ -166,6 +167,8 @@ function openEditExtensionModal(item) {
     if (obEl) obEl.value = item.outbound_group || 1;
     document.getElementById('modal_cid_internal').value = item.cid_internal || '';
     document.getElementById('modal_cid_external').value = item.cid_external || '';
+    const picked = (item.caller_ids || []).map(n => String(n).replace(/\D/g, ''));
+    document.querySelectorAll('#modal_caller_ids input[type=checkbox]').forEach(c => { c.checked = picked.includes(c.value.replace(/\D/g, '')); });
     const actEl = document.getElementById('modal_is_active');
     if (actEl) actEl.checked = (item.is_active == 1);
 

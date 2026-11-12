@@ -11,7 +11,7 @@ class ExtensionRepository extends BaseRepository
 
     public static function allWithExtension(): array
     {
-        return static::db()->query(
+        $rows = static::db()->query(
             "SELECT u.id, u.username, u.full_name, u.email, u.extension, u.sip_password, u.sip_auth_digest, u.sip_send_pai,
                     u.extension_type, u.outbound_group, u.cid_internal, u.cid_external, u.is_active, u.role,
                     u.permission_group_id, u.boss_secretary_group_id, u.boss_secretary_role,
@@ -26,6 +26,20 @@ class ExtensionRepository extends BaseRepository
              WHERE u.extension IS NOT NULL AND u.extension != '' AND COALESCE(u.extension_type, 'sip') <> 'fax'
              ORDER BY u.extension ASC"
         )->fetchAll();
+        // Outgoing numbers ticked per extension (pbx_user_caller_ids), for the edit form.
+        $byUser = [];
+        try {
+            foreach (static::db()->query('SELECT user_id, number FROM pbx_user_caller_ids ORDER BY id')->fetchAll(PDO::FETCH_ASSOC) as $r) {
+                $byUser[(int) $r['user_id']][] = (string) $r['number'];
+            }
+        } catch (\Throwable $e) {
+            // before the migration
+        }
+        foreach ($rows as &$row) {
+            $row['caller_ids'] = $byUser[(int) $row['id']] ?? [];
+        }
+        unset($row);
+        return $rows;
     }
 
     public static function livePjsipStatuses(): array
