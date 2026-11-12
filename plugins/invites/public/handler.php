@@ -8,6 +8,27 @@
  */
 require_once dirname(__DIR__) . '/lib/Invites.php';
 
+// Defined before the return below: code after a file's return never runs.
+if (!function_exists('invitesPage')) {
+function invitesPage(string $title, string $body): string
+{
+    $t = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
+        . '<meta name="robots" content="noindex"><title>' . $t . '</title><style>'
+        . 'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f5f6fa;color:#1f2430;margin:0;padding:24px}'
+        . 'main{max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06)}'
+        . 'h1{font-size:24px;margin-top:0}label{display:block;margin:14px 0 4px;font-weight:600}'
+        . 'input{width:100%;padding:10px;border:1px solid #cfd3dc;border-radius:8px;font-size:15px;box-sizing:border-box}'
+        . 'input:disabled{background:#f0f1f5;color:#555}.note{color:#555;font-size:14px;font-weight:400}'
+        . 'button,.btn{display:inline-block;background:#0ea5e9;color:#fff;border:0;border-radius:8px;padding:12px 18px;font-size:16px;cursor:pointer;margin-top:18px;text-decoration:none}'
+        . '.err{background:#fde8e8;color:#9b1c1c;padding:10px;border-radius:8px}.trap{position:absolute;left:-10000px}'
+        . '.box{background:#f0f9ff;border-radius:8px;padding:12px;line-height:1.8}'
+        . '@media (prefers-color-scheme:dark){body{background:#0f172a;color:#e2e8f0}main{background:#1e293b}input{background:#0f172a;color:#e2e8f0;border-color:#334155}input:disabled{background:#1e293b;color:#94a3b8}.note{color:#94a3b8}.box{background:#0c4a6e}}'
+        . '</style></head><body><main>' . $body . '</main></body></html>';
+}
+}
+
+
 return static function (string $subPath, array $settings): void {
     Invites::setSettings($settings);
     $h = static fn($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
@@ -84,22 +105,3 @@ return static function (string $subPath, array $settings): void {
         $send(500, 'Error', '<h1>Something went wrong</h1><p>Please try again later.</p>');
     }
 };
-
-if (!function_exists('invitesPage')) {
-function invitesPage(string $title, string $body): string
-{
-    $t = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
-    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">'
-        . '<meta name="robots" content="noindex"><title>' . $t . '</title><style>'
-        . 'body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f5f6fa;color:#1f2430;margin:0;padding:24px}'
-        . 'main{max-width:480px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;box-shadow:0 2px 12px rgba(0,0,0,.06)}'
-        . 'h1{font-size:24px;margin-top:0}label{display:block;margin:14px 0 4px;font-weight:600}'
-        . 'input{width:100%;padding:10px;border:1px solid #cfd3dc;border-radius:8px;font-size:15px;box-sizing:border-box}'
-        . 'input:disabled{background:#f0f1f5;color:#555}.note{color:#555;font-size:14px;font-weight:400}'
-        . 'button,.btn{display:inline-block;background:#0ea5e9;color:#fff;border:0;border-radius:8px;padding:12px 18px;font-size:16px;cursor:pointer;margin-top:18px;text-decoration:none}'
-        . '.err{background:#fde8e8;color:#9b1c1c;padding:10px;border-radius:8px}.trap{position:absolute;left:-10000px}'
-        . '.box{background:#f0f9ff;border-radius:8px;padding:12px;line-height:1.8}'
-        . '@media (prefers-color-scheme:dark){body{background:#0f172a;color:#e2e8f0}main{background:#1e293b}input{background:#0f172a;color:#e2e8f0;border-color:#334155}input:disabled{background:#1e293b;color:#94a3b8}.note{color:#94a3b8}.box{background:#0c4a6e}}'
-        . '</style></head><body><main>' . $body . '</main></body></html>';
-}
-}
