@@ -70,7 +70,10 @@ class AsteriskHelper {
             return ['success' => true, 'output' => '[test-modu] atlandi: ' . $command];
         }
 
-        $cmd = 'asterisk -rx ' . escapeshellarg($command);
+        // From a directory the user cannot read (root's home under cron, a shell in
+        // /root) `asterisk -rx` prints "Unable to access the running directory" before
+        // doing the work. Run it from / so that warning never appears.
+        $cmd = 'cd / && asterisk -rx ' . escapeshellarg($command);
         exec($cmd . ' 2>&1', $out, $ret);
         $output = implode("\n", $out);
         return [
@@ -85,7 +88,32 @@ class AsteriskHelper {
      * `asterisk -rx` output share the same check as execCLI().
      */
     public static function looksLikeCliFailure($output) {
-        return (bool) preg_match('/no such command|not found|unable to|error|failed|invalid|usage:/i', (string) $output);
+        $real = [];
+        foreach (preg_split('/\r?\n/', (string) $output) ?: [] as $line) {
+            $line = trim($line);
+            if ($line !== '' && !self::isHarmlessCliNotice($line)) {
+                $real[] = $line;
+            }
+        }
+        if ($real === []) {
+            return false;
+        }
+        return (bool) preg_match('/no such command|not found|unable to|error|failed|invalid|usage:/i', implode("\n", $real));
+    }
+
+    /**
+     * Noise that `asterisk -rx` prints beside a command that worked.
+     *
+     * The working-directory warning cost an OwnPBX install two days of inbound calls: the
+     * word "Unable" in it made every reload look like a failure, so writeConfWithRollback
+     * put the previous file back each time and the PBX kept answering the carrier 404,
+     * with no way to repair it from the portal.
+     */
+    public static function isHarmlessCliNotice(string $line): bool
+    {
+        return (bool) preg_match('/unable to access the running directory/i', $line)
+            || (bool) preg_match('/^changing to .* for compatibility/i', $line)
+            || (bool) preg_match('/^verbosity (is|was) /i', $line);
     }
 
     /**
