@@ -34,7 +34,22 @@ try {
 try {
     require_once dirname(__DIR__) . '/src/services/TrunkRegistrationWatchdog.php';
     TrunkRegistrationWatchdog::check();
-    TrunkRegistrationWatchdog::checkInboundContexts();
+    // A trunk without its context in the dialplan means every call from the carrier is
+    // answered 404: rebuild the inbound routing rather than wait for somebody to notice.
+    $trunksWithoutRouting = TrunkRegistrationWatchdog::inboundRepairDue();
+    if ($trunksWithoutRouting !== []) {
+        // The cron runs as root, the portal writes these files as the web user: keep
+        // whichever owner the file had, or the next "Apply" could not write it.
+        $inboundConf = ASTERISK_PBX_DIR . '/extensions_inbound.conf';
+        $ownerBefore = @stat($inboundConf);
+        require_once dirname(__DIR__) . '/src/asterisk_sync.php';
+        syncInboundDialplan();
+        if (is_array($ownerBefore) && is_file($inboundConf)) {
+            @chown($inboundConf, (int) $ownerBefore['uid']);
+            @chgrp($inboundConf, (int) $ownerBefore['gid']);
+        }
+        writeAuditLog(null, 'trunks', 'watchdog', 'Inbound routing was missing, rebuilt: ' . implode(', ', $trunksWithoutRouting), 'update', null);
+    }
 } catch (\Throwable $e) {
     error_log('task_dispatcher trunk watchdog: ' . $e->getMessage());
 }

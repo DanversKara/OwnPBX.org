@@ -88,23 +88,23 @@ class TrunkRegistrationWatchdog
     }
 
     /**
-     * Every inbound call needs the trunk's own context in the dialplan. One OwnPBX install
-     * ended up with an extensions_inbound.conf written at a moment when no active trunk was
-     * visible: the contexts were gone, and from then on the carrier's every call was answered
-     * "404 Not Found" - no inbound calls at all, with nothing in the portal to show it. The
-     * file is rebuilt when a context is missing, at most once every ten minutes.
+     * Active trunks whose own context is missing from the running dialplan.
      *
-     * @return list<string> the trunks whose routing was rebuilt
+     * Every inbound call needs it. One OwnPBX install ended up with an
+     * extensions_inbound.conf written without those contexts: the carrier's every call was
+     * answered "404 Not Found" - no inbound calls at all, and nothing in the portal to show
+     * it. bin/task_dispatcher.php rebuilds the inbound dialplan when this is not empty.
+     *
+     * @return list<string>
      */
-    public static function checkInboundContexts(?int $now = null): array
+    public static function missingInboundContexts(): array
     {
-        $now = $now ?? time();
-        $missing = [];
         try {
             $names = getDB()->query('SELECT trunk_name FROM pbx_trunks WHERE is_active = 1')->fetchAll(PDO::FETCH_COLUMN);
         } catch (\Throwable $e) {
             return [];
         }
+        $missing = [];
         foreach ($names ?: [] as $name) {
             $clean = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $name);
             if ($clean === '') {
@@ -116,6 +116,19 @@ class TrunkRegistrationWatchdog
                 $missing[] = $clean;
             }
         }
+        return $missing;
+    }
+
+    /**
+     * The trunks whose routing should be rebuilt now, or none while the last rebuild is
+     * still within the cooldown. Calling this records the attempt, so the caller rebuilds.
+     *
+     * @return list<string>
+     */
+    public static function inboundRepairDue(?int $now = null): array
+    {
+        $now = $now ?? time();
+        $missing = self::missingInboundContexts();
         if ($missing === []) {
             return [];
         }
@@ -125,25 +138,6 @@ class TrunkRegistrationWatchdog
         }
         $state['inbound_fixed'] = $now;
         self::saveState($state);
-
-        // The cron runs as root, the portal writes these files as the web user: keep whichever
-        // owner the file already had, or the next "Apply" in the portal could not write it.
-        $path = (defined('ASTERISK_PBX_DIR') ? ASTERISK_PBX_DIR : '') . '/extensions_inbound.conf';
-        $before = @stat($path);
-        try {
-            require_once dirname(__DIR__) . '/asterisk_sync.php';
-            syncInboundDialplan();
-        } catch (\Throwable $e) {
-            error_log('trunk watchdog: rebuilding the inbound dialplan failed: ' . $e->getMessage());
-            return [];
-        }
-        if (is_array($before) && is_file($path)) {
-            @chown($path, (int) $before['uid']);
-            @chgrp($path, (int) $before['gid']);
-        }
-        if (function_exists('writeAuditLog')) {
-            writeAuditLog(null, 'trunks', 'watchdog', 'Inbound routing was missing, rebuilt: ' . implode(', ', $missing), 'update', null);
-        }
         return $missing;
     }
 
