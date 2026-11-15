@@ -62,6 +62,18 @@ final class TrunkWatchdogTest extends TestCase
             && $now - $lastNudge >= TrunkRegistrationWatchdog::COOLDOWN;
     }
 
+    public function testEveryActiveTrunkHasItsInboundContext(): void
+    {
+        // Without [from-trunk-<name>-route] the carrier's calls are answered 404 and no call
+        // comes in at all, so the generated dialplan must always carry one per active trunk.
+        syncInboundDialplan();
+        $conf = (string) @file_get_contents(ASTERISK_PBX_DIR . '/extensions_inbound.conf');
+        foreach (getDB()->query('SELECT trunk_name FROM pbx_trunks WHERE is_active = 1')->fetchAll(PDO::FETCH_COLUMN) as $name) {
+            $this->assertStringContainsString('[from-trunk-' . $name . ']', $conf);
+            $this->assertStringContainsString('[from-trunk-' . $name . '-route]', $conf);
+        }
+    }
+
     public function testNothingIsReportedWhenAsteriskSaysNothing(): void
     {
         // No answer from the CLI (Asterisk stopped): not the watchdog's business, and it

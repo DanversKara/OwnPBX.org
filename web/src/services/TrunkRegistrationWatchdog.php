@@ -87,6 +87,66 @@ class TrunkRegistrationWatchdog
         return $down;
     }
 
+    /**
+     * Every inbound call needs the trunk's own context in the dialplan. One OwnPBX install
+     * ended up with an extensions_inbound.conf written at a moment when no active trunk was
+     * visible: the contexts were gone, and from then on the carrier's every call was answered
+     * "404 Not Found" - no inbound calls at all, with nothing in the portal to show it. The
+     * file is rebuilt when a context is missing, at most once every ten minutes.
+     *
+     * @return list<string> the trunks whose routing was rebuilt
+     */
+    public static function checkInboundContexts(?int $now = null): array
+    {
+        $now = $now ?? time();
+        $missing = [];
+        try {
+            $names = getDB()->query('SELECT trunk_name FROM pbx_trunks WHERE is_active = 1')->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Throwable $e) {
+            return [];
+        }
+        foreach ($names ?: [] as $name) {
+            $clean = preg_replace('/[^a-zA-Z0-9_-]/', '', (string) $name);
+            if ($clean === '') {
+                continue;
+            }
+            $out = self::sh('asterisk -rx ' . escapeshellarg('dialplan show from-trunk-' . $clean . '-route'));
+            // Empty output means Asterisk did not answer at all: that is not a missing context.
+            if (trim($out) !== '' && stripos($out, 'no existence') !== false) {
+                $missing[] = $clean;
+            }
+        }
+        if ($missing === []) {
+            return [];
+        }
+        $state = self::state();
+        if ($now - (int) ($state['inbound_fixed'] ?? 0) < self::COOLDOWN) {
+            return [];
+        }
+        $state['inbound_fixed'] = $now;
+        self::saveState($state);
+
+        // The cron runs as root, the portal writes these files as the web user: keep whichever
+        // owner the file already had, or the next "Apply" in the portal could not write it.
+        $path = (defined('ASTERISK_PBX_DIR') ? ASTERISK_PBX_DIR : '') . '/extensions_inbound.conf';
+        $before = @stat($path);
+        try {
+            require_once dirname(__DIR__) . '/asterisk_sync.php';
+            syncInboundDialplan();
+        } catch (\Throwable $e) {
+            error_log('trunk watchdog: rebuilding the inbound dialplan failed: ' . $e->getMessage());
+            return [];
+        }
+        if (is_array($before) && is_file($path)) {
+            @chown($path, (int) $before['uid']);
+            @chgrp($path, (int) $before['gid']);
+        }
+        if (function_exists('writeAuditLog')) {
+            writeAuditLog(null, 'trunks', 'watchdog', 'Inbound routing was missing, rebuilt: ' . implode(', ', $missing), 'update', null);
+        }
+        return $missing;
+    }
+
     /** Reloading the module starts every outbound registration again, including stopped ones. */
     private static function nudge(): void
     {

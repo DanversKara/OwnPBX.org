@@ -34,6 +34,7 @@ try {
 try {
     require_once dirname(__DIR__) . '/src/services/TrunkRegistrationWatchdog.php';
     TrunkRegistrationWatchdog::check();
+    TrunkRegistrationWatchdog::checkInboundContexts();
 } catch (\Throwable $e) {
     error_log('task_dispatcher trunk watchdog: ' . $e->getMessage());
 }
