@@ -48,7 +48,7 @@ function __syncAllTrunksBody() {
         $context = ($raw_context === '' || $raw_context === 'from-trunk-inbound' || $raw_context === 'from-trunk-kapanma-tonu')
             ? "from-trunk-{$t_name}"
             : $raw_context;
-        $qualify = !empty($sip_map['qualify_frequency']) ? intval($sip_map['qualify_frequency']) : intval($t['qualify_frequency'] ?: 60);
+        $qualify = !empty($sip_map['qualify_frequency']) ? intval($sip_map['qualify_frequency']) : intval($t['qualify_frequency'] ?: 30);
         $t38 = (!empty($sip_map['t38_udptl']) && $sip_map['t38_udptl'] === 'yes') || !empty($t['t38_support']);
         $dtmf_mode = toCleanAscii(!empty($sip_map['dtmf_mode']) ? $sip_map['dtmf_mode'] : (!empty($t['dtmf_mode']) ? $t['dtmf_mode'] : 'rfc4733'));
         $direct_media = toCleanAscii(!empty($sip_map['direct_media']) ? $sip_map['direct_media'] : (!empty($t['direct_media']) ? $t['direct_media'] : 'no'));
@@ -113,7 +113,7 @@ function __syncAllTrunksBody() {
         }
 
         $reg_enabled = (!empty($sip_map['registration_enabled']) && $sip_map['registration_enabled'] == '1') || !empty($t['registration_enabled']);
-        $reg_expire = !empty($sip_map['registration_expiration']) ? intval($sip_map['registration_expiration']) : intval($t['registration_expiration'] ?: 3600);
+        $reg_expire = !empty($sip_map['registration_expiration']) ? intval($sip_map['registration_expiration']) : intval($t['registration_expiration'] ?: 180);
         $reg_retry = !empty($sip_map['registration_retry_interval']) ? intval($sip_map['registration_retry_interval']) : intval($t['registration_retry_interval'] ?: 60);
         // After an authentication rejection we wait longer than after a network failure:
         // retrying a wrong password every minute can get the address blocked at the carrier.

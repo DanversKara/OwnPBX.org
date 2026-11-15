@@ -222,6 +222,7 @@
                         <div class="form-group">
                             <label class="form-label"><?php echo t('trunks.field_registration_expiration'); ?></label>
                             <input type="number" name="registration_expiration" id="modal_registration_expiration" class="form-control" value="3600" min="30" max="86400">
+                            <small class="u-muted u-fs-11">How often the PBX tells the carrier where to send calls. Behind NAT keep this short (180 s): with a long one, a router that changes the outside port leaves inbound calls going nowhere until the next registration, while the trunk still looks registered.</small>
                         </div>
 
                         <div class="form-group">
@@ -351,7 +352,7 @@
                     <div class="u-grid-2">
                         <div class="form-group">
                             <label class="form-label"><?php echo t('trunks.field_qualify'); ?></label>
-                            <input type="number" name="qualify_frequency" id="modal_qualify_frequency" class="form-control" value="60" required>
+                            <input type="number" name="qualify_frequency" id="modal_qualify_frequency" class="form-control" value="30" required>
                         </div>
 
                         <div class="form-group">

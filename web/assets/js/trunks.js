@@ -55,7 +55,7 @@ function openCreateTrunkModal() {
     document.getElementById('modal_connection_mode').value = 'ip';
     document.getElementById('modal_auth_username').value = '';
     document.getElementById('modal_auth_password').value = '';
-    document.getElementById('modal_registration_expiration').value = 3600;
+    document.getElementById('modal_registration_expiration').value = 180;
     document.getElementById('modal_registration_retry_interval').value = 60;
     document.getElementById('modal_max_contacts').value = 1;
 
@@ -80,7 +80,7 @@ function openCreateTrunkModal() {
     document.getElementById('modal_t38_udptl_maxdatagram').value = 400;
     document.getElementById('modal_fax_detect').value = 1;
     document.getElementById('modal_fax_detect_timeout').value = 10;
-    document.getElementById('modal_qualify_frequency').value = 60;
+    document.getElementById('modal_qualify_frequency').value = 30;
     document.getElementById('modal_direct_media').value = 'no';
     document.getElementById('modal_rtp_symmetric').value = 'yes';
     document.getElementById('modal_rewrite_contact').value = 'yes';
@@ -143,7 +143,7 @@ function openEditTrunkModal(item) {
     document.getElementById('modal_connection_mode').value = item.connection_mode || 'ip';
     document.getElementById('modal_auth_username').value = item.auth_username || '';
     document.getElementById('modal_auth_password').value = item.auth_password || '';
-    document.getElementById('modal_registration_expiration').value = item.registration_expiration || 3600;
+    document.getElementById('modal_registration_expiration').value = item.registration_expiration || 180;
     document.getElementById('modal_registration_retry_interval').value = item.registration_retry_interval || 60;
     document.getElementById('modal_max_contacts').value = item.max_contacts || 1;
 
@@ -166,7 +166,7 @@ function openEditTrunkModal(item) {
     document.getElementById('modal_t38_udptl_maxdatagram').value = item.t38_udptl_maxdatagram || 400;
     document.getElementById('modal_fax_detect').value = item.fax_detect !== undefined ? item.fax_detect : 1;
     document.getElementById('modal_fax_detect_timeout').value = item.fax_detect_timeout || 10;
-    document.getElementById('modal_qualify_frequency').value = item.qualify_frequency || 60;
+    document.getElementById('modal_qualify_frequency').value = item.qualify_frequency || 30;
     document.getElementById('modal_direct_media').value = item.direct_media || 'no';
     document.getElementById('modal_rtp_symmetric').value = item.rtp_symmetric || 'yes';
     document.getElementById('modal_rewrite_contact').value = item.rewrite_contact || 'yes';
