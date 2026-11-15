@@ -29,6 +29,15 @@ try {
     // Non-fatal
 }
 
+// Trunks: a registration that is not working is no calls in or out, so it is restarted
+// rather than waiting for somebody to notice.
+try {
+    require_once dirname(__DIR__) . '/src/services/TrunkRegistrationWatchdog.php';
+    TrunkRegistrationWatchdog::check();
+} catch (\Throwable $e) {
+    error_log('task_dispatcher trunk watchdog: ' . $e->getMessage());
+}
+
 // Do not disturb with a timer ("for 8 hours"): switch it off when the time has passed.
 try {
     require_once dirname(__DIR__) . '/src/services/DndTimerService.php';

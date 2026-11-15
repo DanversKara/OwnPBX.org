@@ -115,6 +115,9 @@ function __syncAllTrunksBody() {
         $reg_enabled = (!empty($sip_map['registration_enabled']) && $sip_map['registration_enabled'] == '1') || !empty($t['registration_enabled']);
         $reg_expire = !empty($sip_map['registration_expiration']) ? intval($sip_map['registration_expiration']) : intval($t['registration_expiration'] ?: 3600);
         $reg_retry = !empty($sip_map['registration_retry_interval']) ? intval($sip_map['registration_retry_interval']) : intval($t['registration_retry_interval'] ?: 60);
+        // After an authentication rejection we wait longer than after a network failure:
+        // retrying a wrong password every minute can get the address blocked at the carrier.
+        $reg_auth_retry = max(300, $reg_retry);
 
         // 1. Endpoint Section
         $conf .= "; SIP Trunk ID {$t['id']}: {$title} ({$t_name})\n";
@@ -259,6 +262,17 @@ function __syncAllTrunksBody() {
             }
             $conf .= "expiration={$reg_expire}\n";
             $conf .= "retry_interval={$reg_retry}\n";
+            // Never give up registering. Asterisk's default treats an authentication
+            // rejection (401/403) as permanent: it stops registering and never tries
+            // again, so one bad answer from the carrier (a password change, a glitch at
+            // their end, a nonce the proxy mangled) takes the trunk down until somebody
+            // notices and reloads - hours of no calls in either direction. The trunk now
+            // keeps retrying, more slowly for rejections so the carrier does not see it
+            // as an attack; TrunkRegistrationWatchdog also nudges a stuck registration.
+            $conf .= "auth_rejection_permanent=no\n";
+            $conf .= "forbidden_retry_interval={$reg_auth_retry}\n";
+            $conf .= "fatal_retry_interval={$reg_auth_retry}\n";
+            $conf .= "max_retries=10000\n";
             if ($outbound_proxy !== '') {
                 $conf .= "outbound_proxy={$outbound_proxy}\n";
             }
