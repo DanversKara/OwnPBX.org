@@ -15,6 +15,14 @@ for f in "$INSTALL_DIR/conf/asterisk/pbx/"*.conf "$INSTALL_DIR/asterisk-config/p
     [[ -e "/etc/asterisk/pbx/$(basename "$f")" ]] || cp "$f" /etc/asterisk/pbx/
 done
 
+# features.conf includes the generated list of codes pressed during a call. The sync a few
+# steps later writes it from the Feature Codes page; make sure it exists first so Asterisk
+# does not complain about a missing include while loading.
+if [[ ! -f /etc/asterisk/pbx/features_applicationmap.conf ]]; then
+    printf '; Generated from the Feature Codes page on the first sync.\n' > /etc/asterisk/pbx/features_applicationmap.conf
+    chown asterisk:asterisk /etc/asterisk/pbx/features_applicationmap.conf 2>/dev/null || true
+fi
+
 for f in extensions.conf pjsip.conf pjsip_notify.conf queues.conf musiconhold.conf http.conf rtp.conf hep.conf modules.conf cdr.conf res_odbc.conf cdr_adaptive_odbc.conf extconfig.conf stasis.conf dnsmgr.conf cli_permissions.conf features.conf; do
     if [[ -f "$INSTALL_DIR/conf/asterisk/$f" ]]; then
         cp "$INSTALL_DIR/conf/asterisk/$f" /etc/asterisk/"$f"
