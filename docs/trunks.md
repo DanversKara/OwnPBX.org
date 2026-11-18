@@ -13,6 +13,10 @@ managed on **Trunks**; the edit dialog is split into tabs.
 | Routing | Context, max concurrent channels, max calls per minute, inbound DID normalization, transit routing, outbound caller ID normalization, carrier dialled number format |
 | Advanced | Extra PJSIP parameters, one per line |
 
+> 🕳️ **Inbound calls stopped but the trunk says Registered?** That is almost always the router
+> changing the outside port the carrier sends to, not the PBX. See
+> [Trunks behind NAT](trunk-nat.md).
+
 ## Identification
 
 Calls from a trunk are recognised by source IP (the trunk address plus *matched hosts*). Two trunks

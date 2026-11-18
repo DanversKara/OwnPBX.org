@@ -1,0 +1,21 @@
+---
+config:
+  layout: elk
+---
+flowchart LR
+%% @classes
+  ast["`**Asterisk**
+  registers from :5060`"]:::core
+  nat["`**Router (NAT)**
+  rewrites the source port`"]:::edge
+  carrier["`**Carrier**
+  remembers the port it saw`"]:::client
+  dead["`**Inbound call**
+  sent to the old port
+  nothing arrives`"]:::db
+
+  ast -->|"REGISTER from 5060"| nat
+  nat -->|"arrives as 203.0.113.10:30306"| carrier
+  carrier -->|"calls go to :30306"| nat
+  nat -.->|"port changed: no mapping"| dead
+  nat -->|"while the mapping lasts"| ast

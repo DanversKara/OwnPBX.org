@@ -165,6 +165,7 @@ return [
     'trunks.help_transport' => 'Transport & Port: UDP 5060 is the default VoIP signaling port.',
     'trunks.help_t38' => 'T.38 UDPTL: fax over IP. Switch it on only when the carrier supports T.38: a carrier that refuses it makes faxes fail.',
     'trunks.help_qualify' => 'Qualify (Heartbeat): Periodically tests the trunk connection status.',
+    'trunks.help_nat' => 'Behind a router: if inbound calls stop while the trunk still says Registered, the router has changed the outside port the carrier sends to. Keep the registration short (180 s) and set the router to keep the SIP source port (pfSense: Static Port). See docs/trunk-nat.md.',
     'trunks.col_trunk' => 'Trunk',
     'trunks.col_title' => 'Description',
     'trunks.col_ip_port' => 'IP & Port',

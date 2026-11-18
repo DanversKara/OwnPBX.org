@@ -15,7 +15,8 @@
         <p class="u-mt-8"><?php echo t('common.help_number_order'); ?></p>
         - <strong><?php echo t('trunks.help_transport'); ?></strong><br>
         - <strong><?php echo t('trunks.help_t38'); ?></strong><br>
-        - <strong><?php echo t('trunks.help_qualify'); ?></strong>
+        - <strong><?php echo t('trunks.help_qualify'); ?></strong><br>
+        - <strong><?php echo t('trunks.help_nat'); ?></strong>
         <div class="u-mt-10"><strong><?php echo t('common.help_limits'); ?></strong><ul class="u-m-4-0-0-20"><li><?php echo t('trunks.limit_e164'); ?></li><li><?php echo t('trunks.limit_custom'); ?></li></ul></div>
 <?php echo uiHelpBoxClose(); ?>
 
