@@ -13,10 +13,10 @@
  *   owner_extension  the extension that pressed *86 (the called party)
  *
  * The block action is always 'announcement' (the caller hears the
- * not-in-service sound). The entry is attributed to the owner extension
- * so each user sees their own blocked numbers under Call filtering.
- * The block itself is enforced for the whole PBX (the blacklist is
- * global) — a number blocked by one user is blocked for everyone.
+ * not-in-service sound). The entry belongs to the owner extension: the
+ * caller is stopped on their way to that person only, and still reaches
+ * everybody else. The owner sees it under Panel -> Blocked callers; an
+ * administrator sees every user's list on the Blacklist page.
  *
  * Runs in the background (dialplan System ... &), so it must be fast and
  * must never block the call. CLI only; never over HTTP.
@@ -46,27 +46,34 @@ if ($clean === '') {
 
 $db = getDB();
 
-// Already blocked? Do not duplicate; just make sure it is active and
-// attributed to this owner.
-$stmt = $db->prepare("SELECT id, owner_extension FROM pbx_inbound_blacklist WHERE number = ? LIMIT 1");
-$stmt->execute([$clean]);
+// An administrator can take call blocking away from a user; then *86 does nothing.
+require_once dirname(__DIR__) . '/src/services/InboundBlacklistService.php';
+if (!InboundBlacklistService::userMayBlock($owner)) {
+    fwrite(STDERR, "Call blocking is switched off for {$owner}\n");
+    exit(1);
+}
+
+// Already on this person's own list? Do not duplicate; just make sure it is active.
+// Another user may have the same number on theirs: the two never touch.
+$stmt = $db->prepare("SELECT id FROM pbx_inbound_blacklist WHERE number = ? AND owner_extension = ? LIMIT 1");
+$stmt->execute([$clean, $owner]);
 $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 if ($existing) {
-    $db->prepare("UPDATE pbx_inbound_blacklist SET is_active = 1, block_action = 'announcement', owner_extension = ?, updated_at = NOW() WHERE id = ?")
-        ->execute([$owner, (int) $existing['id']]);
+    $db->prepare("UPDATE pbx_inbound_blacklist SET is_active = 1, block_action = 'announcement', updated_at = NOW() WHERE id = ?")
+        ->execute([(int) $existing['id']]);
 } else {
     $db->prepare("INSERT INTO pbx_inbound_blacklist (number, title, block_action, owner_extension, is_active) VALUES (?, ?, 'announcement', ?, 1)")
         ->execute([$clean, 'Blocked via *86', $owner]);
 }
 
-// Put it in AstDB right away so the block is live for the caller's next
-// call without waiting for a dialplan sync.
-AsteriskHelper::execCLI("database put blacklist {$clean} 1");
-AsteriskHelper::execCLI("database put blacklist_action {$clean} announcement");
+// Put it in AstDB right away so the block is live for the caller's next call without
+// waiting for a dialplan sync: this person's own family, not the PBX-wide one.
+AsteriskHelper::execCLI("database put blacklist_u/{$owner} {$clean} 1");
+AsteriskHelper::execCLI("database put blacklist_u_action/{$owner} {$clean} announcement");
 
 // Regenerate the inbound dialplan so the portal and the pattern rules
 // stay in step (cheap; the AstDB put above already enforces the block).
-markPendingSync('inbound_dialplan', 'blacklist', $clean, "Inbound blacklist: {$clean} (blocked via *86 by {$owner})", 'create', null);
+markPendingSync('inbound_dialplan', 'blacklist', $clean, "Blocked for {$owner} via *86: {$clean}", 'create', null);
 
 fwrite(STDOUT, "Blocked {$clean} for {$owner}\n");
 exit(0);

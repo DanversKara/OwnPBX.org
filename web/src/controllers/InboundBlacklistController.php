@@ -86,8 +86,29 @@ class InboundBlacklistController extends BaseController
 
         $entries = InboundBlacklistService::listAll();
 
+        // Grouped per owner so the page is not one blob of numbers: what the whole PBX blocks
+        // first, then each user's own list with their name. Users never see each other's;
+        // an administrator sees every list, because they answer for the PBX.
+        $groups = [];
+        foreach ($entries as $e) {
+            $owner = preg_replace('/\D+/', '', (string) ($e['owner_extension'] ?? '')) ?? '';
+            $groups[$owner][] = $e;
+        }
+        ksort($groups, SORT_NATURAL);
+        $ownerNames = [];
+        foreach (array_keys($groups) as $owner) {
+            if ($owner === '') {
+                continue;
+            }
+            $q = getDB()->prepare('SELECT full_name FROM sys_users WHERE extension = ? LIMIT 1');
+            $q->execute([$owner]);
+            $ownerNames[$owner] = trim((string) ($q->fetchColumn() ?: ''));
+        }
+
         static::renderPage('blacklist/index', [
             'entries' => $entries,
+            'groups' => $groups,
+            'ownerNames' => $ownerNames,
             'canEdit' => $canEdit,
             'canDelete' => $canDelete,
             'notices' => $notices,

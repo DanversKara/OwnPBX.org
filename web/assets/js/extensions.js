@@ -100,6 +100,8 @@ function openCreateExtensionModal() {
 
     const dndEl = document.getElementById('modal_dnd_enabled');
     if (dndEl) dndEl.checked = false;
+    const blkEl = document.getElementById('modal_may_block_callers');
+    if (blkEl) blkEl.checked = true;
     const cfAlways = document.getElementById('modal_call_forward_number');
     if (cfAlways) cfAlways.value = '';
     const cfBusy = document.getElementById('modal_cf_busy_number');
@@ -176,6 +178,9 @@ function openEditExtensionModal(item) {
 
     const dndEl = document.getElementById('modal_dnd_enabled');
     if (dndEl) dndEl.checked = (item.dnd_enabled == 1);
+    // Not sent by an older server, and then blocking is allowed: do not switch it off by accident.
+    const blkEl2 = document.getElementById('modal_may_block_callers');
+    if (blkEl2) blkEl2.checked = (item.may_block_callers === undefined || item.may_block_callers == 1);
     const cfAlways = document.getElementById('modal_call_forward_number');
     if (cfAlways) cfAlways.value = item.call_forward_number || '';
     const cfBusy = document.getElementById('modal_cf_busy_number');

@@ -32,6 +32,8 @@ class ExtensionService {
             $is_active = PBXHelper::boolFlag($data, 'is_active', 0);
             $pickup_group = preg_replace('/[^A-Za-z0-9_-]/', '', trim((string) ($data['pickup_group'] ?? '')));
             $dnd_enabled = PBXHelper::boolFlag($data, 'dnd_enabled', 0);
+            // *86 and the user's own Blocked callers page; on unless an administrator says otherwise.
+            $may_block_callers = PBXHelper::boolFlag($data, 'may_block_callers', 1);
             $call_forward_number = preg_replace('/[^0-9+*#]/', '', trim((string) ($data['call_forward_number'] ?? '')));
             $cf_busy_number = preg_replace('/[^0-9+*#]/', '', trim((string) ($data['cf_busy_number'] ?? '')));
             $cf_noanswer_number = preg_replace('/[^0-9+*#]/', '', trim((string) ($data['cf_noanswer_number'] ?? '')));
@@ -145,6 +147,7 @@ class ExtensionService {
                     'cid_external' => $cid_external,
                     'pickup_group' => $pickup_group !== '' ? $pickup_group : null,
                     'dnd_enabled' => $dnd_enabled,
+                    'may_block_callers' => $may_block_callers,
                     'call_forward_number' => $call_forward_number !== '' ? $call_forward_number : null,
                     'cf_busy_number' => $cf_busy_number !== '' ? $cf_busy_number : null,
                     'cf_noanswer_number' => $cf_noanswer_number !== '' ? $cf_noanswer_number : null,
@@ -213,6 +216,7 @@ class ExtensionService {
                     'cid_external' => $cid_external,
                     'pickup_group' => $pickup_group !== '' ? $pickup_group : null,
                     'dnd_enabled' => $dnd_enabled,
+                    'may_block_callers' => $may_block_callers,
                     'call_forward_number' => $call_forward_number !== '' ? $call_forward_number : null,
                     'cf_busy_number' => $cf_busy_number !== '' ? $cf_busy_number : null,
                     'cf_noanswer_number' => $cf_noanswer_number !== '' ? $cf_noanswer_number : null,

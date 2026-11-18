@@ -79,7 +79,7 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
     $seq++;
     $lbl = ($labelPrefix !== '' ? $labelPrefix . '_' : '') . $ext . '_' . $seq;
 
-    $stmt = $db->prepare("SELECT dnd_enabled, call_forward_number, cf_busy_number, cf_noanswer_number, cf_noanswer_timeout, allowed_phone_mode, voicemail_enabled, vm_on_noanswer, vm_on_busy, vm_on_unavail, vm_always, permission_group_id, outbound_group, role, is_guest, guest_inbound FROM sys_users WHERE extension = ?");
+    $stmt = $db->prepare("SELECT dnd_enabled, call_forward_number, cf_busy_number, cf_noanswer_number, cf_noanswer_timeout, allowed_phone_mode, voicemail_enabled, vm_on_noanswer, vm_on_busy, vm_on_unavail, vm_always, permission_group_id, outbound_group, role, is_guest, guest_inbound, may_block_callers FROM sys_users WHERE extension = ?");
     $stmt->execute([$ext]);
     $u = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
     $isGuest = !empty($u['is_guest']) && ($u['role'] ?? '') !== 'admin';
@@ -254,9 +254,12 @@ function buildExtensionDialLines(string $ext, PDO $db, string $labelPrefix = '')
     // __BLOCK_CALLER_CHAN is this (the caller's) channel, so the feature
     // Gosub can add the caller to the blacklist and redirect their channel
     // to the not-in-service announcement. Only the callee can trigger it.
-    $lines[] = " same => n,Set(__DYNAMIC_FEATURES=blockcaller)";
-    $lines[] = " same => n,Set(__BLOCK_OWNER={$ext})";
-    $lines[] = " same => n,Set(__BLOCK_CALLER_CHAN=\${CHANNEL})";
+    // An administrator can take *86 away from a user: then it is never armed on their calls.
+    if (!array_key_exists('may_block_callers', $u) || !empty($u['may_block_callers'])) {
+        $lines[] = " same => n,Set(__DYNAMIC_FEATURES=blockcaller)";
+        $lines[] = " same => n,Set(__BLOCK_OWNER={$ext})";
+        $lines[] = " same => n,Set(__BLOCK_CALLER_CHAN=\${CHANNEL})";
+    }
     if (($jb = rtrim(jitterBufferLine())) !== '') {
         $lines[] = $jb;
     }

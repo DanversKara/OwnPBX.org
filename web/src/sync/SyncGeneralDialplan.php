@@ -91,6 +91,9 @@ function __syncGeneralDialplanBody() {
             $conf .= "exten => {$ext},hint,PJSIP/{$ext}-sip&PJSIP/{$ext}-webrtc&PJSIP/{$ext}-mob-webrtc\n";
             $conf .= "exten => {$ext},1,NoOp(Direct Call to Extension {$ext} - {$name})\n";
             $conf .= " same => n,ExecIf(\$[\"\${CDR(direction)}\" = \"\"]?Set(CDR(direction)=internal))\n";
+            // Callers this person blocked (*86, or their Blocked callers page): their own list
+            // only, so the caller still reaches everybody else on the PBX.
+            $conf .= " same => n,GosubIf(\$[\${DB_EXISTS(blacklist_u/{$ext}/\${FILTER(0-9,\${CALLERID(num)})})}]?sub-user-blocked,s,1({$ext}))\n";
 
             // Boss - secretary check: if this extension is an active boss, the secretary filter applies
             if (isset($bs_groups[$ext])) {
@@ -354,6 +357,28 @@ function __syncGeneralDialplanBody() {
     $conf .= " same => n,GotoIf(\$[\"\${BLOCK_CALLER_CHAN}\" = \"\"]?done)\n";
     $conf .= " same => n,ChannelRedirect(\${BLOCK_CALLER_CHAN},block-announce,s,1)\n";
     $conf .= " same => n(done),Hangup()\n\n";
+
+    // A caller on one person's own blocked list reaching that person's extension.
+    // Inside a ring group (SKIP_VM=1) only this member's leg ends: the caller is blocked
+    // from this person, and the colleagues who did not block them still ring.
+    $conf .= "[sub-user-blocked]\n";
+    $conf .= "exten => s,1,NoOp(Blocked by \${ARG1}: \${CALLERID(num)})\n";
+    $conf .= " same => n,Set(CDR(accountcode)=SPAM_BLOCKED)\n";
+    $conf .= " same => n,Set(CDR(userfield)=Blocked by \${ARG1})\n";
+    $conf .= " same => n,Set(BLK_ACTION=\${DB(blacklist_u_action/\${ARG1}/\${FILTER(0-9,\${CALLERID(num)})})})\n";
+    $conf .= " same => n,GotoIf(\$[\"\${SKIP_VM}\" = \"1\"]?quiet)\n";
+    $conf .= " same => n,GotoIf(\$[\"\${BLK_ACTION}\" = \"busy\"]?act_busy)\n";
+    $conf .= " same => n,GotoIf(\$[\"\${BLK_ACTION}\" = \"congestion\"]?act_congestion)\n";
+    $conf .= " same => n,GotoIf(\$[\"\${BLK_ACTION}\" = \"drop\"]?act_drop)\n";
+    $conf .= " same => n,Answer()\n";
+    $conf .= " same => n,Playback(ss-noservice)\n";
+    $conf .= " same => n,Hangup()\n";
+    $conf .= " same => n(act_busy),Playtones(busy)\n";
+    $conf .= " same => n,Busy(5)\n";
+    $conf .= " same => n(act_congestion),Playtones(congestion)\n";
+    $conf .= " same => n,Congestion(5)\n";
+    $conf .= " same => n(act_drop),Hangup(16)\n";
+    $conf .= " same => n(quiet),Hangup(17)\n\n";
 
     // What a blocked caller hears after *86: the not-in-service sound.
     $conf .= "[block-announce]\n";

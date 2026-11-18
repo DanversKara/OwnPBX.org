@@ -234,6 +234,18 @@
                         </div>
                     </div>
 
+                    <div class="u-d-flex u-ai-center u-jc-space-between u-gap-12 u-mb-16">
+                        <div>
+                            <span class="u-fw-700 u-fs-13 u-text-main"><i class="fas fa-user-slash text-danger"></i> <?php echo t('extensions.field_may_block'); ?></span>
+                            <small class="u-hint u-fs-11"><?php echo t('extensions.may_block_help'); ?></small>
+                        </div>
+                        <label class="u-d-inline-flex u-ai-center u-gap-6 u-fs-12 u-pointer u-m-0">
+                            <input type="hidden" name="may_block_callers" value="0">
+                            <input type="checkbox" name="may_block_callers" id="modal_may_block_callers" value="1" class="u-accent" checked>
+                            <span><?php echo t('common.active'); ?></span>
+                        </label>
+                    </div>
+
                     <div class="form-group u-mb-16">
                         <label class="form-label"><i class="fas fa-stopwatch u-primary"></i> <?php echo t('extensions.cf_noanswer_timeout'); ?></label>
                         <input type="number" name="cf_noanswer_timeout" id="modal_cf_noanswer_timeout" class="form-control" min="5" max="120" value="20" placeholder="20">

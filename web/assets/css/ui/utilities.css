@@ -442,3 +442,6 @@
     border: 1px solid #ccc;
     padding: 4px;
 }
+.u-bg-subtle:not(#u):not(#u) { background: var(--bg-subtle); }
+.u-d-none:not(#u):not(#u) { display: none; }
+.u-fw-400:not(#u):not(#u) { font-weight: 400; }

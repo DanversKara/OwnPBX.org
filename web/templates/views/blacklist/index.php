@@ -55,7 +55,20 @@ $can_delete = $canDelete ?? false;
                 <?php if (empty($entries)): ?>
                     <?php echo uiTableEmptyRow(8, t('blacklist.empty', 'Kayıtlı engellenmiş numara bulunmamaktadır.'), 'fa-shield-alt'); ?>
                 <?php else: ?>
-                    <?php foreach ($entries as $e): ?>
+                    <?php foreach (($groups ?? ['' => $entries]) as $ownerExt => $ownerEntries): ?>
+                        <tr class="u-bg-subtle">
+                            <td colspan="8" class="u-fw-600 u-fs-12">
+                                <?php if ((string) $ownerExt === ''): ?>
+                                    <i class="fas fa-building"></i> <?php echo t('blacklist.group_pbx_wide'); ?>
+                                <?php else: ?>
+                                    <i class="fas fa-user"></i>
+                                    <?php echo htmlspecialchars(trim($ownerExt . ' ' . (string) (($ownerNames ?? [])[$ownerExt] ?? ''))); ?>
+                                    <span class="text-muted u-fw-400"><?php echo t('blacklist.group_user_note'); ?></span>
+                                <?php endif; ?>
+                                <span class="badge badge-secondary"><?php echo count($ownerEntries); ?></span>
+                            </td>
+                        </tr>
+                    <?php foreach ($ownerEntries as $e): ?>
                         <tr>
                             <td class="col-hide-mobile text-muted u-fs-12">#<?php echo (int)$e['id']; ?></td>
                             <td>
@@ -131,6 +144,7 @@ $can_delete = $canDelete ?? false;
                                 <?php endif; ?>
                             </td>
                         </tr>
+                    <?php endforeach; ?>
                     <?php endforeach; ?>
                 <?php endif; ?>
             <?php echo uiTableClose(); ?>

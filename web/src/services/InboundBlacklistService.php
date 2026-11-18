@@ -48,16 +48,16 @@ class InboundBlacklistService
      *
      * @return array<string, mixed>|null
      */
-    private static function findExistingOrVariant(string $cleanNumber): ?array
+    private static function findExistingOrVariant(string $cleanNumber, ?string $ownerExtension = null): ?array
     {
-        $existing = InboundBlacklistRepository::findByNumber($cleanNumber);
+        $existing = InboundBlacklistRepository::findByNumber($cleanNumber, $ownerExtension);
         if ($existing !== null) {
             return $existing;
         }
         if (!str_starts_with($cleanNumber, '_')) {
             $alt = str_starts_with($cleanNumber, '+') ? substr($cleanNumber, 1) : '+' . $cleanNumber;
             if ($alt !== '' && $alt !== '+') {
-                return InboundBlacklistRepository::findByNumber($alt);
+                return InboundBlacklistRepository::findByNumber($alt, $ownerExtension);
             }
         }
         return null;
@@ -79,7 +79,7 @@ class InboundBlacklistService
             $action = 'busy';
         }
 
-        $existing = self::findExistingOrVariant($cleanNumber);
+        $existing = self::findExistingOrVariant($cleanNumber, $ownerExtension);
         if ($existing !== null) {
             return ['success' => false, 'error' => t('blacklist.err_duplicate', 'Bu numara zaten kara listede kayıtlı.')];
         }
@@ -93,7 +93,7 @@ class InboundBlacklistService
         ]);
 
         if (!$deferSync) {
-            self::syncAstDb($cleanNumber, $action, $isActive);
+            self::syncAstDb($cleanNumber, $action, $isActive, $ownerExtension);
             if (function_exists('markPendingSync')) {
                 markPendingSync('inbound_dialplan', 'blacklist', $cleanNumber, "Inbound blacklist: {$cleanNumber}", 'create', $_SESSION['user_id'] ?? null);
             }
@@ -123,14 +123,14 @@ class InboundBlacklistService
             $action = 'busy';
         }
 
-        $duplicate = self::findExistingOrVariant($cleanNumber);
+        $duplicate = self::findExistingOrVariant($cleanNumber, (string) ($entry['owner_extension'] ?? '') !== '' ? (string) $entry['owner_extension'] : null);
         if ($duplicate !== null && (int)$duplicate['id'] !== $id) {
             return ['success' => false, 'error' => t('blacklist.err_duplicate', 'Bu numara zaten kara listede kayıtlı.')];
         }
 
         // Clean up old AstDB key if number changed
         if ($entry['number'] !== $cleanNumber) {
-            self::removeFromAstDb($entry['number']);
+            self::removeFromAstDb($entry['number'], (string) ($entry['owner_extension'] ?? ''));
         }
 
         InboundBlacklistRepository::update($id, [
@@ -140,7 +140,7 @@ class InboundBlacklistService
             'is_active' => $isActive ? 1 : 0,
         ]);
 
-        self::syncAstDb($cleanNumber, $action, $isActive);
+        self::syncAstDb($cleanNumber, $action, $isActive, (string) ($entry['owner_extension'] ?? ''));
         if (function_exists('markPendingSync')) {
             markPendingSync('inbound_dialplan', 'blacklist', $cleanNumber, "Inbound blacklist: {$cleanNumber}", 'update', $_SESSION['user_id'] ?? null);
         }
@@ -155,7 +155,7 @@ class InboundBlacklistService
     {
         $entry = InboundBlacklistRepository::findById($id);
         if ($entry !== null) {
-            self::removeFromAstDb($entry['number']);
+            self::removeFromAstDb($entry['number'], (string) ($entry['owner_extension'] ?? ''));
             InboundBlacklistRepository::delete($id);
             if (function_exists('markPendingSync')) {
                 markPendingSync('inbound_dialplan', 'blacklist', (string)$entry['number'], "Inbound blacklist: {$entry['number']} (deleted)", 'delete', $_SESSION['user_id'] ?? null);
@@ -179,7 +179,7 @@ class InboundBlacklistService
         $updated = InboundBlacklistRepository::findById($id);
         $newActive = (bool)($updated['is_active'] ?? 0);
 
-        self::syncAstDb($entry['number'], (string)$entry['block_action'], $newActive);
+        self::syncAstDb($entry['number'], (string)$entry['block_action'], $newActive, (string) ($entry['owner_extension'] ?? ''));
         if (function_exists('markPendingSync')) {
             markPendingSync('inbound_dialplan', 'blacklist', (string)$entry['number'], "Inbound blacklist: {$entry['number']} (status changed)", 'update', $_SESSION['user_id'] ?? null);
         }
@@ -187,13 +187,80 @@ class InboundBlacklistService
         return true;
     }
 
+    // ------------------------------------------------- a user's own blocked callers
+
+    /**
+     * May this extension block callers (*86 and the Blocked callers page)? An administrator
+     * can take it away per user; a user who is not allowed keeps the numbers already blocked
+     * but cannot add more, and *86 does nothing on their calls.
+     */
+    public static function userMayBlock(string $extension): bool
+    {
+        $ext = preg_replace('/\D+/', '', $extension) ?? '';
+        if ($ext === '') {
+            return false;
+        }
+        try {
+            $q = getDB()->prepare('SELECT may_block_callers FROM sys_users WHERE extension = ? LIMIT 1');
+            $q->execute([$ext]);
+            $v = $q->fetchColumn();
+            return $v === false ? true : (bool) $v;   // before the migration: allowed
+        } catch (\Throwable $e) {
+            return true;
+        }
+    }
+
+    /** One person's own blocked numbers. Nobody else's list is ever visible to them. */
+    public static function listForUser(string $extension): array
+    {
+        $ext = preg_replace('/\D+/', '', $extension) ?? '';
+        return $ext === '' ? [] : InboundBlacklistRepository::findByOwner($ext);
+    }
+
+    /**
+     * Block a caller for this extension only.
+     * @return array{success: bool, id?: int, error?: string}
+     */
+    public static function addForUser(string $extension, string $number, ?string $title = null, string $action = 'announcement'): array
+    {
+        $ext = preg_replace('/\D+/', '', $extension) ?? '';
+        if ($ext === '') {
+            return ['success' => false, 'error' => t('blocked.err_no_extension', 'No extension.')];
+        }
+        if (!self::userMayBlock($ext)) {
+            return ['success' => false, 'error' => t('blocked.err_not_allowed', 'An administrator has switched call blocking off for you.')];
+        }
+        return self::add($number, $title, $action, true, false, $ext);
+    }
+
+    /** Unblock one of this extension's own numbers; another person's entry is never touched. */
+    public static function deleteForUser(string $extension, int $id): bool
+    {
+        $ext = preg_replace('/\D+/', '', $extension) ?? '';
+        $entry = InboundBlacklistRepository::findById($id);
+        if ($ext === '' || $entry === null) {
+            return false;
+        }
+        if ((string) ($entry['owner_extension'] ?? '') !== $ext) {
+            return false;
+        }
+        return self::delete($id);
+    }
+
     /**
      * Sync single entry to AstDB.
      */
-    public static function syncAstDb(string $number, string $action, bool $isActive): void
+    public static function syncAstDb(string $number, string $action, bool $isActive, ?string $ownerExtension = null): void
     {
         if (str_starts_with($number, '_')) {
             // Dialplan pattern, handled via generated extensions in dialplan
+            return;
+        }
+        // A number blocked by a user stops at that person's extension only (*86), so it lives
+        // in a family of its own. Only what an administrator adds with no owner is PBX-wide.
+        $owner = preg_replace('/\D+/', '', (string) $ownerExtension) ?? '';
+        if ($owner !== '') {
+            self::syncUserAstDb($owner, $number, $action, $isActive);
             return;
         }
 
@@ -211,16 +278,40 @@ class InboundBlacklistService
         }
     }
 
+    /** One person's own block (*86 or their Blocked callers page): blacklist_u/<ext>/<number>. */
+    public static function syncUserAstDb(string $ownerExtension, string $number, string $action, bool $isActive): void
+    {
+        $owner = preg_replace('/\D+/', '', $ownerExtension) ?? '';
+        $cleanKey = preg_replace('/[^0-9]/', '', $number) ?? '';
+        if ($owner === '' || $cleanKey === '') {
+            return;
+        }
+        if ($isActive) {
+            AsteriskHelper::execCLI("database put blacklist_u/{$owner} {$cleanKey} 1");
+            AsteriskHelper::execCLI("database put blacklist_u_action/{$owner} {$cleanKey} {$action}");
+        } else {
+            AsteriskHelper::execCLI("database del blacklist_u/{$owner} {$cleanKey}");
+            AsteriskHelper::execCLI("database del blacklist_u_action/{$owner} {$cleanKey}");
+        }
+    }
+
     /**
      * Remove entry from AstDB.
      */
-    public static function removeFromAstDb(string $number): void
+    public static function removeFromAstDb(string $number, ?string $ownerExtension = null): void
     {
         $cleanKey = preg_replace('/[^0-9]/', '', $number);
-        if ($cleanKey !== '') {
-            AsteriskHelper::execCLI("database del blacklist {$cleanKey}");
-            AsteriskHelper::execCLI("database del blacklist_action {$cleanKey}");
+        if ($cleanKey === '') {
+            return;
         }
+        $owner = preg_replace('/\D+/', '', (string) $ownerExtension) ?? '';
+        if ($owner !== '') {
+            AsteriskHelper::execCLI("database del blacklist_u/{$owner} {$cleanKey}");
+            AsteriskHelper::execCLI("database del blacklist_u_action/{$owner} {$cleanKey}");
+            return;
+        }
+        AsteriskHelper::execCLI("database del blacklist {$cleanKey}");
+        AsteriskHelper::execCLI("database del blacklist_action {$cleanKey}");
     }
 
     /**
@@ -228,21 +319,31 @@ class InboundBlacklistService
      */
     public static function rebuildAstDb(): void
     {
-        // First clear blacklist family
+        // First clear both families: PBX-wide and the users' own lists.
         AsteriskHelper::execCLI('database deltree blacklist');
         AsteriskHelper::execCLI('database deltree blacklist_action');
+        AsteriskHelper::execCLI('database deltree blacklist_u');
+        AsteriskHelper::execCLI('database deltree blacklist_u_action');
 
         $active = InboundBlacklistRepository::findActive();
         foreach ($active as $entry) {
             $num = (string)$entry['number'];
-            if (!str_starts_with($num, '_')) {
-                $cleanKey = preg_replace('/[^0-9]/', '', $num);
-                if ($cleanKey !== '') {
-                    $action = (string)($entry['block_action'] ?? 'busy');
-                    AsteriskHelper::execCLI("database put blacklist {$cleanKey} 1");
-                    AsteriskHelper::execCLI("database put blacklist_action {$cleanKey} {$action}");
-                }
+            if (str_starts_with($num, '_')) {
+                continue;
             }
+            $cleanKey = preg_replace('/[^0-9]/', '', $num);
+            if ($cleanKey === '') {
+                continue;
+            }
+            $action = (string)($entry['block_action'] ?? 'busy');
+            $owner = preg_replace('/\D+/', '', (string)($entry['owner_extension'] ?? '')) ?? '';
+            if ($owner !== '') {
+                AsteriskHelper::execCLI("database put blacklist_u/{$owner} {$cleanKey} 1");
+                AsteriskHelper::execCLI("database put blacklist_u_action/{$owner} {$cleanKey} {$action}");
+                continue;
+            }
+            AsteriskHelper::execCLI("database put blacklist {$cleanKey} 1");
+            AsteriskHelper::execCLI("database put blacklist_action {$cleanKey} {$action}");
         }
     }
 

@@ -29,10 +29,22 @@ class InboundBlacklistRepository extends BaseRepository
     /**
      * @return array<string, mixed>|null
      */
-    public static function findByNumber(string $number): ?array
+    public static function findByNumber(string $number, ?string $ownerExtension = null): ?array
     {
-        $rows = static::findWhere('number = ?', [$number]);
+        // The same number can sit in several lists: one person blocks a caller for themselves,
+        // another for themselves, an administrator for the whole PBX. They never clash.
+        $owner = $ownerExtension !== null ? (preg_replace('/\D+/', '', $ownerExtension) ?? '') : '';
+        $rows = $owner !== ''
+            ? static::findWhere('number = ? AND owner_extension = ?', [$number, $owner])
+            : static::findWhere('number = ? AND (owner_extension IS NULL OR owner_extension = \'\')', [$number]);
         return $rows[0] ?? null;
+    }
+
+    /** One person's own blocked numbers, newest first. */
+    public static function findByOwner(string $ownerExtension): array
+    {
+        $owner = preg_replace('/\D+/', '', $ownerExtension) ?? '';
+        return $owner === '' ? [] : static::findWhere('owner_extension = ?', [$owner], 'id DESC');
     }
 
     /**

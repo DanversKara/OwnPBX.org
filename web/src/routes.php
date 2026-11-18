@@ -30,6 +30,7 @@ return [
     '/dashboard'       => ['controller' => DashboardController::class, 'action' => 'index', 'module' => 'dashboard.php'],
     '/my-phone'        => ['controller' => MyPhoneController::class, 'action' => 'index', 'module' => 'my_phone.php'],
     '/chat'            => ['controller' => ChatController::class, 'action' => 'index', 'module' => 'chat.php'],
+    '/blocked-callers' => ['controller' => BlockedCallersController::class, 'action' => 'index', 'module' => 'blocked_callers.php'],
     '/trunks'          => ['controller' => TrunkController::class, 'action' => 'index', 'module' => 'trunks.php'],
     '/did-routes'      => ['controller' => DidRouteController::class, 'action' => 'index', 'module' => 'did_routes.php'],
     '/blacklist'       => ['controller' => InboundBlacklistController::class, 'action' => 'index', 'module' => 'blacklist.php'],

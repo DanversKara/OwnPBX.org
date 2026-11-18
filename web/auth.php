@@ -156,6 +156,7 @@ function getModuleKeyForPage($page = null) {
     $map = [
         'dashboard.php'         => 'dashboard',
         'my_phone.php'          => 'my_phone',
+        'blocked_callers.php'   => 'my_phone',
         'chat.php'              => 'chat',
         'trunks.php'            => 'trunks',
         'did_routes.php'        => 'did_routes',
