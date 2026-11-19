@@ -121,6 +121,7 @@ register_shutdown_function(function () use ($path, $lang, $role, $outfile) {
 });
 
 require $SMOKE_ROOT . '/auth.php';
+require_once __DIR__ . '/_smoke_render_fns.php';
 if (is_file($SMOKE_ROOT . '/vendor/autoload.php')) {
     require_once $SMOKE_ROOT . '/vendor/autoload.php';
 }
@@ -141,7 +142,10 @@ register_shutdown_function(static function (): void {
 // Anonymous routes (login / password reset) are rendered without a session.
 $ANON = ['/login', '/force-reset', '/reset-password', '/forgot-password'];
 if (!in_array($path, $ANON, true)) {
-    $_SESSION['user_id']       = 1;
+    // A real account, not a hardcoded id 1. Every page checks that the signed-in user exists,
+    // so once that account was deleted on a live PBX every render bounced to /login and the
+    // sweep reported "0 bytes" for all 398 of them - the pages were fine, the visitor was not.
+    $_SESSION['user_id']       = smoke_user_id($role);
     $_SESSION['user_role']     = $role;
     $_SESSION['username']      = 'smoke';
     $_SESSION['last_activity'] = time();
