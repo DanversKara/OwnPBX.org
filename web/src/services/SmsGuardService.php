@@ -102,7 +102,19 @@ final class SmsGuardService
         self::clearFailures();
         self::burnCode($code);
 
-        return self::run($command, $who, $from);
+        // Every answer ends with where things stand. A text that silently worked and a text that
+        // never arrived look identical from a phone, and this is the one channel whose whole
+        // purpose is being used when nothing else can be checked.
+        return rtrim(self::run($command, $who, $from)) . ' — ' . self::state();
+    }
+
+    /** Where the PBX stands, in the few words a text has room for. */
+    private static function state(): string
+    {
+        $state = SecurityLockdownService::state();
+        $locked = count(SecurityLockdownService::lockedUsers());
+        return 'lockdown ' . ($state['active'] ? 'ON since ' . $state['at'] : 'off')
+             . ', ' . $locked . ' locked.';
     }
 
     /** Carries out one command. Every one of these tightens access; none of them loosens it. */
@@ -139,10 +151,7 @@ final class SmsGuardService
                 return "{$who} is locked out. Unlock from the LAN or the console.";
 
             case 'STATUS':
-                $state = SecurityLockdownService::state();
-                $locked = count(SecurityLockdownService::lockedUsers());
-                return 'Lockdown ' . ($state['active'] ? 'ON since ' . $state['at'] : 'off')
-                     . ", {$locked} account(s) locked.";
+                return 'Status:';
 
             default:
                 return 'Commands: LOCKDOWN, KICK [who], LOCK <who>, STATUS.';

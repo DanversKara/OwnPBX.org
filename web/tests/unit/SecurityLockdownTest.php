@@ -120,6 +120,9 @@ final class SecurityLockdownTest extends TestCase
         $reply = SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' LOCKDOWN');
         $this->assertStringStartsWith('Lockdown ON', (string) $reply);
         $this->assertTrue(SecurityLockdownService::isActive());
+        // Every answer says where things stand, so a text that worked cannot be mistaken for
+        // one that never arrived.
+        $this->assertStringContainsString('lockdown ON', (string) $reply);
     }
 
     public function testACodeWorksOnlyOnce(): void
@@ -161,6 +164,16 @@ final class SecurityLockdownTest extends TestCase
         setSystemSetting(SmsGuardService::SETTING_PASSPHRASE, '');
         $this->assertFalse(SmsGuardService::enabled());
         $this->assertNull(SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' LOCKDOWN'));
+    }
+
+    public function testEveryAnswerCarriesTheCurrentState(): void
+    {
+        foreach (['STATUS', 'KICK', 'LOCK 7841', 'NONSENSE'] as $command) {
+            setSystemSetting(SmsGuardService::SETTING_USED_CODE, '');
+            $reply = (string) SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' ' . $command);
+            $this->assertStringContainsString('lockdown ', $reply, "'{$command}' answered without the state.");
+            $this->assertStringContainsString(' locked.', $reply, "'{$command}' answered without the lock count.");
+        }
     }
 
     // ------------------------------------------------------------ the replies

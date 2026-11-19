@@ -238,7 +238,8 @@ final class PluginManager
             $stmt = $db->prepare(
                 "INSERT INTO sys_plugins (slug, name, version, source, enabled, worker_enabled, config_version, installed_at, updated_at)
                  VALUES (?, ?, ?, ?, 1, ?, 1, NOW(), NOW())
-                 ON DUPLICATE KEY UPDATE name = VALUES(name), version = VALUES(version), enabled = 1, updated_at = NOW()"
+                 ON DUPLICATE KEY UPDATE name = VALUES(name), version = VALUES(version), enabled = 1,
+                     worker_enabled = VALUES(worker_enabled), updated_at = NOW()"
             );
             $hasWorker = !empty($m['hooks']['worker']) ? 1 : 0;
             $stmt->execute([
@@ -559,7 +560,8 @@ final class PluginManager
         $db->prepare(
             "INSERT INTO sys_plugins (slug, name, version, source, enabled, worker_enabled, config_version, installed_at, updated_at)
              VALUES (?, ?, ?, 'custom', 1, ?, 1, NOW(), NOW())
-             ON DUPLICATE KEY UPDATE name = VALUES(name), version = VALUES(version), source = 'custom', enabled = 1, updated_at = NOW()"
+             ON DUPLICATE KEY UPDATE name = VALUES(name), version = VALUES(version), source = 'custom', enabled = 1,
+                 worker_enabled = VALUES(worker_enabled), updated_at = NOW()"
         )->execute([$slug, $name, $version, $hasWorker]);
 
         if (!empty($manifest['settings_schema']) && is_array($manifest['settings_schema'])) {
