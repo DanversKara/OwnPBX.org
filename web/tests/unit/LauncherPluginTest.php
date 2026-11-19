@@ -88,6 +88,48 @@ final class LauncherPluginTest extends TestCase
         $this->assertSame('pstn', $mine['line']);
     }
 
+    /**
+     * A texting number shared by several people still reports to the watched one.
+     *
+     * The owner used to be whichever row the database returned first, so a number shared between
+     * the watched extension and somebody else came back as that somebody else and was filtered
+     * out - the same text showed as extension 1000 one minute and 1002 the next.
+     */
+    public function testASharedTextingNumberReportsToTheWatchedExtension(): void
+    {
+        $db = getDB();
+        $has = $db->prepare("SELECT 1 FROM information_schema.tables
+                             WHERE table_schema = DATABASE() AND table_name = 'plg_sms_access' LIMIT 1");
+        $has->execute();
+        if ($has->fetchColumn() === false) {
+            $this->markTestSkipped('The SMS plugin tables are not installed here.');
+        }
+        $db->exec("DELETE FROM sys_users WHERE username = 'lnchmon'");
+        $db->exec("INSERT INTO sys_users (username, password_hash, full_name, role, extension, extension_type, is_active) VALUES ('lnchmon', 'x', 'Hall monitor', 'user', '7842', 'sip', 1)");
+        $watchedId = (int) $db->query("SELECT id FROM sys_users WHERE username = 'lnchuser'")->fetchColumn();
+        $otherId = (int) $db->query("SELECT id FROM sys_users WHERE username = 'lnchmon'")->fetchColumn();
+        $db->exec("INSERT IGNORE INTO plg_sms_numbers (id, number, provider, label) VALUES (9972, '+15594069020', 'voipms', 'Shared')");
+        $db->exec("DELETE FROM plg_sms_access WHERE number_id = 9972");
+        // The other user first, so "whichever comes first" picks the wrong one.
+        $db->exec("INSERT INTO plg_sms_access (number_id, user_id) VALUES (9972, {$otherId}), (9972, {$watchedId})");
+        $db->exec("DELETE FROM plg_sms_messages WHERE provider_id = 'lnch-shared'");
+        $db->exec("INSERT INTO plg_sms_messages (number_id, peer, direction, body, status, provider_id)
+                   VALUES (9972, '+15592396132', 'in', 'shared number probe', 'received', 'lnch-shared')");
+
+        $settings = $this->settings;
+        $settings['extensions'] = '7841';
+        $texts = array_values(array_filter(
+            LauncherFeed::events($settings, 0, 50)['events'],
+            static fn(array $e): bool => $e['text'] === 'shared number probe'
+        ));
+        $db->exec("DELETE FROM plg_sms_messages WHERE provider_id = 'lnch-shared'");
+        $db->exec("DELETE FROM plg_sms_access WHERE number_id = 9972");
+        $db->exec("DELETE FROM sys_users WHERE username = 'lnchmon'");
+
+        $this->assertCount(1, $texts, 'A text to a number the watched extension can see should be reported.');
+        $this->assertStringStartsWith('7841', $texts[0]['to']);
+    }
+
     /** A chat message addressed to a watched extension reaches the feed. */
     public function testAnIncomingChatIsReported(): void
     {
