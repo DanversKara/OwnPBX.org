@@ -113,6 +113,48 @@ final class LauncherPluginTest extends TestCase
         $this->assertSame('internal', $chats[0]['line']);
     }
 
+    /**
+     * A second call from the same number is a new event, not the first one again.
+     *
+     * A ringing call keeps one id so the banner does not come back every few seconds, but the id
+     * is kept against a key, and when that key was "<extension>|<number>" the same person ringing
+     * again was handed their first call's id - older than the cursor, so it never showed. Keys
+     * come from channel unique ids now, which Asterisk never repeats.
+     */
+    public function testEachCallGetsItsOwnId(): void
+    {
+        $callId = new ReflectionMethod(LauncherFeed::class, 'callId');
+        $callId->setAccessible(true);
+        $now = time();
+
+        $first = $callId->invoke(null, 'L1763515234.56', $now);
+        // While it rings, every poll must hand back the same id.
+        $this->assertSame($first, $callId->invoke(null, 'L1763515234.56', $now + 3));
+        // The same caller ringing again is a different channel, so a different and newer id.
+        $second = $callId->invoke(null, 'L1763517000.12', $now + 600);
+        $this->assertGreaterThan($first, $second);
+
+        // And the key itself must differ between two calls from one number. Asterisk is not
+        // running here, so this takes the path where the call is recognised by the trunk leg.
+        $callerOf = new ReflectionMethod(LauncherFeed::class, 'callerOf');
+        $callerOf->setAccessible(true);
+        $keyFor = static function (string $trunkUniqueId) use ($callerOf): string {
+            $leg = ['name' => 'PJSIP/7841-webrtc-0000000b', 'exten' => '7841', 'state' => 'Ringing',
+                    'cid' => '7841', 'uniqueid' => $trunkUniqueId . '1'];
+            $trunk = ['name' => 'PJSIP/236248_openpbx-0000000a', 'exten' => '7841', 'state' => 'Up',
+                      'cid' => '5593799829', 'uniqueid' => $trunkUniqueId];
+            [$from, $key] = $callerOf->invoke(null, $leg, [$trunkUniqueId => $trunk, $leg['uniqueid'] => $leg], '7841');
+            return $from . ' ' . $key;
+        };
+        $callA = $keyFor('1763515234.56');
+        $callB = $keyFor('1763517000.12');
+        // Same caller both times...
+        $this->assertStringStartsWith('5593799829 ', $callA);
+        $this->assertStringStartsWith('5593799829 ', $callB);
+        // ...but not the same call.
+        $this->assertNotSame($callA, $callB);
+    }
+
     public function testAnswerShapeAndTheSinceCursor(): void
     {
         $res = LauncherFeed::events($this->settings, 0, 20);
