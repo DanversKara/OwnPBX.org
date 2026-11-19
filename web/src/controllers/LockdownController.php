@@ -109,6 +109,13 @@ class LockdownController extends BaseController
                 return [static::saveGuard(), null];
 
             case 'new_secret':
+                // This button sits in the same form as the number and the passphrase, so anyone
+                // who fills those in and reaches for it first would otherwise watch their typing
+                // vanish. Keep the form, then make the secret: either order now works.
+                $problem = static::persistGuard();
+                if ($problem !== '') {
+                    return [['message' => '', 'error' => $problem], null];
+                }
                 $secret = TwoFactorService::generateSecret();
                 setSystemSetting(SmsGuardService::SETTING_SECRET, $secret);
                 $notices['message'] = t('lockdown.msg_new_secret');
@@ -137,31 +144,47 @@ class LockdownController extends BaseController
         return str_contains($uri, 'QR Error') ? '' : $uri;
     }
 
-    /** @return array{message: string, error: string} */
-    protected static function saveGuard(): array
+    /**
+     * Writes what the form holds. Returns "" when it was written, or why it was not.
+     *
+     * An empty passphrase box means "keep the one you have", not "clear it": the box is blank
+     * every time the page loads, because a stored passphrase is a hash and cannot be shown back.
+     */
+    protected static function persistGuard(): string
     {
-        $numbers = trim((string) ($_POST['guard_numbers'] ?? ''));
         $pass = (string) ($_POST['guard_passphrase'] ?? '');
-        $on = isset($_POST['guard_enabled']) ? '1' : '0';
-
         if ($pass !== '') {
             if (mb_strlen($pass) < 8) {
-                return ['message' => '', 'error' => t('lockdown.err_passphrase_short')];
+                return t('lockdown.err_passphrase_short');
             }
             // The message is read as "<passphrase> <code> <command>", so a passphrase with a
             // space in it would swallow the code and every command would be refused - at the
             // worst possible moment, with no way to tell why.
             if (preg_match('/\s/u', $pass)) {
-                return ['message' => '', 'error' => t('lockdown.err_passphrase_spaces')];
+                return t('lockdown.err_passphrase_spaces');
             }
             setSystemSetting(SmsGuardService::SETTING_PASSPHRASE, password_hash($pass, PASSWORD_DEFAULT));
         }
-        setSystemSetting(SmsGuardService::SETTING_NUMBERS, $numbers);
-        setSystemSetting(SmsGuardService::SETTING_ENABLED, $on);
+        setSystemSetting(SmsGuardService::SETTING_NUMBERS, trim((string) ($_POST['guard_numbers'] ?? '')));
+        setSystemSetting(SmsGuardService::SETTING_ENABLED, isset($_POST['guard_enabled']) ? '1' : '0');
         writeAuditLog('security', 'lockdown', 'sms_guard', 'Text command channel settings changed', 'update', null);
+        return '';
+    }
 
-        if ($on === '1' && !SmsGuardService::enabled()) {
-            return ['message' => '', 'error' => t('lockdown.err_guard_incomplete')];
+    /** @return array{message: string, error: string} */
+    protected static function saveGuard(): array
+    {
+        $problem = static::persistGuard();
+        if ($problem !== '') {
+            return ['message' => '', 'error' => $problem];
+        }
+        // Saved, but half-built. Say which half is missing and which button finishes it, rather
+        // than leaving someone to work out that a second step exists at all.
+        if (getSystemSetting(SmsGuardService::SETTING_ENABLED, '0') === '1' && !SmsGuardService::enabled()) {
+            $missing = (string) getSystemSetting(SmsGuardService::SETTING_PASSPHRASE, '') === ''
+                ? t('lockdown.err_guard_no_passphrase')
+                : t('lockdown.err_guard_no_secret');
+            return ['message' => '', 'error' => $missing];
         }
         return ['message' => t('lockdown.msg_guard_saved'), 'error' => ''];
     }

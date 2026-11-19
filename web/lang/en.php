@@ -1944,6 +1944,8 @@ return [
     'lockdown.msg_new_secret' => 'A new authenticator secret has been made.',
     'lockdown.msg_guard_saved' => 'Saved.',
     'lockdown.err_guard_incomplete' => 'Saved, but the channel is not usable until a passphrase and an authenticator secret are both set.',
+    'lockdown.err_guard_no_secret' => 'Saved. One step left: press “New authenticator secret” below, then scan the code with your authenticator app.',
+    'lockdown.err_guard_no_passphrase' => 'Saved. One step left: type a passphrase above (at least 8 characters, no spaces) and save again.',
     'lockdown.err_passphrase_short' => 'Use at least 8 characters for the passphrase.',
     'lockdown.err_passphrase_spaces' => 'The passphrase cannot contain spaces: a command is read as passphrase, code, then the command itself.',
     'lockdown.err_local_only' => 'That can only be done from the local network, or from the console with bin/unlock.php.',
