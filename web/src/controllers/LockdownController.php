@@ -36,8 +36,9 @@ class LockdownController extends BaseController
             }
         }
 
-        static::render('lockdown/index', [
-            'page_title' => t('lockdown.title'),
+        // renderPage, not render: render() emits the bare view with no layout around it, so the
+        // page would arrive without its head, sidebar or closing tags.
+        static::renderPage('lockdown/index', [
             'state' => SecurityLockdownService::state(),
             'locked_users' => SecurityLockdownService::lockedUsers(),
             'is_local' => $isLocal,
@@ -47,7 +48,7 @@ class LockdownController extends BaseController
             'guard_ready' => SmsGuardService::enabled(),
             'new_secret' => $newSecret,
             'notices' => $notices,
-        ]);
+        ], ['title' => t('lockdown.title')]);
     }
 
     /**
