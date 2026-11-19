@@ -163,6 +163,30 @@ final class SecurityLockdownTest extends TestCase
         $this->assertNull(SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' LOCKDOWN'));
     }
 
+    // ------------------------------------------------------------ the replies
+
+    /**
+     * A reply waits in a queue rather than going out on the provider's own webhook.
+     *
+     * Reported from a live system: the answer was sent from inside the inbound webhook, our SMS
+     * API call outlasted the provider's patience, and it reported "Operation timed out after
+     * 15002 milliseconds" for a message that had in fact arrived.
+     */
+    public function testARepliesQueueRoundTripsAndEmpties(): void
+    {
+        PluginManager::kvSet(SmsGuardService::SLUG_SMS, 'state', 'guard_replies', []);
+        SmsGuardService::queueReply('+15555550123', 'Lockdown ON.');
+        SmsGuardService::queueReply('+15555550123', 'Second one.');
+
+        $taken = SmsGuardService::takeQueuedReplies();
+        $this->assertCount(2, $taken);
+        $this->assertSame('Lockdown ON.', $taken[0]['text']);
+        $this->assertSame('+15555550123', $taken[0]['to']);
+
+        // Taking empties it, so a reply cannot be sent twice or retried for ever.
+        $this->assertSame([], SmsGuardService::takeQueuedReplies());
+    }
+
     // -------------------------------------------------------------- the kicks
 
     public function testSigningSomeoneOutRaisesTheirSessionEpoch(): void

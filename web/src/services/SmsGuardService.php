@@ -209,6 +209,51 @@ final class SmsGuardService
         setSystemSetting(self::SETTING_FAILS, '');
     }
 
+    /**
+     * Holds a reply until something else can send it.
+     *
+     * The command arrives on the provider's webhook, and sending the answer from inside that
+     * request keeps the provider waiting on us: our SMS API call can take longer than its own
+     * patience, so it times out, reports an error for a message that was in fact delivered, and
+     * may redeliver the incoming text. The command has already been carried out by this point,
+     * so the answer can wait the second or two until the worker picks it up.
+     */
+    public static function queueReply(string $to, string $text): void
+    {
+        $row = PluginManager::kvGet(self::SLUG_SMS, 'state', 'guard_replies');
+        $queue = is_array($row['value'] ?? null) ? $row['value'] : [];
+        $queue[] = ['to' => $to, 'text' => $text, 'at' => time()];
+        // A reply nobody collected for an hour is of no use to anyone by then.
+        $cutoff = time() - 3600;
+        $queue = array_values(array_filter(
+            array_slice($queue, -20),
+            static fn(array $r): bool => (int) ($r['at'] ?? 0) >= $cutoff
+        ));
+        PluginManager::kvSet(self::SLUG_SMS, 'state', 'guard_replies', $queue);
+    }
+
+    /**
+     * Takes everything waiting, and empties the queue in the same breath.
+     *
+     * Emptying first means a reply can be lost if sending then fails, which is the right way
+     * round: the alternative is a reply that cannot be sent being tried again every two seconds
+     * for ever.
+     *
+     * @return list<array{to: string, text: string, at: int}>
+     */
+    public static function takeQueuedReplies(): array
+    {
+        $row = PluginManager::kvGet(self::SLUG_SMS, 'state', 'guard_replies');
+        $queue = is_array($row['value'] ?? null) ? $row['value'] : [];
+        if ($queue !== []) {
+            PluginManager::kvSet(self::SLUG_SMS, 'state', 'guard_replies', []);
+        }
+        return $queue;
+    }
+
+    /** The queue belongs to the SMS plugin, because its worker is what empties it. */
+    public const SLUG_SMS = 'sms';
+
     /** "…5188" - enough to tell which phone it was in the audit log, not the whole number. */
     public static function mask(string $number): string
     {
