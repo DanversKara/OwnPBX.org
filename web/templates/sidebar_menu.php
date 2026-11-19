@@ -45,6 +45,7 @@ return [
         'id' => 'admin', 'icon' => 'fas fa-user-shield u-warning', 'label' => 'sidebar.group_system',
         'items' => [
             ['href' => '/system-users', 'icon' => 'fas fa-users-cog', 'label' => 'sidebar.item_system_users', 'show' => $can('system_users'), 'pages' => ['system_users.php']],
+            ['href' => '/lockdown', 'icon' => 'fas fa-lock', 'label' => 'sidebar.item_lockdown', 'show' => $can('system_users'), 'pages' => ['lockdown.php']],
             ['href' => '/roles', 'icon' => 'fas fa-user-shield', 'label' => 'sidebar.item_roles', 'show' => $can('roles'), 'pages' => ['roles.php']],
             ['href' => '/asterisk-settings', 'icon' => 'fas fa-cogs', 'label' => 'sidebar.item_asterisk_settings', 'show' => $can('asterisk_settings'), 'pages' => ['asterisk_settings.php']],
             ['href' => '/transports', 'icon' => 'fas fa-route', 'label' => 'sidebar.item_transports', 'show' => $isAdmin, 'pages' => ['transports.php']],

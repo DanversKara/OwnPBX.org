@@ -27,6 +27,7 @@ return [
     '/forgot-password' => ['controller' => ForgotPasswordController::class, 'action' => 'index', 'module' => 'forgot_password.php'],
     '/mobile-login'    => ['controller' => MobileLoginController::class, 'action' => 'index', 'module' => 'mobile_login.php'],
     '/security'        => ['controller' => SecurityController::class, 'action' => 'index', 'module' => 'security.php'],
+    '/lockdown'        => ['controller' => LockdownController::class, 'action' => 'index', 'module' => 'lockdown.php'],
     '/dashboard'       => ['controller' => DashboardController::class, 'action' => 'index', 'module' => 'dashboard.php'],
     '/my-phone'        => ['controller' => MyPhoneController::class, 'action' => 'index', 'module' => 'my_phone.php'],
     '/chat'            => ['controller' => ChatController::class, 'action' => 'index', 'module' => 'chat.php'],
