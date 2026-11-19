@@ -63,6 +63,7 @@ Administrator documentation for OwnPBX on 64-bit Linux (Ubuntu 26.04 LTS+, Debia
 |------|----------------|
 | 👥 [Users & roles](users-and-roles.md) | Adding users and invitations, the `admin` account, built-in roles, permissions, *My Phone* |
 | 🛡️ [Security](security.md) | Firewall (common and per-card rules), fail2ban, the `aipbx-priv` root helper, Apache sandbox |
+| 🚨 [Emergency lockdown](lockdown.md) | Signing everyone out, sealing an account, local-network-only sign-in, and locking the PBX down by text message when you cannot reach the portal |
 | 🖧 [Network ports & firewall](network-ports.md) | Complete matrix of all TCP/UDP ports, public vs LAN scopes, NAT guidelines, UFW/firewalld/iptables recipes |
 | 🛡️ [Threat model & attack surface](threat-model.md) | Security architecture, SIP exposure boundaries, WebRTC/TURNS credentials, recording retention, mobile push tokens, and AI least privilege guardrails |
 | ⚖️ [GDPR, KVKK & data privacy](privacy.md) | Optional regulatory presets (KVKK, GDPR, CCPA/FCC, HIPAA, PCI-DSS, LGPD), pre-call opt-in/opt-out, periodic beep, retention purge, SAR export, Right to Erasure, and Cloud AI lock |

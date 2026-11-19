@@ -296,6 +296,11 @@ release first; `aipbx-update` does both steps in one run. See [INSTALL.md](INSTA
 - **Passkeys (WebAuthn / FIDO2)** — passwordless sign-in with biometrics or PIN
 - **Google sign-in** (optional) with token audience and verified e-mail checks
 - **Sessions revoked on password change** — mobile and chat tokens stop working immediately
+- **Emergency lockdown** — sign everyone out (portal, mobile app and API tokens), seal individual
+  accounts, or restrict the whole PBX to local-network sign-in; can be triggered **by text message**
+  when you cannot reach the portal, authenticated by a passphrase plus a single-use authenticator
+  code. No text can *open* anything: unlocking needs the local network or the console
+  (`bin/unlock.php`) — see [docs/lockdown.md](docs/lockdown.md)
 - **User invitations** — generated passwords, forced first-login change, mobile sign-in link
 - **RBAC** — built-in roles (admin, viewer, queue manager, agent, fax, **user** — the default) and custom
   roles with per-module permissions; security-critical pages are admin-only
