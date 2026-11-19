@@ -126,6 +126,18 @@ if (is_file($SMOKE_ROOT . '/vendor/autoload.php')) {
 }
 if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
+// This is a test rendering a page, not a person signing in. Without saying so it borrows user
+// id 1 below, and every render marks the real administrator account as active: the sidebar then
+// warns the actual admin that "another admin is currently active" whenever the checks run, and
+// each render leaves a session file behind - hundreds of them in one pass.
+$_SESSION['_smoke_render'] = true;
+register_shutdown_function(static function (): void {
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        $_SESSION = [];
+        @session_destroy();
+    }
+});
+
 // Anonymous routes (login / password reset) are rendered without a session.
 $ANON = ['/login', '/force-reset', '/reset-password', '/forgot-password'];
 if (!in_array($path, $ANON, true)) {

@@ -100,6 +100,9 @@ function requireApiLogin() {
  */
 function _touchLastSeen($user_id) {
     if (empty($user_id)) return;
+    // A page rendered by the smoke checks borrows user id 1; it is not somebody signing in, and
+    // counting it made the PBX warn its own administrator that another admin was active.
+    if (!empty($_SESSION['_smoke_render'])) return;
     $now = time();
     if (isset($_SESSION['_last_seen_touch']) && ($now - $_SESSION['_last_seen_touch']) < 20) {
         return;
