@@ -54,6 +54,13 @@ final class LauncherPluginTest extends TestCase
     public function testAnIncomingTextIsReported(): void
     {
         $db = getDB();
+        // The SMS plugin is not installed on every PBX, and not in CI's database.
+        $has = $db->prepare("SELECT 1 FROM information_schema.tables
+                             WHERE table_schema = DATABASE() AND table_name = 'plg_sms_numbers' LIMIT 1");
+        $has->execute();
+        if ($has->fetchColumn() === false) {
+            $this->markTestSkipped('The SMS plugin tables are not installed here.');
+        }
         $db->exec("INSERT IGNORE INTO plg_sms_numbers (id, number, provider, label) VALUES (9971, '+15595600098', 'voipms', 'Main')");
         $db->exec("DELETE FROM plg_sms_messages WHERE provider_id = 'lnch-test'");
         $db->exec("DELETE FROM plg_sms_contacts WHERE number_id = 9971 AND phone = '+15551230001'");
