@@ -44,7 +44,7 @@ $csrf = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
             <?php if (!$state['active']): ?>
                 <input type="hidden" name="action" value="lockdown_on">
                 <button type="submit" class="btn btn-danger"
-                        onclick="return confirm('<?php echo $h(t('lockdown.confirm_on')); ?>');">
+                        data-confirm="<?php echo $h(t('lockdown.confirm_on')); ?>">
                     <i class="fas fa-lock"></i> <?php echo $h(t('lockdown.btn_on')); ?>
                 </button>
             <?php else: ?>
@@ -68,7 +68,7 @@ $csrf = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
             <input type="hidden" name="csrf_token" value="<?php echo $h($csrf); ?>">
             <input type="hidden" name="action" value="kick_all">
             <button type="submit" class="btn btn-danger"
-                    onclick="return confirm('<?php echo $h(t('lockdown.confirm_kick_all')); ?>');">
+                    data-confirm="<?php echo $h(t('lockdown.confirm_kick_all')); ?>">
                 <i class="fas fa-power-off"></i> <?php echo $h(t('lockdown.btn_kick_all')); ?>
             </button>
         </form>
@@ -153,7 +153,7 @@ $csrf = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
                 <i class="fas fa-save"></i> <?php echo $h(t('common.save')); ?>
             </button>
             <button type="submit" name="action" value="new_secret" class="btn btn-secondary" <?php echo $is_local ? '' : 'disabled'; ?>
-                    onclick="return confirm('<?php echo $h(t('lockdown.confirm_new_secret')); ?>');">
+                    data-confirm="<?php echo $h(t('lockdown.confirm_new_secret')); ?>">
                 <i class="fas fa-key"></i> <?php echo $h(t('lockdown.btn_new_secret')); ?>
             </button>
         </form>
@@ -173,3 +173,5 @@ php /opt/aipbx/web/bin/unlock.php user 611
 php /opt/aipbx/web/bin/unlock.php all</pre>
     </div>
 </div>
+
+<script src="<?php echo asset('/assets/js/lockdown.js'); ?>"></script>
