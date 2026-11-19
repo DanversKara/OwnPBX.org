@@ -4,7 +4,7 @@
  * $guard_enabled, $guard_numbers, $guard_ready, $new_secret, $notices.
  */
 $h = static fn($s): string => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
-$csrf = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
+$csrf = getCSRFToken();
 ?>
 
 <div class="card u-mb-20">
