@@ -1939,6 +1939,8 @@ return [
     'lockdown.btn_new_secret' => 'New authenticator secret',
     'lockdown.confirm_new_secret' => 'The old secret stops working at once. Continue?',
     'lockdown.secret_shown_once' => 'Put this into your authenticator app now. It is not shown again.',
+    'lockdown.secret_qr_alt' => 'QR code for the emergency lockdown authenticator secret',
+    'lockdown.secret_type_instead' => 'Scan it with your authenticator app, or type this in by hand:',
     'lockdown.msg_new_secret' => 'A new authenticator secret has been made.',
     'lockdown.msg_guard_saved' => 'Saved.',
     'lockdown.err_guard_incomplete' => 'Saved, but the channel is not usable until a passphrase and an authenticator secret are both set.',

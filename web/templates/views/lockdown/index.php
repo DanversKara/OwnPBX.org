@@ -127,6 +127,10 @@ $csrf = function_exists('generateCSRFToken') ? generateCSRFToken() : '';
         <?php if ($new_secret !== null): ?>
             <div class="alert alert-warning">
                 <p><strong><?php echo $h(t('lockdown.secret_shown_once')); ?></strong></p>
+                <?php if ($new_secret_qr !== ''): ?>
+                    <p><img src="<?php echo $h($new_secret_qr); ?>" alt="<?php echo $h(t('lockdown.secret_qr_alt')); ?>" width="200" height="200"></p>
+                <?php endif; ?>
+                <p class="u-hint"><?php echo $h(t('lockdown.secret_type_instead')); ?></p>
                 <p><code><?php echo $h($new_secret); ?></code></p>
             </div>
         <?php endif; ?>

@@ -47,6 +47,7 @@ class LockdownController extends BaseController
             'guard_numbers' => (string) getSystemSetting(SmsGuardService::SETTING_NUMBERS, ''),
             'guard_ready' => SmsGuardService::enabled(),
             'new_secret' => $newSecret,
+            'new_secret_qr' => static::qrFor($newSecret),
             'notices' => $notices,
         ], ['title' => t('lockdown.title')]);
     }
@@ -115,6 +116,25 @@ class LockdownController extends BaseController
         }
 
         return [$notices, null];
+    }
+
+    /**
+     * A scannable code for the authenticator app, or "" when one cannot be drawn.
+     *
+     * Scanning beats transcribing 32 characters into a phone by hand, and a mistyped secret only
+     * shows itself later, when a command is refused and nobody can say why. When the QR library
+     * is missing the helper hands back a grey "QR Error" square; showing that would look like
+     * something had gone wrong, when the typed secret printed below it works perfectly well.
+     */
+    protected static function qrFor(?string $secret): string
+    {
+        if ($secret === null) {
+            return '';
+        }
+        $uri = TwoFactorService::getQrCodeDataUri(
+            TwoFactorService::getOtpAuthUri('OwnPBX lockdown', $secret)
+        );
+        return str_contains($uri, 'QR Error') ? '' : $uri;
     }
 
     /** @return array{message: string, error: string} */
