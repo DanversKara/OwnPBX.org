@@ -153,10 +153,22 @@ final class SecurityLockdownTest extends TestCase
         for ($i = 0; $i < SmsGuardService::MAX_FAILS; $i++) {
             SmsGuardService::handle('+15555550123', 'wrong 000000 LOCKDOWN');
         }
-        // Even the right message is now ignored: the channel has gone quiet.
-        $reply = SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' LOCKDOWN');
-        $this->assertNull($reply);
-        $this->assertFalse(SecurityLockdownService::isActive());
+        // Even a correct message does nothing now. Reported from a live test: a few typed
+        // passphrases put the channel in its cool-off, and the correct LOCKDOWN that followed
+        // was met with silence, which reads as a broken feature rather than a working guard.
+        $reply = (string) SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' LOCKDOWN');
+        $this->assertStringContainsString('Too many wrong attempts', $reply);
+        $this->assertStringContainsString('minute(s)', $reply);
+        $this->assertFalse(SecurityLockdownService::isActive(), 'A locked-out channel must still change nothing.');
+    }
+
+    /** A stranger learns nothing: a number that is not on the list is never answered at all. */
+    public function testAnUnknownNumberIsStillToldNothingEvenWhenLockedOut(): void
+    {
+        for ($i = 0; $i < SmsGuardService::MAX_FAILS; $i++) {
+            SmsGuardService::handle('+15555550123', 'wrong 000000 LOCKDOWN');
+        }
+        $this->assertNull(SmsGuardService::handle('+15559998888', 'wrong 000000 STATUS'));
     }
 
     public function testTheChannelIsOffUntilItIsSetUp(): void

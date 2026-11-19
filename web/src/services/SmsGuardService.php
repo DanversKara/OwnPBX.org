@@ -80,8 +80,12 @@ final class SmsGuardService
         if (!self::enabled() || !self::numberAllowed($from)) {
             return null;
         }
-        if (self::lockedOut()) {
-            return null;
+        $waitFor = self::lockedOutFor();
+        if ($waitFor > 0) {
+            // The number is on the list, so it has already been told this channel exists: saying
+            // why it has gone quiet gives a stranger nothing and saves the owner from believing
+            // the whole thing is broken when it is working exactly as intended.
+            return 'Too many wrong attempts. Try again in ' . (int) ceil($waitFor / 60) . ' minute(s).';
         }
 
         $parts = preg_split('/\s+/', trim($text)) ?: [];
@@ -186,10 +190,15 @@ final class SmsGuardService
 
     // ------------------------------------------------------------ rate limits
 
-    private static function lockedOut(): bool
+    /** Seconds still to wait, or 0 when the channel is answering. */
+    private static function lockedOutFor(): int
     {
         [$count, $since] = self::failures();
-        return $count >= self::MAX_FAILS && (time() - $since) < self::FAIL_WINDOW;
+        if ($count < self::MAX_FAILS) {
+            return 0;
+        }
+        $left = self::FAIL_WINDOW - (time() - $since);
+        return $left > 0 ? $left : 0;
     }
 
     /** @return array{0: int, 1: int} */
