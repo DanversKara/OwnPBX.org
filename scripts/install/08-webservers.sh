@@ -361,7 +361,7 @@ stream {
         listen 443;
         listen [::]:443;
         ssl_preread on;
-        ssl_preread_timeout 5s;
+        preread_timeout 5s;
         limit_conn aipbx_stream_conn 128;
         proxy_pass $aipbx_backend;
         proxy_protocol on;

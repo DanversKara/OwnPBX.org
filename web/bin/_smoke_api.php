@@ -101,6 +101,8 @@ register_shutdown_function(function () use ($script, $query, $role, $outfile) {
     file_put_contents($outfile, $json);
 });
 
+require $SMOKE_ROOT . '/auth.php';
+require_once __DIR__ . '/_smoke_render_fns.php';
 if (is_file($SMOKE_ROOT . '/vendor/autoload.php')) {
     require_once $SMOKE_ROOT . '/vendor/autoload.php';
 }
@@ -108,8 +110,11 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 
 // The same forged session the route renderer uses: the role under test, on a
 // signed-in user, so requireApiLogin() passes and the endpoint's own check is
-// what decides.
-$_SESSION['user_id']       = 1;
+// what decides. A real account, not a hardcoded id 1: the unused `admin`
+// account was deleted on a live PBX, and requireApiLogin() bounces a session
+// whose user does not exist, so every API check failed with 401 while the
+// pages (fixed the same way in _smoke_render.php) passed.
+$_SESSION['user_id']       = smoke_user_id($role);
 $_SESSION['user_role']     = $role;
 $_SESSION['username']      = 'smoke';
 $_SESSION['last_activity'] = time();

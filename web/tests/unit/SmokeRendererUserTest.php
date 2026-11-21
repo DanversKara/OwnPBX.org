@@ -30,6 +30,16 @@ final class SmokeRendererUserTest extends TestCase
         );
     }
 
+    public function testTheApiCallerDoesNotHardcodeAUserId(): void
+    {
+        $api = (string) file_get_contents(dirname(__DIR__, 2) . '/bin/_smoke_api.php');
+        $this->assertDoesNotMatchRegularExpression(
+            '/\$_SESSION\[\s*[\'"]user_id[\'"]\s*\]\s*=\s*\d+\s*;/',
+            $api,
+            'A fixed user id breaks every API check the moment that account is deleted.'
+        );
+    }
+
     public function testItPicksARealAccountPreferringTheRoleBeingRendered(): void
     {
         require_once dirname(__DIR__, 2) . '/bin/_smoke_render_fns.php';
