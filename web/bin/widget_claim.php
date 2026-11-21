@@ -5,8 +5,9 @@
  * src/sync/SyncWidgets.php): spends the call's one-time token.
  *
  * Usage: widget_claim.php <widget id> <token>
- * Prints "OK|<caller name>" or "DENY|<reason>" without a newline (read with
- * SHELL() and CUT() in the dialplan).
+ * Prints "OK|<caller name>|<domain>" or "DENY|<reason>" without a newline (read with
+ * SHELL() and CUT() in the dialplan). The domain is the embedding website's
+ * host, or '' when it is not a valid host name.
  */
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);

@@ -139,8 +139,13 @@ function buildWidgetDialplan(array $widgets): string {
             $conf .= " same => n,Set(WIDGET_RES=\${SHELL(/usr/local/bin/widget_claim.php {$id} \${FILTER(0-9a-f,\${EXTEN:1})})})\n";
             $conf .= " same => n,GotoIf(\$[\"\${CUT(WIDGET_RES,|,1)}\" != \"OK\"]?deny)\n";
             $conf .= " same => n,Set(CALLERID(num)={$number})\n";
-            // A typed name is marked "(web)" so a visitor cannot pass for a colleague.
-            $conf .= " same => n,Set(CALLERID(name)=\${IF(\$[\"\${CUT(WIDGET_RES,|,2)}\" != \"\"]?\${CUT(WIDGET_RES,|,2)} (web):{$name})})\n";
+            // A typed name is marked "(web)" so a visitor cannot pass for a colleague, and the
+            // embedding website's host is appended — "Guest Name (web) (karas.page)" — so the
+            // person answering knows where the call came from. claim() returns the host as the
+            // third field of WIDGET_RES; when it is empty the display is exactly as before.
+            $conf .= " same => n,Set(WIDGET_NAME=\${CUT(WIDGET_RES,|,2)})\n";
+            $conf .= " same => n,Set(WIDGET_DOMAIN=\${CUT(WIDGET_RES,|,3)})\n";
+            $conf .= " same => n,Set(CALLERID(name)=\${IF(\$[\"\${WIDGET_NAME}\" != \"\"]?\${WIDGET_NAME} (web):{$name})}\${IF(\$[\"\${WIDGET_DOMAIN}\" != \"\"]? (\${WIDGET_DOMAIN}):)})\n";
             $conf .= " same => n,Goto(widget-{$id}-route,s,1)\n";
             $conf .= " same => n(deny),NoOp(Web widget {$id}: refused \${WIDGET_RES})\n";
             $conf .= " same => n,Hangup(21)\n\n";
@@ -189,7 +194,9 @@ function buildWidgetDialplan(array $widgets): string {
             $conf .= "[widget-{$id}-callback]\n";
             $conf .= "exten => _X.,1,NoOp(Web widget {$id}: call-back answered by \${EXTEN})\n";
             $conf .= " same => n,Set(CALLERID(num)=\${EXTEN})\n";
-            $conf .= " same => n,Set(CALLERID(name)=\${IF(\$[\"\${WIDGET_CB_NAME}\" != \"\"]?\${WIDGET_CB_NAME}:{$name})})\n";
+            // The call-back shows where the visitor came from too (WIDGET_CB_DOMAIN is set by
+            // the call file); with no domain the display is exactly as before.
+            $conf .= " same => n,Set(CALLERID(name)=\${IF(\$[\"\${WIDGET_CB_NAME}\" != \"\"]?\${WIDGET_CB_NAME}:{$name})}\${IF(\$[\"\${WIDGET_CB_DOMAIN}\" != \"\"]? (\${WIDGET_CB_DOMAIN}):)})\n";
             $conf .= " same => n,Goto(widget-{$id}-route,s,1)\n\n";
         }
     }

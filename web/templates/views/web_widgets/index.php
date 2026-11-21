@@ -379,7 +379,7 @@ $resultBadges = [
                             <option value="optional">Ask (optional)</option>
                             <option value="required">Ask (required)</option>
                         </select>
-                        <div class="text-muted u-fs-11">Shown to you as the caller name, marked "(web)".</div>
+                        <div class="text-muted u-fs-11">Shown to you as the caller name, marked "(web)" with the website it came from after it — e.g. "Guest Name (web) (karas.page)".</div>
                     </div>
                 </div>
                 <div class="alert alert-info u-fs-12">

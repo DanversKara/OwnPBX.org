@@ -499,7 +499,7 @@ class WebWidgetService
             return self::refuse(422, 'bad_number');
         }
 
-        self::placeCallback($w, $number, $name);
+        self::placeCallback($w, $number, $name, $origin);
         self::log((int) $w['id'], 'callback', 'callback', $origin, $ip, $ua, $name, $number);
         return ['status' => 200, 'body' => ['success' => true]];
     }
@@ -523,7 +523,11 @@ class WebWidgetService
      * arrives: a token is valid once, for TOKEN_TTL seconds, for its own
      * widget, while the daily limit allows.
      *
-     * @return string "OK|<name>" or "DENY|<reason>"
+     * @return string "OK|<name>|<domain>" or "DENY|<reason>" — the domain is
+     *   the embedding website's host, taken from the Origin the token was
+     *   issued for (already checked against the widget's allowed websites),
+     *   or '' when it is not a valid host name; the dialplan appends
+     *   " (<domain>)" to the caller name only when it is not empty.
      */
     public static function claim(int $widgetId, string $token): string
     {
@@ -536,7 +540,7 @@ class WebWidgetService
         }
         $db = getDB();
         $stmt = $db->prepare(
-            "SELECT id, caller_name, created_at < (NOW() - INTERVAL " . self::TOKEN_TTL . " SECOND) AS expired
+            "SELECT id, caller_name, origin, created_at < (NOW() - INTERVAL " . self::TOKEN_TTL . " SECOND) AS expired
              FROM pbx_web_widget_sessions WHERE token = ? AND widget_id = ? AND result = 'issued'"
         );
         $stmt->execute([$token, $widgetId]);
@@ -558,7 +562,7 @@ class WebWidgetService
         if ($upd->rowCount() !== 1) {
             return 'DENY|bad_token';
         }
-        return 'OK|' . self::dialplanName((string) $s['caller_name']);
+        return 'OK|' . self::dialplanName((string) $s['caller_name']) . '|' . self::originDomain((string) ($s['origin'] ?? ''));
     }
 
     // ------------------------------------------------------------ PBX side
@@ -579,9 +583,11 @@ class WebWidgetService
      * Drops a call file: Local/<number>@widget-<id>-out rings the visitor
      * through the outbound route; when they answer, [widget-<id>-callback]
      * routes them like a widget call (see SyncWidgets.php). Skipped in tests
-     * (AIPBX_NO_ASTERISK).
+     * (AIPBX_NO_ASTERISK). The file also carries the embedding website's host
+     * (WIDGET_CB_DOMAIN) so the call-back shows where the visitor came from,
+     * the same as a browser call.
      */
-    private static function placeCallback(array $w, string $number, string $name): void
+    private static function placeCallback(array $w, string $number, string $name, string $origin = ''): void
     {
         $id = (int) $w['id'];
         $cid = self::outsideCallerId($w);
@@ -592,7 +598,8 @@ class WebWidgetService
             . "Context: widget-{$id}-callback\n"
             . "Extension: {$number}\n"
             . "Priority: 1\n"
-            . "SetVar: WIDGET_CB_NAME=" . self::dialplanName($name) . "\n";
+            . "SetVar: WIDGET_CB_NAME=" . self::dialplanName($name) . "\n"
+            . "SetVar: WIDGET_CB_DOMAIN=" . self::originDomain($origin) . "\n";
 
         if (getenv('AIPBX_NO_ASTERISK') === '1') {
             return;
@@ -744,6 +751,26 @@ class WebWidgetService
             return '';
         }
         return strtolower((string) parse_url($origin, PHP_URL_HOST));
+    }
+
+    /**
+     * The embedding website's host for a stored Origin, or '' when it is not
+     * a valid host name. The Origin was already checked against the widget's
+     * allowed websites when the token was issued (originAllowed), so this is
+     * a server-trusted value, not visitor input — the check here only guards
+     * the display against a malformed stored value. Host name only: no
+     * scheme, path, query or port ever reaches the caller display.
+     */
+    public static function originDomain(string $origin): string
+    {
+        $host = self::originHost($origin);
+        if ($host === '' || strlen($host) > 253) {
+            return '';
+        }
+        if (!preg_match('/^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/', $host)) {
+            return '';
+        }
+        return $host;
     }
 
     private static function destinationExists(string $type, string $id): bool

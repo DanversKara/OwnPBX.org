@@ -5,7 +5,7 @@
         "tr": "Web Çağrı Widget'ı ve WordPress Eklentisi",
         "en": "Website Call Widgets & WordPress Plugin"
     },
-    "version": "1.2.0",
+    "version": "1.2.1",
     "author": "OwnPBX Official Team",
     "category": "integration",
     "icon": "fas fa-headset",

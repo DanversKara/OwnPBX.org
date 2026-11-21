@@ -149,7 +149,7 @@ final class WebWidgetTest extends TestCase
         $other = $this->widget(['name' => 'Other', 'number' => '7002']);
         $this->assertSame('DENY|bad_token', WebWidgetService::claim((int) $other['id'], $token), 'another widget');
         $this->assertSame('DENY|disabled', WebWidgetService::claim(999999, $token), 'no such widget');
-        $this->assertSame('OK|Ayse b Yilmazx', WebWidgetService::claim((int) $w['id'], $token));
+        $this->assertSame('OK|Ayse b Yilmazx|www.shop.example', WebWidgetService::claim((int) $w['id'], $token));
         $this->assertSame('DENY|bad_token', WebWidgetService::claim((int) $w['id'], $token), 'spent');
         $this->assertSame('DENY|bad_token', WebWidgetService::claim((int) $w['id'], 'not-a-token'));
 
@@ -158,6 +158,27 @@ final class WebWidgetTest extends TestCase
         $this->assertNull($row['token']);
         $this->assertSame(self::SITE, $row['origin']);
         $this->assertSame(1, WebWidgetService::countedToday((int) $w['id']));
+    }
+
+    public function testClaimCarriesTheEmbeddingWebsite(): void
+    {
+        $w = $this->widget(['ask_name' => 1]);
+        $token = $this->token(WebWidgetService::requestCall($w['public_id'], self::SITE, '198.51.100.7', 'UA', 'Guest Name'));
+        $this->assertSame('OK|Guest Name|www.shop.example', WebWidgetService::claim((int) $w['id'], $token));
+
+        // A malformed stored origin never reaches the caller display: the
+        // domain falls back to empty, i.e. exactly today's "(web)" display.
+        $token2 = $this->token(WebWidgetService::requestCall($w['public_id'], self::SITE, '198.51.100.7', 'UA', 'Guest Name'));
+        $upd = $this->db->prepare('UPDATE pbx_web_widget_sessions SET origin = ? WHERE token = ?');
+        $upd->execute(['not a host', $token2]);
+        $this->assertSame('OK|Guest Name|', WebWidgetService::claim((int) $w['id'], $token2));
+
+        $this->assertSame('karas.page', WebWidgetService::originDomain('https://karas.page/'));
+        $this->assertSame('shop.example', WebWidgetService::originDomain('https://SHOP.example:8443/x?y=1'));
+        $this->assertSame('', WebWidgetService::originDomain(''));
+        $this->assertSame('', WebWidgetService::originDomain('null'));
+        $this->assertSame('', WebWidgetService::originDomain('javascript:alert(1)'));
+        $this->assertSame('', WebWidgetService::originDomain('https://exa mple.com'));
     }
 
     public function testExpiredTokenIsRefused(): void
@@ -249,6 +270,11 @@ final class WebWidgetTest extends TestCase
         $this->assertStringContainsString('Set(TIMEOUT(absolute)=600)', $conf);
         $this->assertStringContainsString('Set(CDR(did)=7001)', $conf);
         $this->assertStringContainsString("Set(CDR(inbound_trunk)=widget-{$id})", $conf);
+        // The caller name carries the website it came from.
+        $this->assertStringContainsString('Set(WIDGET_NAME=${CUT(WIDGET_RES,|,2)})', $conf);
+        $this->assertStringContainsString('Set(WIDGET_DOMAIN=${CUT(WIDGET_RES,|,3)})', $conf);
+        $this->assertStringContainsString('Set(CALLERID(name)=${IF($["${WIDGET_NAME}" != ""]?${WIDGET_NAME} (web):', $conf);
+        $this->assertStringContainsString('${IF($["${WIDGET_DOMAIN}" != ""]? (${WIDGET_DOMAIN}):)}', $conf);
         $this->assertStringContainsString('PJSIP_DIAL_CONTACTS(' . self::EXT, $conf);
         $this->assertStringNotContainsString("Sales, \"web\"", $conf, 'name is cleaned for the dialplan');
 
@@ -277,6 +303,9 @@ final class WebWidgetTest extends TestCase
         $this->assertStringContainsString("Set(__CID_EXTERNAL=02125550000)", $conf);
         $this->assertStringContainsString("Goto(outbound-route-{$this->routeId},\${EXTEN},1)", $conf);
         $this->assertStringContainsString("[widget-{$id}-callback]", $conf);
+        // The call-back shows the website too.
+        $this->assertStringContainsString('Set(CALLERID(name)=${IF($["${WIDGET_CB_NAME}" != ""]?${WIDGET_CB_NAME}:', $conf);
+        $this->assertStringContainsString('${IF($["${WIDGET_CB_DOMAIN}" != ""]? (${WIDGET_CB_DOMAIN}):)}', $conf);
     }
 
     public function testSyncWritesOnlyActiveWidgets(): void

@@ -3,7 +3,7 @@
  * Plugin Name:       OwnPBX Call Widget & API Connector
  * Plugin URI:        https://github.com/DanversKara/OwnPBX.org
  * Description:       Adds the OwnPBX "Call us" button (browser call over WebRTC and the call-back form) to your WordPress site. Supports pasting the embed code or fetching widgets directly via OwnPBX REST API v1 (/api/v1/web-widgets).
- * Version:           1.2.0
+ * Version:           1.2.1
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            OwnPBX

@@ -40,7 +40,7 @@ route and a **daily limit are required**.
 | Requests per IP per hour | Requests from one visitor address; more are refused (not logged) |
 | Calls per day | Connected calls and call-backs since midnight; 0 = no limit (only without an outside line) |
 | Look | Floating button or a card in the page; corner, distance from the edges, size, shape, icon and text, colours, panel width, rounding, light/dark theme, title, message, language, showing on phones, delay before showing. The live preview beside the settings shows the result as you change it (it never places calls) |
-| Visitor controls | What the visitor gets during a call: mute, hold, volume slider, call timer, keypad (digits only, or with `*` and `#`), and asking for their name (off, optional, required; shown to you with "(web)" after it) |
+| Visitor controls | What the visitor gets during a call: mute, hold, volume slider, call timer, keypad (digits only, or with `*` and `#`), and asking for their name (off, optional, required; shown to you with "(web)" after it and the website it came from after that, e.g. "Guest Name (web) (karas.page)") |
 
 Save, then press **Apply** (pending changes): the widget's WebRTC endpoint and dialplan are written
 then. **Switch off** (the power button) refuses new calls at once, before Apply.
@@ -54,7 +54,7 @@ A visitor is a stranger with a microphone, so the widget is locked down whatever
 | Transfer the call (blind `#` or attended), to an extension or an outside number | The visitor's leg is dialled without the caller-transfer option (`T`) everywhere (extensions, ring groups, queues, follow-me, outbound routes) when `AIPBX_WIDGET=1` is set on the channel; any transfer lands in the empty `widget-no-transfer` context; the WebRTC endpoint refuses SIP REFER (`allow_transfer=no`) |
 | Star codes, voicemail of others, other extensions or outbound routes | The endpoint's context is `widget-<id>-route`, which only goes to the chosen destination |
 | See who answered, or the number a call was forwarded to (e.g. a mobile) | Connected-line, P-Asserted-Identity and Remote-Party-ID updates are not sent to the visitor (`send_connected_line=no`, `send_pai=no`, `send_rpid=no`, `trust_id_outbound=no`) |
-| Pretend to be someone (caller ID spoofing) | Identity headers from the browser are ignored (`trust_id_inbound=no`); the name they type is marked "(web)" |
+| Pretend to be someone (caller ID spoofing) | Identity headers from the browser are ignored (`trust_id_inbound=no`); the name they type is marked "(web)" and the website it came from, e.g. "Guest Name (web) (karas.page)" |
 | Video, recording, conferencing, presence | Not offered by the endpoint (`allow_subscribe=no`, audio only) |
 | Run up costs | Max. concurrent calls, max. call length, per-IP and per-day limits, call-back number prefixes |
 
