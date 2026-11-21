@@ -63,7 +63,7 @@ AI Assistant by [Gregory Merriweather (shido6)](https://github.com/shido6) is ma
 
 ## OwnPBX's own plugins
 
-`ha-texts`, `invites`, `billing` and the modified `sms` are also kept in
+`ha-texts`, `invites`, `billing`, `reseller` and the modified `sms` are also kept in
 [DanversKara/plugins.OwnPBX.org](https://github.com/DanversKara/plugins.OwnPBX.org) under
 `plugins/custom/<slug>/`, apart from the upstream copies, so upstream updates can be compared and
 merged (its `UPSTREAM.md` and `scripts/upstream-check.sh`). A new plugin, or a change to one of these,
