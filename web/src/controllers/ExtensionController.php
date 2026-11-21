@@ -23,7 +23,9 @@ class ExtensionController extends BaseController
             'sync_all_extensions' => fn() => ExtensionService::syncAll(static::csrfToken()),
         ]);
 
-        $extensions = ExtensionRepository::allWithExtension();
+        // Tenant scope (Reseller plugin v1): a reseller admin sees only their own extensions;
+        // the main admin (no tenant) sees everyone, as before.
+        $extensions = ExtensionRepository::allWithExtension(ResellerBridge::viewerTenantId());
         $sipOptions = ExtensionSipOptions::allStored();
         foreach ($extensions as &$extensionRow) {
             $extensionRow['sip_options'] = $sipOptions[(string) ($extensionRow['extension'] ?? '')] ?? [];
