@@ -716,30 +716,82 @@ final class PluginManager
     /** Tests only: answers in place of the network, fn(string $url): ?string. */
     public static ?\Closure $fetch = null;
 
-    /** An HTTPS download of at most $max bytes (GitHub's release links redirect once or twice). */
+    /**
+     * An HTTPS download of at most $max bytes (GitHub's release links redirect once or twice).
+     *
+     * SSRF: every hop is validated through WebhookService::validatedResolve()
+     * before it is fetched — the initial URL and each redirect target must
+     * resolve to public addresses only, and the checked address is pinned
+     * (CURLOPT_RESOLVE) so a DNS answer cannot change between the check and
+     * the request. Redirects are followed by hand for exactly that reason:
+     * curl's FOLLOWLOCATION would follow a redirect to a private address
+     * unchecked. An IP literal in a private/reserved range (including the
+     * 169.254.169.254 metadata address) is refused outright.
+     */
     private static function download(string $url, int $max, int $timeout = 30): ?string
     {
         if (self::$fetch !== null) {
             return (self::$fetch)($url);
         }
-        $ch = curl_init($url);
-        // The limit holds while the body arrives too: CURLOPT_MAXFILESIZE alone trusts Content-Length.
-        $body = '';
-        $tooBig = false;
-        curl_setopt($ch, CURLOPT_WRITEFUNCTION, static function ($ch, string $chunk) use (&$body, &$tooBig, $max): int {
-            if (strlen($body) + strlen($chunk) > $max) {
-                $tooBig = true;
-                return 0; // stops the transfer
+        require_once dirname(__DIR__) . '/services/WebhookService.php';
+        $current = $url;
+        for ($hop = 0; $hop <= 5; $hop++) {
+            if (strtolower((string) parse_url($current, PHP_URL_SCHEME)) !== 'https') {
+                return null;
             }
-            $body .= $chunk;
-            return strlen($chunk);
-        });
-        curl_setopt_array($ch, [CURLOPT_FOLLOWLOCATION => true, CURLOPT_MAXREDIRS => 5,
-            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_TIMEOUT => $timeout,
-            CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_MAXFILESIZE => $max, CURLOPT_USERAGENT => 'AiPBX/' . (defined('AIPBX_VERSION') ? AIPBX_VERSION : 'dev')]);
-        $ok = curl_exec($ch) === true;
-        $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        return $ok && !$tooBig && $code === 200 ? $body : null;
+            $host = trim(strtolower((string) parse_url($current, PHP_URL_HOST)), '[]');
+            if ($host !== '' && filter_var($host, FILTER_VALIDATE_IP)
+                && filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                return null;
+            }
+            try {
+                $resolve = WebhookService::validatedResolve($current);
+            } catch (\Throwable $e) {
+                return null;
+            }
+            $ch = curl_init($current);
+            // The limit holds while the body arrives too: CURLOPT_MAXFILESIZE alone trusts Content-Length.
+            $body = '';
+            $tooBig = false;
+            $location = null;
+            curl_setopt($ch, CURLOPT_WRITEFUNCTION, static function ($ch, string $chunk) use (&$body, &$tooBig, $max): int {
+                if (strlen($body) + strlen($chunk) > $max) {
+                    $tooBig = true;
+                    return 0; // stops the transfer
+                }
+                $body .= $chunk;
+                return strlen($chunk);
+            });
+            curl_setopt($ch, CURLOPT_HEADERFUNCTION, static function ($ch, string $header) use (&$location): int {
+                if ($location === null && preg_match('/^Location:\s*(.+?)\s*$/i', $header, $m)) {
+                    $location = $m[1];
+                }
+                return strlen($header);
+            });
+            curl_setopt_array($ch, [CURLOPT_FOLLOWLOCATION => false,
+                CURLOPT_PROTOCOLS => CURLPROTO_HTTPS, CURLOPT_TIMEOUT => $timeout,
+                CURLOPT_CONNECTTIMEOUT => 5, CURLOPT_MAXFILESIZE => $max, CURLOPT_RESOLVE => $resolve,
+                CURLOPT_USERAGENT => 'AiPBX/' . (defined('AIPBX_VERSION') ? AIPBX_VERSION : 'dev')]);
+            $ok = curl_exec($ch) === true;
+            $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+            curl_close($ch);
+            if ($ok && !$tooBig && $code === 200) {
+                return $body;
+            }
+            if (!$ok || $tooBig || !in_array($code, [301, 302, 303, 307, 308], true) || $location === null || $location === '') {
+                return null;
+            }
+            $next = trim($location);
+            if (preg_match('#^https?://#i', $next)) {
+                $current = $next;
+            } elseif (str_starts_with($next, '/')) {
+                $p = parse_url($current);
+                $current = $p['scheme'] . '://' . $p['host'] . (isset($p['port']) ? ':' . $p['port'] : '') . $next;
+            } else {
+                $current = substr($current, 0, (int) strrpos($current, '/') + 1) . $next;
+            }
+        }
+        return null;
     }
 
     /**

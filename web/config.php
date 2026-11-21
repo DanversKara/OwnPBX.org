@@ -374,6 +374,15 @@ function verifyLoginPassword(string $input, string $hash): bool
     return $trimmed !== $input && password_verify($trimmed, $hash);
 }
 
+/**
+ * Bcrypt hash of a random string nobody knows, used only to burn the same
+ * time as a real password check when there is no account (or a disabled one)
+ * to check against. The result is always discarded: an unknown username must
+ * take as long as a wrong password on a live account, or response time alone
+ * tells whether the name exists. Cost 10 matches PASSWORD_DEFAULT.
+ */
+const DUMMY_LOGIN_PASSWORD_HASH = '$2y$10$4dM860Zyb/LqorO76EXNMuvX17WoTNp7feqNrzV9/GDPPe0DtQYVW';
+
 // Rate Limiting & Brute Force Tracker
 /**
  * Resolves the client IP address. When reverse proxy support is enabled and the

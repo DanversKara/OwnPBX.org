@@ -52,8 +52,11 @@ class ForgotPasswordService
         }
 
         $token = bin2hex(random_bytes(32));
+        // Only the SHA-256 hash is stored (varchar(64) fits the 64 hex chars
+        // exactly): a database read must never hand out a usable reset link.
+        // The raw token exists only in the e-mail URL below.
         $db->prepare('UPDATE sys_users SET reset_token = ?, reset_token_expires = ? WHERE id = ?')
-            ->execute([$token, date('Y-m-d H:i:s', time() + self::TOKEN_MINUTES * 60), $user['id']]);
+            ->execute([hash('sha256', $token), date('Y-m-d H:i:s', time() + self::TOKEN_MINUTES * 60), $user['id']]);
 
         $url = self::portalUrl() . '/reset-password?token=' . $token;
         $lang = MailTemplateService::languageFor(null, (int) $user['id']);

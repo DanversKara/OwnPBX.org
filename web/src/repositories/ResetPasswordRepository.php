@@ -8,13 +8,18 @@ class ResetPasswordRepository extends BaseRepository
      * All unexpired candidate tokens are fetched and compared in constant time
      * with hash_equals() — the SQL WHERE match (the old version) was not
      * constant-time. It used to be a standalone function inside reset_password.php.
+     *
+     * Only the SHA-256 hash of a token is stored (see ForgotPasswordService):
+     * the presented token is hashed first and the hashes are compared, so a
+     * database read never yields a usable reset link.
      */
     public static function lookupResetUser(string $token): ?array
     {
         if ($token === '') return null;
+        $presented = hash('sha256', $token);
         $stmt = static::db()->query("SELECT id, username, email, reset_token FROM sys_users WHERE reset_token IS NOT NULL AND reset_token_expires > NOW()");
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            if (hash_equals((string)$row['reset_token'], $token)) {
+            if (hash_equals((string)$row['reset_token'], $presented)) {
                 unset($row['reset_token']);
                 return $row;
             }

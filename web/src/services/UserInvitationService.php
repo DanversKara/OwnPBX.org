@@ -51,9 +51,11 @@ class UserInvitationService
 
         // The token is stored now (the link needs it); must_reset_password only
         // once the mail went out — set before, a failed send left the user
-        // forced into a reset whose link never arrived.
+        // forced into a reset whose link never arrived. Only the SHA-256 hash
+        // is stored (ResetPasswordRepository compares hashes); the raw token
+        // exists only in the e-mailed link below.
         $upd = $db->prepare('UPDATE sys_users SET reset_token = ?, reset_token_expires = ? WHERE id = ?');
-        $upd->execute([$token, $expires, $userId]);
+        $upd->execute([hash('sha256', $token), $expires, $userId]);
 
         // Build the link URL
         require_once __DIR__ . '/ForgotPasswordService.php';

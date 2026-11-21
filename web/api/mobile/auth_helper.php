@@ -52,6 +52,10 @@ function getMobileTokenSecret(): string
         return CHAT_JWT_SECRET;
     }
     if (defined('TURN_SECRET') && TURN_SECRET !== '') {
+        // Log-only: the fallback stays (upgraded installs may rely on it),
+        // but sharing one secret for TURN and mobile tokens means a TURN
+        // compromise can forge mobile tokens — set CHAT_JWT_SECRET.
+        error_log('mobile API: CHAT_JWT_SECRET is not set; mobile tokens are signed with TURN_SECRET — set CHAT_JWT_SECRET in /etc/ai-pbx.env so a TURN compromise cannot forge mobile tokens.');
         return TURN_SECRET;
     }
     // No fallback to the database password (it signed every token on an

@@ -155,6 +155,19 @@ cat > /etc/apache2/conf-available/aipbx-routing.conf << 'ROUTING'
     Require all denied
 </FilesMatch>
 
+# Defence in depth: dotfiles and dot-directories (.git, .svn, ...) are never
+# served, even if a checkout ever lands inside the web root — the repository
+# lives outside it today, so this should never trigger. .well-known stays
+# open: Let's Encrypt HTTP-01 challenges are served from it (see the :80 host
+# above). FilesMatch alone would not catch files inside a dot-directory
+# (their basenames do not start with a dot), hence the DirectoryMatch too.
+<DirectoryMatch "(^|/)\.(?!well-known(/|$))">
+    Require all denied
+</DirectoryMatch>
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
 <Directory "/var/www/html/src">
     Require all denied
 </Directory>

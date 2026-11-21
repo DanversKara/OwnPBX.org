@@ -41,8 +41,13 @@ class LoginService {
         $user = findLoginUser($username, 'id, username, password_hash, full_name, role, extension, theme_preference, language_preference, is_active, must_reset_password, two_factor_enabled, two_factor_secret, locked_at');
 
         $is_authenticated = false;
-        if ($user && $user['is_active'] == 1 && verifyLoginPassword($password, (string) $user['password_hash'])) {
-            $is_authenticated = true;
+        if ($user && $user['is_active'] == 1) {
+            $is_authenticated = verifyLoginPassword($password, (string) $user['password_hash']);
+        } else {
+            // No account, or a disabled one: still run a password check
+            // (against a dummy hash, result discarded) so the response takes
+            // the same time as a wrong password on a live account.
+            verifyLoginPassword($password, DUMMY_LOGIN_PASSWORD_HASH);
         }
 
         // A sealed account, or a lockdown shutting out everything but the local network. This is
@@ -59,8 +64,13 @@ class LoginService {
         }
 
         if ($is_authenticated && !SsoOnlyService::roleMayUsePassword((string) $user['role'])) {
+            // SSO-only account: answer with the generic credential error, not
+            // the SSO message — the SSO message is only reachable with a
+            // correct password, so it would confirm the password. (The
+            // pre-password SSO block above stays as-is: it fires before any
+            // password is checked, so it leaks nothing.)
             logLoginAttempt($clientIp, $username, 'FAILED');
-            return ['error' => t('sso_only.err_local_off')];
+            return ['error' => t('srv_login.err_credentials')];
         }
 
         if ($is_authenticated && !empty($user['must_reset_password'])) {

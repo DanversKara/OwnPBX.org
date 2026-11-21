@@ -172,16 +172,38 @@ class FaxSendService {
         $stmt->execute([$userId, $sender_did, $dest_number, $archived_pdf, $archived_tif, $page_count]);
         $fax_id = $db->lastInsertId();
 
+        // Billing (plugin): reserve one fax of this month's quota atomically
+        // (Billing 1.0.3+). The early allows() check above is advisory only:
+        // two sends at the same time can both pass it and then both count, so
+        // the count itself must happen in the one-statement reserve. Null =
+        // billing off or too old for reserve(): the old record() after the
+        // call file, as before. The reservation happens here — after
+        // validation and conversion, so a refused upload never burns quota —
+        // and a failed call file gives it back below. A losing race marks
+        // this fax FAILED with the quota error (no call file was made yet).
+        $reservedId = BillingBridge::reserve($userId, 'faxes', 1, 'to ' . $dest_number);
+        $billAfterSend = $reservedId === null;
+        if ($reservedId === 0) {
+            $db->prepare("UPDATE fax_sent SET status = 'FAILED', error_message = ?, completed_at = NOW() WHERE id = ?")
+               ->execute([t('billing.err_no_faxes'), $fax_id]);
+            return ['success' => false, 'error' => t('billing.err_no_faxes')];
+        }
+
         // Create Asterisk Call File for outbound SendFAX()
         try {
             self::submitCallFile((int)$fax_id, $dest_number, $sender_did, $archived_tif);
         } catch (\Exception $e) {
+            if (($reservedId ?? 0) > 0) {
+                BillingBridge::releaseReservation((int) $reservedId);
+            }
             $db->prepare("UPDATE fax_sent SET status = 'FAILED', error_message = ?, completed_at = NOW() WHERE id = ?")
                ->execute([$e->getMessage(), $fax_id]);
             return ['success' => false, 'error' => $e->getMessage()];
         }
 
-        BillingBridge::record($userId, 'faxes', 1, 'to ' . $dest_number);
+        if ($billAfterSend) {
+            BillingBridge::record($userId, 'faxes', 1, 'to ' . $dest_number);
+        }
         return ['success' => true, 'message' => sprintf(t('srv_fax.queued'), $fax_id, $page_count)];
     }
 

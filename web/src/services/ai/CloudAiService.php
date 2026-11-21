@@ -397,18 +397,25 @@ class CloudAiService
 
     /**
      * One answer of a cloud language model (temperature 0). Google AI uses
-     * Gemini's own API, every other provider the OpenAI chat API.
+     * Gemini's own API, every other provider the OpenAI chat API. $system,
+     * when given, is sent as the system message (Gemini: systemInstruction),
+     * never mixed into the user prompt — caller-controlled text in the prompt
+     * stays data, not instructions.
      */
-    public static function chat(string $id, string $prompt, int $maxTokens = 300, int $timeout = 30): string
+    public static function chat(string $id, string $prompt, int $maxTokens = 300, int $timeout = 30, ?string $system = null): string
     {
         if (!in_array('llm', self::provider($id)['caps'], true) || !self::configured($id)) {
             throw new CloudAiException(t('ai_cloud.err_no_llm'));
         }
         if ($id === 'google_ai') {
+            $req = ['contents' => [['parts' => [['text' => $prompt]]]],
+                    'generationConfig' => ['temperature' => 0, 'maxOutputTokens' => $maxTokens]];
+            if ($system !== null && $system !== '') {
+                $req['systemInstruction'] = ['parts' => [['text' => $system]]];
+            }
             $d = self::json(TtsHttp::request('POST', 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
                 ['x-goog-api-key' => self::config($id)['api_key'] ?? '', 'Content-Type' => 'application/json'],
-                (string) json_encode(['contents' => [['parts' => [['text' => $prompt]]]],
-                                      'generationConfig' => ['temperature' => 0, 'maxOutputTokens' => $maxTokens]]), $timeout), $id);
+                (string) json_encode($req), $timeout), $id);
             self::count($id, 'llm_tokens', (float) ($d['usageMetadata']['totalTokenCount'] ?? 0));
             return trim((string) ($d['candidates'][0]['content']['parts'][0]['text'] ?? ''));
         }
@@ -417,9 +424,14 @@ class CloudAiService
         if ($key !== '') {
             $headers['Authorization'] = 'Bearer ' . $key;
         }
+        $messages = [];
+        if ($system !== null && $system !== '') {
+            $messages[] = ['role' => 'system', 'content' => $system];
+        }
+        $messages[] = ['role' => 'user', 'content' => $prompt];
         $d = self::json(TtsHttp::request('POST', $base . '/chat/completions', $headers, (string) json_encode([
             'model' => $model, 'temperature' => 0, 'max_tokens' => $maxTokens,
-            'messages' => [['role' => 'user', 'content' => $prompt]],
+            'messages' => $messages,
         ]), $timeout), $id);
         self::count($id, 'llm_tokens', (float) ($d['usage']['total_tokens'] ?? 0));
         return trim((string) ($d['choices'][0]['message']['content'] ?? ''));

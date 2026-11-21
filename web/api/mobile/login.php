@@ -26,14 +26,25 @@ if (checkBruteForceLockout($client_ip, $username)) {
 
 $user = findLoginUser($username, 'id, username, password_hash, full_name, email, role, extension, extension_type, sip_password, allowed_phone_mode, is_active, two_factor_enabled, two_factor_secret');
 
-if (!$user || !verifyLoginPassword($password, (string) $user['password_hash'])) {
+if (!$user) {
+    // No account: still run a password check (dummy hash, result discarded)
+    // so the response takes the same time as a wrong password on a live one.
+    verifyLoginPassword($password, DUMMY_LOGIN_PASSWORD_HASH);
+    logLoginAttempt($client_ip, $username, 'FAILED');
+    mobileError(t('mobile_api.invalid_credentials'), 401);
+}
+
+if (!verifyLoginPassword($password, (string) $user['password_hash'])) {
     logLoginAttempt($client_ip, $username, 'FAILED');
     mobileError(t('mobile_api.invalid_credentials'), 401);
 }
 
 if (empty($user['is_active'])) {
+    // Disabled account: the generic credential error, not account_disabled —
+    // the disabled message is only reachable with a correct password, so it
+    // would confirm the password.
     logLoginAttempt($client_ip, $username, 'FAILED');
-    mobileError(t('mobile_api.account_disabled'), 403);
+    mobileError(t('mobile_api.invalid_credentials'), 401);
 }
 
 if (empty($user['extension'])) {
