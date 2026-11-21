@@ -257,5 +257,131 @@ final class RbacTest extends TestCase
         PluginManager::disable('ai-tts', $csrf);
         PluginManager::disable('ms-teams', $csrf);
     }
+
+    /**
+     * Remote-admin limit (2026-11-20): an admin signed in from a non-local IP
+     * keeps only basic user + fax functions. The tests below fake the client
+     * IP through $_SERVER['REMOTE_ADDR'] — with no proxy settings in the test
+     * DB, getClientIP() returns REMOTE_ADDR as-is (and even with the proxy
+     * on, an untrusted REMOTE_ADDR is returned unchanged). isLocalRequest()
+     * caches per REMOTE_ADDR fingerprint, so changing the IP between tests
+     * recomputes it; the IP is restored in a finally block either way.
+     */
+    private function grantModule(string $role, string $module): void
+    {
+        $db = getDB();
+        $db->prepare(
+            'INSERT INTO sys_role_permissions (role_key, module_key, can_view, can_access, can_edit, can_delete)
+             VALUES (?, ?, 1, 1, 1, 1)
+             ON DUPLICATE KEY UPDATE can_view = 1, can_access = 1, can_edit = 1, can_delete = 1'
+        )->execute([$role, $module]);
+        getRolePermissionsMap(null, true);
+    }
+
+    private function withRemoteAddr(?string $ip, callable $fn): mixed
+    {
+        $had = array_key_exists('REMOTE_ADDR', $_SERVER);
+        $old = $_SERVER['REMOTE_ADDR'] ?? null;
+        try {
+            if ($ip === null) {
+                unset($_SERVER['REMOTE_ADDR']);
+            } else {
+                $_SERVER['REMOTE_ADDR'] = $ip;
+            }
+            return $fn();
+        } finally {
+            if ($had) {
+                $_SERVER['REMOTE_ADDR'] = $old;
+            } else {
+                unset($_SERVER['REMOTE_ADDR']);
+            }
+        }
+    }
+
+    public function testRemoteAdminIsDeniedAdminModulesButKeepsUserAndFax(): void
+    {
+        // A normal user may use My Phone; a fax user may use the fax inbox.
+        $this->grantModule('user', 'my_phone');
+        $this->grantModule('fax_user', 'fax_inbox');
+
+        $_SESSION['user_role'] = 'admin';
+        $this->withRemoteAddr('203.0.113.5', function (): void {
+            $this->assertSame(['user', 'fax_user'], effectiveUserRoles());
+            $this->assertFalse(
+                hasModulePermission('system_users', 'access'),
+                'remote admin can access Users — the limit is not applied!'
+            );
+            $this->assertFalse(
+                hasModulePermission('trunks', 'access'),
+                'remote admin can access Trunks — the limit is not applied!'
+            );
+            $this->assertTrue(
+                hasModulePermission('my_phone', 'access'),
+                'remote admin lost basic user functions!'
+            );
+            $this->assertTrue(
+                hasModulePermission('fax_inbox', 'access'),
+                'remote admin lost fax functions!'
+            );
+        });
+    }
+
+    public function testLocalAdminKeepsFullAccess(): void
+    {
+        $_SESSION['user_role'] = 'admin';
+        $this->withRemoteAddr('192.168.8.50', function (): void {
+            $this->assertSame(['admin'], effectiveUserRoles());
+            $this->assertTrue(hasModulePermission('system_users', 'access'));
+        });
+        // And from the loopback address (localhost / VPN endpoint).
+        $this->withRemoteAddr('127.0.0.1', function (): void {
+            $this->assertTrue(hasModulePermission('system_users', 'access'));
+        });
+    }
+
+    public function testCliWithoutRemoteAddrCountsAsLocal(): void
+    {
+        // bin/smoke.php runs under CLI with no REMOTE_ADDR — it must keep
+        // seeing the admin role, or the smoke checks break.
+        $_SESSION['user_role'] = 'admin';
+        $this->withRemoteAddr(null, function (): void {
+            $this->assertTrue(isLocalRequest(), 'CLI (no REMOTE_ADDR) must count as local.');
+            $this->assertTrue(hasModulePermission('system_users', 'access'));
+        });
+    }
+
+    public function testRemoteAdminSessionRoleIsRewrittenFromTheDatabase(): void
+    {
+        $db = getDB();
+        // The sys_users role FK needs the admin role row to exist.
+        $db->prepare("INSERT IGNORE INTO sys_roles (role_key, role_name) VALUES ('admin', 'Admin')")->execute();
+        $db->prepare(
+            "INSERT INTO sys_users (username, password_hash, full_name, role, is_active)
+             VALUES ('remote-admin-test', 'x', 'Remote Admin Test', 'admin', 1)
+             ON DUPLICATE KEY UPDATE role = 'admin', is_active = 1"
+        )->execute();
+        $userId = (int) $db->query("SELECT id FROM sys_users WHERE username = 'remote-admin-test'")->fetchColumn();
+
+        $_SESSION['user_id'] = $userId;
+        $_SESSION['user_role'] = 'admin';
+
+        // Remote: the session role drops to 'user' and the marker is set, so
+        // the inline `$_SESSION['user_role'] === 'admin'` checks in api/*.php
+        // (the pattern requireApiLogin() cannot cover by itself) fail too.
+        $this->withRemoteAddr('203.0.113.5', function (): void {
+            applyRemoteAdminRestriction();
+            $this->assertSame('user', $_SESSION['user_role']);
+            $this->assertTrue(isRemoteLimitedAdmin());
+        });
+
+        // Back on LAN: the very next request restores 'admin' by itself.
+        $this->withRemoteAddr('192.168.8.50', function (): void {
+            applyRemoteAdminRestriction();
+            $this->assertSame('admin', $_SESSION['user_role']);
+            $this->assertFalse(isRemoteLimitedAdmin());
+        });
+
+        $db->prepare('DELETE FROM sys_users WHERE username = ?')->execute(['remote-admin-test']);
+    }
 }
 

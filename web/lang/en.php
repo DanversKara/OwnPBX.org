@@ -1896,6 +1896,7 @@ return [
     'sidebar.pending_sync_label' => 'Apply',
     'sidebar.pending_sync_tooltip' => 'There are pending PBX changes — click to push them to Asterisk',
     'sidebar.other_admin_active' => 'Another admin is currently active',
+    'sidebar.remote_admin_limited' => 'Limited mode — connect via VPN for full admin',
     'sidebar.item_lockdown' => 'Emergency lockdown',
     'lockdown.title' => 'Emergency lockdown',
     'lockdown.state_title' => 'The doors',

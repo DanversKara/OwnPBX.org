@@ -35,6 +35,15 @@ final class ApiRequestContext
             return;
         }
 
+        // Remote-admin limit: a browser session is only an admin session for
+        // this API when the request is local. applyRemoteAdminRestriction()
+        // (web/auth.php, loaded by web/index.php before dispatch reaches
+        // here) recomputes the session role from the sys_users row, so a
+        // remote admin's session fails the 'admin' check below.
+        if (function_exists('applyRemoteAdminRestriction')) {
+            applyRemoteAdminRestriction();
+        }
+
         // Allow logged-in admin session for browser-based GETs or CSRF-verified mutations
         if (isset($_SESSION['user_id']) && ($_SESSION['user_role'] ?? '') === 'admin' && _isSessionActivityFresh()) {
             $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');

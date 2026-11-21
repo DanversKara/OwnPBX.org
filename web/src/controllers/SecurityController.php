@@ -123,8 +123,10 @@ class SecurityController extends BaseController
                     }
                 }
 
-                // 5. Google sign-in settings (administrators only)
-                elseif ($action === 'save_google_settings' && $user['role'] === 'admin') {
+                // 5. Google sign-in settings (administrators only). Session
+                // role (not the DB role): a remote admin's session role is
+                // 'user', so this save is refused exactly like the page is.
+                elseif ($action === 'save_google_settings' && ($_SESSION['user_role'] ?? '') === 'admin') {
                     $res = GoogleAuthService::saveSettings($_POST);
                     if ($res['success']) {
                         $message = $res['message'];

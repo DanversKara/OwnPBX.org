@@ -26,6 +26,7 @@ function requireLogin() {
         header('Location: /login');
         exit;
     }
+    applyRemoteAdminRestriction();
     $_SESSION['last_activity'] = time();
     _touchLastSeen($_SESSION['user_id']);
 }
@@ -87,8 +88,102 @@ function requireApiLogin() {
         echo json_encode(['success' => false, 'error' => 'Unauthorized']);
         exit;
     }
+    applyRemoteAdminRestriction();
     $_SESSION['last_activity'] = time();
     _touchLastSeen($_SESSION['user_id']);
+}
+
+/**
+ * Remote-admin limit (2026-11-20, user request: "dont allow ADMIN ACCESS thru
+ * Domains, Only Local IP"): an admin signed in from a non-local IP keeps only
+ * basic user + fax functions — no ADMIN role features. From a local IP (LAN or
+ * VPN, which gives a local IP) the admin role works in full. This is a
+ * permanent policy, NOT the emergency lockdown toggle: sign-in itself always
+ * works, and non-admin roles are untouched.
+ *
+ * Two halves, both recomputed on EVERY request from the live IP and the live
+ * sys_users row, so going back on LAN/VPN restores full admin automatically
+ * and no stale session value can ever lock an admin out (or in):
+ *  - effectiveUserRoles() — the roles hasModulePermission()/requireRole()
+ *    judge by (a remote admin gets ['user', 'fax_user']).
+ *  - applyRemoteAdminRestriction() — rewrites $_SESSION['user_role'] so the
+ *    inline `$_SESSION['user_role'] === 'admin'` checks in api/*.php see the
+ *    limited role too. It runs inside requireLogin()/requireApiLogin() AFTER
+ *    their validity checks pass, so every reader of the session role has
+ *    already passed through one of those two gates.
+ */
+function isLocalRequest(): bool
+{
+    static $cache = null;
+    $fingerprint = (string) ($_SERVER['REMOTE_ADDR'] ?? '') . '|'
+        . (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? '') . '|'
+        . (string) ($_SERVER['HTTP_X_REAL_IP'] ?? '');
+    if ($cache === null || $cache[0] !== $fingerprint) {
+        try {
+            $svc = __DIR__ . '/src/services/SecurityLockdownService.php';
+            if (is_file($svc)) {
+                require_once $svc;
+            }
+            $cache = [$fingerprint, SecurityLockdownService::isLocalIp(getClientIP())];
+        } catch (\Throwable $e) {
+            // Fail closed: an IP we cannot classify is treated as remote.
+            $cache = [$fingerprint, false];
+        }
+    }
+    return $cache[1];
+}
+
+/** Roles the signed-in user effectively has for THIS request. */
+function effectiveUserRoles(): array
+{
+    $role = $_SESSION['user_role'] ?? '';
+    if ($role !== 'admin' && empty($_SESSION['_remote_admin'])) {
+        return [$role];
+    }
+    if (isLocalRequest()) {
+        return ['admin'];
+    }
+    // Remote admin: basic user + fax functions only, exactly as the user asked.
+    return ['user', 'fax_user'];
+}
+
+/** Is the signed-in admin currently limited because this request is remote? */
+function isRemoteLimitedAdmin(): bool
+{
+    return !empty($_SESSION['_remote_admin']) && !isLocalRequest();
+}
+
+/**
+ * Recompute the session role for this request. Called from requireLogin() and
+ * requireApiLogin() after their validity checks pass. The TRUE role comes
+ * from the sys_users row (not a login-time session key), so the limit follows
+ * the request IP and lifts itself the moment the admin is back on LAN/VPN.
+ */
+function applyRemoteAdminRestriction(): void
+{
+    $userId = (int) ($_SESSION['user_id'] ?? 0);
+    if ($userId <= 0) {
+        return;
+    }
+    try {
+        $stmt = getDB()->prepare('SELECT role FROM sys_users WHERE id = ?');
+        $stmt->execute([$userId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (\Throwable $e) {
+        return; // DB unavailable: leave the session role untouched.
+    }
+    if (!$row || ($row['role'] ?? '') !== 'admin') {
+        // Not an admin account: nothing to limit, and any stale marker goes.
+        unset($_SESSION['_remote_admin']);
+        return;
+    }
+    if (isLocalRequest()) {
+        $_SESSION['user_role'] = 'admin';
+        unset($_SESSION['_remote_admin']);
+        return;
+    }
+    $_SESSION['user_role'] = 'user';
+    $_SESSION['_remote_admin'] = true;
 }
 
 /**
@@ -336,7 +431,25 @@ function sessionGuestDenies(string $rule): bool
 }
 
 function hasModulePermission($module_key, $action = 'access') {
-    $role = $_SESSION['user_role'] ?? '';
+    // A remote admin is judged by the EFFECTIVE roles (user+fax_user), not
+    // by the true admin role — any-match union, so the remote admin keeps
+    // exactly what a basic user and a fax user may do, and nothing more.
+    foreach (effectiveUserRoles() as $role) {
+        if (hasModulePermissionForRole($module_key, $action, $role)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Single-role half of hasModulePermission(): every rule below reads $role,
+ * never the session, so a remote admin (effective roles user+fax_user) is
+ * judged exactly like a user with those roles. The admin-only circuit
+ * breaker below is what denies a remote admin the admin modules: it
+ * requires the role to be 'admin', and neither 'user' nor 'fax_user' is.
+ */
+function hasModulePermissionForRole($module_key, $action, string $role): bool {
 
     // The 'roles', 'system_users', 'firewall' and 'fail2ban' modules are under a SYMMETRIC circuit breaker:
     // admin can ALWAYS access them (if the roles page got locked the admin could
@@ -491,8 +604,13 @@ function requireModulePermission($module_key, $action = 'access') {
  */
 function requireRole($allowed_roles) {
     requireLogin();
-    
+
+    // A remote admin is judged by the EFFECTIVE roles (user+fax_user), not by
+    // the true admin role — see effectiveUserRoles(). $user_role stays the
+    // true session role (used only for the read_only_admin special case);
+    // the permission decisions below use $effective_roles.
     $user_role = $_SESSION['user_role'] ?? '';
+    $effective_roles = effectiveUserRoles();
 
     // NOTE: there used to be an unconditional shortcut for $user_role === 'admin' here.
     // hasModulePermission() now applies the same nuanced logic to admin too
@@ -517,7 +635,10 @@ function requireRole($allowed_roles) {
                 return;
             }
         }
-        $role_perm_map = getRolePermissionsMap($user_role);
+        $role_perm_map = [];
+        foreach ($effective_roles as $er) {
+            $role_perm_map += getRolePermissionsMap($er);
+        }
         foreach ($cc_modules as $cm) {
             if (isset($role_perm_map[$cm])) {
                 http_response_code(403);
@@ -559,7 +680,10 @@ function requireRole($allowed_roles) {
     // it was explicitly closed, the fixed $allowed_roles list below must NEVER
     // override it — otherwise closing a role's access in roles.php did nothing
     // on pages whose fixed list names that role (inconsistent access behaviour).
-    $role_perm_map = getRolePermissionsMap($user_role);
+    $role_perm_map = [];
+    foreach ($effective_roles as $er) {
+        $role_perm_map += getRolePermissionsMap($er);
+    }
     if (isset($role_perm_map[$module_key])) {
         http_response_code(403);
         echo '<!DOCTYPE html><html lang="' . getUserLanguage() . '"><head><title>' . t('auth.blocked') . '</title><link rel="stylesheet" href="/assets/css/variables.css"><link rel="stylesheet" href="/assets/css/layout.css">' . uiStylesheets() . '<link rel="stylesheet" href="/assets/css/fontawesome.min.css"><link rel="stylesheet" href="/assets/css/style.css"></head>';
@@ -571,7 +695,7 @@ function requireRole($allowed_roles) {
         exit;
     }
 
-    if (!in_array($user_role, $allowed_roles)) {
+    if (empty(array_intersect($effective_roles, $allowed_roles))) {
         http_response_code(403);
         echo '<!DOCTYPE html><html lang="' . getUserLanguage() . '"><head><title>' . t('auth.blocked') . '</title><link rel="stylesheet" href="/assets/css/variables.css"><link rel="stylesheet" href="/assets/css/layout.css">' . uiStylesheets() . '<link rel="stylesheet" href="/assets/css/fontawesome.min.css"><link rel="stylesheet" href="/assets/css/style.css"></head>';
         echo '<body class="auth-body"><div class="auth-card" style="text-align:center; max-width:480px;">';

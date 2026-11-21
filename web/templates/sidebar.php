@@ -69,6 +69,13 @@ $is_collapsed_cookie = isset($_COOKIE['sidebar_collapsed']) && $_COOKIE['sidebar
         </div>
     <?php endif; ?>
 
+    <?php if (function_exists('isRemoteLimitedAdmin') && isRemoteLimitedAdmin()): ?>
+        <div class="nav-link" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 12px 12px; padding: 10px 12px; border-radius: 8px; background: var(--nav-active-bg); color: var(--primary); font-weight: 700; font-size: 12px; text-align: center;" title="<?php echo t('sidebar.remote_admin_limited'); ?>">
+            <i class="fas fa-shield-alt"></i>
+            <span class="nav-text"><?php echo t('sidebar.remote_admin_limited'); ?></span>
+        </div>
+    <?php endif; ?>
+
     <ul class="nav-menu">
         <?php
         $sidebar_label = fn($l) => is_array($l) ? t($l[0], $l[1]) : t($l);

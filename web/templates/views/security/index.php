@@ -189,7 +189,7 @@
                         <?php echo uiTableClose(); ?>
             <?php endif; ?>
 
-            <?php if (($user['role'] ?? '') === 'admin'): ?>
+            <?php if (($_SESSION['user_role'] ?? '') === 'admin'): // session role, not DB role: hidden from a remote-limited admin ?>
             <!-- Google OAuth 2.0 sign-in settings (system administrator) -->
             <div class="u-mt-24 u-pt-20 u-border-top-1-solid-border-color">
                 <div class="u-d-flex u-ai-center u-jc-space-between u-mb-12">

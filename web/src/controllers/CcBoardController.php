@@ -39,8 +39,10 @@ class CcBoardController extends BaseController
 
         static::renderPage('cc_board/index', [
             'my_queues' => $my_queues,
-            // The same rule as api/cc.php spy_call
-            'can_spy' => in_array($user['role'] ?? '', ['admin', 'cc_manager'], true),
+            // The same rule as api/cc.php spy_call. Session role (not the DB
+            // role): a remote admin's session role is 'user', so the button
+            // hides exactly like the spy action itself is denied.
+            'can_spy' => in_array($_SESSION['user_role'] ?? '', ['admin', 'cc_manager'], true),
         ], $page);
     }
 }
