@@ -13,6 +13,9 @@ class ExtensionService {
         return PBXHelper::handleAction($data['csrf_token'] ?? '', function () use ($data) {
             $db = getDB();
             $user_id = intval($data['user_id'] ?? 0);
+            // Billing roles (Layer 1): a billing user may only save their own
+            // extension, never another user's — and never create one.
+            BillingRoleBridge::assertMayTouchUserId($user_id);
             $extension = trim($data['extension'] ?? '');
             $sip_password = trim($data['sip_password'] ?? '');
             $full_name = trim($data['full_name'] ?? '');
@@ -262,6 +265,8 @@ class ExtensionService {
     public static function removeExtension($user_id, $csrf_token) {
         return PBXHelper::handleAction($csrf_token, function () use ($user_id) {
             $user_id = intval($user_id);
+            // Billing roles (Layer 1): a billing user may only remove their own extension.
+            BillingRoleBridge::assertMayTouchUserId($user_id);
             if ($user_id <= 0) {
                 throw new \Exception(t('srv_ext.err_invalid'));
             }

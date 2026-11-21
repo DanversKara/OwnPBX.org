@@ -20,12 +20,15 @@ class QueueController extends BaseController
             'delete_queue' => fn() => QueueService::deleteQueue($_POST['queue_id'] ?? 0, static::csrfToken()),
         ]);
 
-        $queues = QueueRepository::allOrderedById();
-        $all_agents = QueueRepository::extensionAgents();
-        $queue_agents = QueueRepository::queueAgents();
-        $queue_managers = QueueRepository::queueManagers();
-        $legacy_agents = QueueRepository::assignedOutsideRole('members_json', QueueRepository::AGENT_ROLES);
-        $legacy_managers = QueueRepository::assignedOutsideRole('supervisors_json', QueueRepository::MANAGER_ROLES);
+        // Billing roles (Layer 1): a billing user sees only their own
+        // queues, and may only pick their own extension as agent/manager.
+        $owner = BillingRoleBridge::listOwnerExtension();
+        $queues = QueueRepository::allOrderedById($owner);
+        $all_agents = QueueRepository::extensionAgents($owner);
+        $queue_agents = QueueRepository::queueAgents($owner);
+        $queue_managers = QueueRepository::queueManagers($owner);
+        $legacy_agents = QueueRepository::assignedOutsideRole('members_json', QueueRepository::AGENT_ROLES, array_column($queues, 'id'));
+        $legacy_managers = QueueRepository::assignedOutsideRole('supervisors_json', QueueRepository::MANAGER_ROLES, array_column($queues, 'id'));
         $moh_classes = QueueRepository::activeMohClasses();
 
         $page_title = t('queues.title');

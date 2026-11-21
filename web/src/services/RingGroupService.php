@@ -12,8 +12,21 @@ require_once dirname(__DIR__) . '/asterisk_sync.php';
  * (SyncRingGroups writes extensions_ringgroups.conf).
  */
 class RingGroupService {
-    public static function getRingGroups() {
+    /**
+     * @param string|null $ownerExtension billing-role scope: only this
+     *   extension's ring groups (null = everyone, as before). Without the
+     *   owner column yet, a scoped viewer sees nothing (fail closed).
+     */
+    public static function getRingGroups(?string $ownerExtension = null) {
         $db = getDB();
+        if ($ownerExtension !== null) {
+            if (!BillingRoleBridge::ownerColumnExists('pbx_ring_groups')) {
+                return [];
+            }
+            $stmt = $db->prepare("SELECT * FROM pbx_ring_groups WHERE owner_extension = ? ORDER BY id ASC");
+            $stmt->execute([$ownerExtension]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         $stmt = $db->query("SELECT * FROM pbx_ring_groups ORDER BY id ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -28,6 +41,12 @@ class RingGroupService {
     public static function saveRingGroup($data) {
         return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($data) {
             $id = intval($data['id'] ?? 0);
+            // Billing roles (Layer 1): a billing user may only touch their own ring groups.
+            if ($id > 0) {
+                BillingRoleBridge::assertMayTouchRow('pbx_ring_groups', $id);
+            } else {
+                BillingRoleBridge::assertMayCreate();
+            }
             $group_number = internalNumberSanitize($data['group_number'] ?? '');
             $name = trim($data['name'] ?? '');
             $numbers_list = trim($data['numbers_list'] ?? '');
@@ -47,6 +66,10 @@ class RingGroupService {
                 throw new \Exception(t('srv_rg.err_members'));
             }
 
+            // Billing roles (Layer 1): a billing user's ring group may only
+            // ring their own extension.
+            BillingRoleBridge::assertMembersSelfOnly(preg_split('/[^0-9]+/', $numbers_list, -1, PREG_SPLIT_NO_EMPTY) ?: []);
+
             // Conflict check (with extensions, feature codes, IVRs, queues etc.)
             internalNumberValidate($group_number, 'ring_group', $id);
 
@@ -56,8 +79,17 @@ class RingGroupService {
                 $stmt = $db->prepare("UPDATE pbx_ring_groups SET group_number = ?, internal_number = ?, name = ?, numbers_list = ?, ring_strategy = ?, ring_timeout = ?, cid_prefix = ?, fallback_dest_type = ?, fallback_dest_id = ?, record_call = ?, is_active = ? WHERE id = ?");
                 $stmt->execute([$group_number, $group_number, $name, $numbers_list, $ring_strategy, $ring_timeout, $cid_prefix, $fallback_dest_type, $fallback_dest_id, $record_call, $is_active, $id]);
             } else {
-                $stmt = $db->prepare("INSERT INTO pbx_ring_groups (group_number, internal_number, name, numbers_list, ring_strategy, ring_timeout, cid_prefix, fallback_dest_type, fallback_dest_id, record_call, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$group_number, $group_number, $name, $numbers_list, $ring_strategy, $ring_timeout, $cid_prefix, $fallback_dest_type, $fallback_dest_id, $record_call, $is_active]);
+                // A new ring group belongs to its creator when they are a
+                // billing user; an update never moves the owner. Admins
+                // leave it NULL.
+                $cols = ['group_number', 'internal_number', 'name', 'numbers_list', 'ring_strategy', 'ring_timeout', 'cid_prefix', 'fallback_dest_type', 'fallback_dest_id', 'record_call', 'is_active'];
+                $vals = [$group_number, $group_number, $name, $numbers_list, $ring_strategy, $ring_timeout, $cid_prefix, $fallback_dest_type, $fallback_dest_id, $record_call, $is_active];
+                if (BillingRoleBridge::ownerColumnExists('pbx_ring_groups')) {
+                    $cols[] = 'owner_extension';
+                    $vals[] = BillingRoleBridge::creatorOwnerExtension();
+                }
+                $stmt = $db->prepare('INSERT INTO pbx_ring_groups (' . implode(', ', $cols) . ') VALUES (' . rtrim(str_repeat('?, ', count($cols)), ', ') . ')');
+                $stmt->execute($vals);
                 $id = (int)$db->lastInsertId();
             }
 
@@ -70,6 +102,7 @@ class RingGroupService {
     public static function deleteRingGroup($id, $csrf_token = '') {
         return PBXHelper::handleAction($csrf_token, function() use ($id) {
             $id = intval($id);
+            BillingRoleBridge::assertMayTouchRow('pbx_ring_groups', $id);
             $db = getDB();
 
             // Reference check: the polymorphic dest_type/dest_id fields cannot

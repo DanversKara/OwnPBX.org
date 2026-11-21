@@ -8,6 +8,12 @@ class IVRService {
     public static function saveIVR($data) {
         return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($data) {
             $ivr_id = intval($data['ivr_id'] ?? 0);
+            // Billing roles (Layer 1): a billing user may only touch their own IVRs.
+            if ($ivr_id > 0) {
+                BillingRoleBridge::assertMayTouchRow('pbx_ivrs', $ivr_id);
+            } else {
+                BillingRoleBridge::assertMayCreate();
+            }
             $title = trim($data['title'] ?? '');
             $prompt_file = trim($data['prompt_file'] ?? 'custom/welcome');
             $timeout_seconds = intval($data['timeout_seconds'] ?? 10);
@@ -38,7 +44,7 @@ class IVRService {
 
 
             $is_new = ($ivr_id <= 0);
-            $id = DBHelper::save('pbx_ivrs', [
+            $row = [
                 'id' => $ivr_id,
                 'title' => $title,
                 'prompt_file' => $prompt_file,
@@ -54,7 +60,13 @@ class IVRService {
                 'invalid_dest_id' => $invalid_dest_id,
                 'internal_number' => $internal_number !== '' ? $internal_number : null,
                 'is_active' => $is_active
-            ]);
+            ];
+            // A new IVR belongs to its creator when they are a billing user;
+            // an update never moves the owner. Admins leave it NULL.
+            if ($is_new && BillingRoleBridge::ownerColumnExists('pbx_ivrs')) {
+                $row['owner_extension'] = BillingRoleBridge::creatorOwnerExtension();
+            }
+            $id = DBHelper::save('pbx_ivrs', $row);
 
             markPendingSync('ivrs', 'ivr', $id, "IVR: {$title}", $is_new ? 'create' : 'update', $_SESSION['user_id'] ?? null);
             // When a number was added, changed or removed, the internal targets context must be rebuilt too.
@@ -81,6 +93,7 @@ class IVRService {
     public static function deleteIVR($ivr_id, $csrf_token) {
         return PBXHelper::handleAction($csrf_token, function() use ($ivr_id) {
             $ivr_id = intval($ivr_id);
+            BillingRoleBridge::assertMayTouchRow('pbx_ivrs', $ivr_id);
             $ivr_title = DBHelper::fetchColumn("SELECT title FROM pbx_ivrs WHERE id = ?", [$ivr_id]);
             $refs = DBHelper::fetchColumn(
                 "SELECT COUNT(*) FROM (
@@ -115,6 +128,8 @@ class IVRService {
     public static function saveIVREntry($data) {
         return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($data) {
             $ivr_id = intval($data['ivr_id'] ?? 0);
+            // A menu key belongs to its parent IVR: same ownership check.
+            BillingRoleBridge::assertMayTouchRow('pbx_ivrs', $ivr_id);
             $digit = preg_replace('/[^0-9*#]/', '', trim($data['digit'] ?? '1'));
             $dest_type = sanitizeDestType($data['dest_type'] ?? 'queue');
             $dest_id = trim($data['dest_id'] ?? '');
@@ -135,6 +150,12 @@ class IVRService {
         return PBXHelper::handleAction($csrf_token, function() use ($entry_id) {
             $entry_id = intval($entry_id);
             $ivr_id = DBHelper::fetchColumn("SELECT ivr_id FROM pbx_ivr_entries WHERE id = ?", [$entry_id]);
+            // A menu key belongs to its parent IVR: same ownership check.
+            if ($ivr_id) {
+                BillingRoleBridge::assertMayTouchRow('pbx_ivrs', (int) $ivr_id);
+            } elseif (BillingRoleBridge::isBillingScoped()) {
+                throw new \Exception(t('billing_role.err_not_yours'));
+            }
             DBHelper::delete('pbx_ivr_entries', 'id', $entry_id);
             if ($ivr_id) {
                 $ivr_title = DBHelper::fetchColumn("SELECT title FROM pbx_ivrs WHERE id = ?", [$ivr_id]);

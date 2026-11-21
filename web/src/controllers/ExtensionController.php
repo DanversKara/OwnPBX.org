@@ -20,12 +20,19 @@ class ExtensionController extends BaseController
             'save_extension' => fn() => ExtensionService::saveExtension($_POST),
             'toggle_status' => fn() => PBXHelper::toggleStatus('sys_users', $_POST['user_id'] ?? 0, static::csrfToken()),
             'remove_extension' => fn() => ExtensionService::removeExtension($_POST['user_id'] ?? 0, static::csrfToken()),
-            'sync_all_extensions' => fn() => ExtensionService::syncAll(static::csrfToken()),
+            // Billing roles (Layer 1): syncing every extension is an admin job, never a billing user's.
+            'sync_all_extensions' => function () {
+                if (BillingRoleBridge::isBillingScoped()) {
+                    return ['success' => false, 'error' => t('billing_role.err_not_yours')];
+                }
+                return ExtensionService::syncAll(static::csrfToken());
+            },
         ]);
 
         // Tenant scope (Reseller plugin v1): a reseller admin sees only their own extensions;
         // the main admin (no tenant) sees everyone, as before.
-        $extensions = ExtensionRepository::allWithExtension(ResellerBridge::viewerTenantId());
+        // Billing roles (Layer 1): a billing user sees only their own extension row.
+        $extensions = ExtensionRepository::allWithExtension(ResellerBridge::viewerTenantId(), BillingRoleBridge::isBillingScoped() ? BillingRoleBridge::scopedUserId() : null);
         $sipOptions = ExtensionSipOptions::allStored();
         foreach ($extensions as &$extensionRow) {
             $extensionRow['sip_options'] = $sipOptions[(string) ($extensionRow['extension'] ?? '')] ?? [];

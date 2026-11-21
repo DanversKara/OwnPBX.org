@@ -8,8 +8,17 @@ class CdrReportRepository extends BaseRepository
     /** Records per page. */
     public const PAGE_SIZE = 50;
 
-    public static function agentsForFilter(): array
+    /**
+     * @param string|null $onlyExtension billing-role scope: only this
+     *   extension (null = everyone, as before).
+     */
+    public static function agentsForFilter(?string $onlyExtension = null): array
     {
+        if ($onlyExtension !== null) {
+            $stmt = static::db()->prepare("SELECT extension, full_name FROM sys_users WHERE extension IS NOT NULL AND extension != '' AND extension = ? ORDER BY extension ASC");
+            $stmt->execute([$onlyExtension]);
+            return $stmt->fetchAll();
+        }
         return static::db()->query("SELECT extension, full_name FROM sys_users WHERE extension IS NOT NULL AND extension != '' ORDER BY extension ASC")->fetchAll();
     }
 

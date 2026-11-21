@@ -22,28 +22,33 @@ class MeetingService
     /**
      * Get list of meetings with optional status filter.
      *
+     * @param int|null $onlyHostUserId billing-role scope: only meetings
+     *   hosted by this user (null = everyone, as before). Meetings use the
+     *   existing host_user_id — no new owner column.
      * @return list<array<string, mixed>>
      */
-    public static function getMeetings(?string $status = null): array
+    public static function getMeetings(?string $status = null, ?int $onlyHostUserId = null): array
     {
         $db = getDB();
+        $where = [];
+        $params = [];
         if ($status !== null) {
-            $stmt = $db->prepare('SELECT m.*, u.full_name AS host_name,
-                    (SELECT COUNT(*) FROM pbx_meeting_invites WHERE meeting_id = m.id) AS invite_count,
-                    (SELECT c.admin_pin FROM pbx_conferences c WHERE BINARY c.room_number = BINARY m.room_number LIMIT 1) AS host_pin
-                FROM pbx_meetings m
-                LEFT JOIN sys_users u ON m.host_user_id = u.id
-                WHERE m.status = ?
-                ORDER BY m.scheduled_start DESC');
-            $stmt->execute([$status]);
-        } else {
-            $stmt = $db->query('SELECT m.*, u.full_name AS host_name,
-                    (SELECT COUNT(*) FROM pbx_meeting_invites WHERE meeting_id = m.id) AS invite_count,
-                    (SELECT c.admin_pin FROM pbx_conferences c WHERE BINARY c.room_number = BINARY m.room_number LIMIT 1) AS host_pin
-                FROM pbx_meetings m
-                LEFT JOIN sys_users u ON m.host_user_id = u.id
-                ORDER BY m.scheduled_start DESC');
+            $where[] = 'm.status = ?';
+            $params[] = $status;
         }
+        if ($onlyHostUserId !== null) {
+            $where[] = 'm.host_user_id = ?';
+            $params[] = $onlyHostUserId;
+        }
+        $whereSql = $where !== [] ? ' WHERE ' . implode(' AND ', $where) : '';
+        $stmt = $db->prepare('SELECT m.*, u.full_name AS host_name,
+                (SELECT COUNT(*) FROM pbx_meeting_invites WHERE meeting_id = m.id) AS invite_count,
+                (SELECT c.admin_pin FROM pbx_conferences c WHERE BINARY c.room_number = BINARY m.room_number LIMIT 1) AS host_pin
+            FROM pbx_meetings m
+            LEFT JOIN sys_users u ON m.host_user_id = u.id'
+            . $whereSql . '
+            ORDER BY m.scheduled_start DESC');
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
@@ -253,6 +258,12 @@ class MeetingService
         $db = getDB();
 
         if ($id > 0) {
+            // Billing roles (Layer 1): a billing user may only edit their own meetings.
+            try {
+                BillingRoleBridge::assertMayTouchMeeting($id);
+            } catch (\Throwable $e) {
+                return ['success' => false, 'error' => $e->getMessage()];
+            }
             $existing = self::getMeeting($id);
             if (!$existing) {
                 return ['success' => false, 'error' => t('meetings.err_not_found')];
@@ -384,6 +395,12 @@ class MeetingService
      */
     public static function addInvite(int $meetingId, string $email, string $name = ''): array
     {
+        // Billing roles (Layer 1): a billing user may only invite to their own meetings.
+        try {
+            BillingRoleBridge::assertMayTouchMeeting($meetingId);
+        } catch (\Throwable $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
         $email = strtolower(trim($email));
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return ['success' => false, 'error' => t('meetings.err_invalid_email')];
@@ -416,6 +433,12 @@ class MeetingService
      */
     public static function cancelMeeting(int $meetingId, ?int $userId = null): bool
     {
+        // Billing roles (Layer 1): a billing user may only cancel their own meetings.
+        try {
+            BillingRoleBridge::assertMayTouchMeeting($meetingId);
+        } catch (\Throwable $e) {
+            return false;
+        }
         $db = getDB();
         $meeting = self::getMeeting($meetingId);
         $stmt = $db->prepare('UPDATE pbx_meetings SET status = "cancelled" WHERE id = ?');

@@ -15,6 +15,12 @@ $action = $_GET['action'] ?? '';
 $room = trim($_GET['room'] ?? '');
 
 if ($action === 'members') {
+    // Billing roles (Layer 1): a billing user may only watch their own rooms.
+    if (!BillingRoleBridge::mayTouchRoom($room)) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => t('billing_role.err_not_yours')]);
+        exit;
+    }
     $members = ConferenceService::getLiveMembers($room);
     echo json_encode(['success' => true, 'members' => $members]);
     exit;

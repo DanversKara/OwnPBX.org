@@ -27,7 +27,8 @@ class ConferenceController extends BaseController
             ),
         ]);
 
-        $conferences = ConferenceService::getConferences();
+        // Billing roles (Layer 1): a billing user sees only their own rooms.
+        $conferences = ConferenceService::getConferences(BillingRoleBridge::listOwnerExtension());
 
         $page_title = t('conferences.title');
         static::renderPage('conferences/index', [

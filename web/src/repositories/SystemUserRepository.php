@@ -13,19 +13,27 @@ class SystemUserRepository extends BaseRepository
      *
      * $resellerId scopes the list to one tenant: a reseller admin sees only
      * their own users. NULL (the main admin) sees everyone, as before.
+     * $onlyUserId scopes it to one user (billing roles: a billing user sees
+     * only their own row). NULL sees everyone.
      */
-    public static function allWithRoleName(?int $resellerId = null): array
+    public static function allWithRoleName(?int $resellerId = null, ?int $onlyUserId = null): array
     {
         $sql = "SELECT u.id, u.username, u.full_name, u.email, u.extension, u.sip_password, u.role, u.can_listen_recordings, u.can_view_all_cdrs, u.can_view_queue_monitor, u.allowed_phone_mode, u.is_guest, u.guest_outbound, u.guest_inbound, u.guest_sms, u.guest_fax, u.pickup_group, u.cid_internal, u.cid_external, u.is_active, u.two_factor_enabled, r.role_name
              FROM sys_users u LEFT JOIN sys_roles r ON u.role = r.role_key
              WHERE COALESCE(u.extension_type, 'sip') <> 'fax'";
+        $params = [];
         if ($resellerId !== null) {
             $sql .= ' AND u.reseller_id = ?';
+            $params[] = $resellerId;
+        }
+        if ($onlyUserId !== null) {
+            $sql .= ' AND u.id = ?';
+            $params[] = $onlyUserId;
         }
         $sql .= ' ORDER BY u.role ASC, u.username ASC';
-        if ($resellerId !== null) {
+        if ($params !== []) {
             $stmt = static::db()->prepare($sql);
-            $stmt->execute([$resellerId]);
+            $stmt->execute($params);
             $rows = $stmt->fetchAll();
         } else {
             $rows = static::db()->query($sql)->fetchAll();

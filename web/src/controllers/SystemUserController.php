@@ -139,7 +139,8 @@ class SystemUserController extends BaseController
 
         // Tenant scope (Reseller plugin v1): a reseller admin sees only their own users;
         // the main admin (no tenant) sees everyone, as before.
-        $users = SystemUserRepository::allWithRoleName(ResellerBridge::viewerTenantId());
+        // Billing roles (Layer 1): a billing user sees only their own row.
+        $users = SystemUserRepository::allWithRoleName(ResellerBridge::viewerTenantId(), BillingRoleBridge::isBillingScoped() ? BillingRoleBridge::scopedUserId() : null);
         $all_roles = SystemUserRepository::allRolesForDropdown();
         $sys_roles_full = SystemUserRepository::allRolesFull();
 

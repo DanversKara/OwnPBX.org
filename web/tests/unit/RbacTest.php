@@ -383,5 +383,193 @@ final class RbacTest extends TestCase
 
         $db->prepare('DELETE FROM sys_users WHERE username = ?')->execute(['remote-admin-test']);
     }
+
+    // ------------------------------------------------------------------
+    // Billing roles, Layer 1 (core 1.75.61): an active plan subscription
+    // grants its modules in addition to role permissions, and the
+    // subscriber is scoped to their own extension. The plugin tables are
+    // built here from the plugin's own schema.sql (verbatim), and the new
+    // columns are added when the tables already exist without them.
+    // ------------------------------------------------------------------
+
+    private function ensureBillingColumn(string $table, string $column, string $definition): void
+    {
+        $db = getDB();
+        $stmt = $db->query("SHOW COLUMNS FROM {$table} LIKE '{$column}'");
+        if ($stmt === false || $stmt->fetch() === false) {
+            $db->exec("ALTER TABLE {$table} ADD COLUMN {$column} {$definition}");
+        }
+    }
+
+    /** Creates the test user + plan + subscription; returns [userId, planId]. */
+    private function billingFixture(): array
+    {
+        require_once dirname(__DIR__, 2) . '/src/core/PluginManager.php';
+        require_once dirname(__DIR__, 2) . '/src/services/BillingRoleBridge.php';
+
+        $db = getDB();
+        $db->exec("CREATE TABLE IF NOT EXISTS plg_billing_plans (
+            id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+            name VARCHAR(80) NOT NULL,
+            description VARCHAR(255) NOT NULL DEFAULT '',
+            price_cents INT UNSIGNED NOT NULL DEFAULT 0,
+            currency VARCHAR(3) NOT NULL DEFAULT 'usd',
+            call_minutes INT NOT NULL DEFAULT 0,
+            messages INT NOT NULL DEFAULT 0,
+            fax TINYINT(1) NOT NULL DEFAULT 0,
+            faxes INT NOT NULL DEFAULT 0,
+            feat_time_conditions TINYINT(1) NOT NULL DEFAULT 0,
+            feat_ivrs TINYINT(1) NOT NULL DEFAULT 0,
+            feat_queues TINYINT(1) NOT NULL DEFAULT 0,
+            feat_conferences TINYINT(1) NOT NULL DEFAULT 0,
+            feat_meetings TINYINT(1) NOT NULL DEFAULT 0,
+            feat_boss_secretary TINYINT(1) NOT NULL DEFAULT 0,
+            feat_ring_groups TINYINT(1) NOT NULL DEFAULT 0,
+            role_key VARCHAR(64) NULL DEFAULT NULL,
+            is_active TINYINT(1) NOT NULL DEFAULT 1,
+            in_store TINYINT(1) NOT NULL DEFAULT 1,
+            sort_order INT NOT NULL DEFAULT 0,
+            stripe_mode VARCHAR(4) NOT NULL DEFAULT '',
+            stripe_product_id VARCHAR(64) NOT NULL DEFAULT '',
+            stripe_price_id VARCHAR(64) NOT NULL DEFAULT '',
+            created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY idx_price (stripe_price_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $db->exec("CREATE TABLE IF NOT EXISTS plg_billing_customers (
+            user_id INT NOT NULL,
+            stripe_mode VARCHAR(4) NOT NULL DEFAULT '',
+            stripe_customer_id VARCHAR(64) NOT NULL DEFAULT '',
+            subscription_id VARCHAR(64) NOT NULL DEFAULT '',
+            subscription_item_id VARCHAR(64) NOT NULL DEFAULT '',
+            plan_id INT UNSIGNED NULL,
+            status VARCHAR(24) NOT NULL DEFAULT '',
+            current_period_end INT UNSIGNED NOT NULL DEFAULT 0,
+            cancel_at_period_end TINYINT(1) NOT NULL DEFAULT 0,
+            guest_may_upgrade TINYINT(1) NOT NULL DEFAULT 0,
+            updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (user_id),
+            KEY idx_customer (stripe_customer_id),
+            KEY idx_subscription (subscription_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $db->exec("CREATE TABLE IF NOT EXISTS plg_billing_overrides (
+            user_id INT NOT NULL,
+            feature VARCHAR(32) NOT NULL,
+            value INT NOT NULL,
+            PRIMARY KEY (user_id, feature)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $this->ensureBillingColumn('plg_billing_plans', 'feat_queues', 'TINYINT(1) NOT NULL DEFAULT 0');
+        $this->ensureBillingColumn('plg_billing_plans', 'feat_ivrs', 'TINYINT(1) NOT NULL DEFAULT 0');
+        $this->ensureBillingColumn('plg_billing_plans', 'role_key', 'VARCHAR(64) NULL DEFAULT NULL');
+
+        $csrf = $_SESSION['csrf_token'] = 'test-csrf';
+        $wasEnabled = PluginManager::isEnabled('billing');
+        PluginManager::enable('billing', $csrf);
+        require_once dirname(__DIR__, 2) . '/src/services/BillingBridge.php';
+        $this->assertTrue(BillingBridge::load(), 'billing plugin must load for the billing-role tests');
+
+        $db->prepare("INSERT IGNORE INTO sys_roles (role_key, role_name) VALUES ('user', 'User')")->execute();
+        $db->prepare(
+            "INSERT INTO sys_users (username, password_hash, full_name, role, extension, is_active)
+             VALUES ('billing-role-test', 'x', 'Billing Role Test', 'user', '8809', 1)
+             ON DUPLICATE KEY UPDATE role = 'user', extension = '8809', is_active = 1"
+        )->execute();
+        $userId = (int) $db->query("SELECT id FROM sys_users WHERE username = 'billing-role-test'")->fetchColumn();
+
+        $db->prepare("INSERT INTO plg_billing_plans (name, feat_queues, feat_ivrs) VALUES ('Billing role test plan', 1, 0)")->execute();
+        $planId = (int) $db->lastInsertId();
+        $db->prepare('INSERT INTO plg_billing_customers (user_id, plan_id, status, current_period_end) VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE plan_id = VALUES(plan_id), status = VALUES(status), current_period_end = VALUES(current_period_end)')
+            ->execute([$userId, $planId, 'active', time() + 86400]);
+
+        $_SESSION['user_id'] = $userId;
+        $_SESSION['user_role'] = 'user';
+        BillingRoleBridge::resetCache();
+        return [$userId, $planId, $wasEnabled, $csrf];
+    }
+
+    private function billingCleanup(int $userId, int $planId, bool $wasEnabled, string $csrf): void
+    {
+        $db = getDB();
+        $db->prepare('DELETE FROM plg_billing_overrides WHERE user_id = ?')->execute([$userId]);
+        $db->prepare('DELETE FROM plg_billing_customers WHERE user_id = ?')->execute([$userId]);
+        $db->prepare('DELETE FROM plg_billing_plans WHERE id = ?')->execute([$planId]);
+        $db->prepare('DELETE FROM sys_users WHERE username = ?')->execute(['billing-role-test']);
+        if ($wasEnabled) {
+            PluginManager::enable('billing', $csrf);
+        } else {
+            PluginManager::disable('billing', $csrf);
+        }
+        BillingRoleBridge::resetCache();
+    }
+
+    public function testPlanGrantsItsModulesButNothingElse(): void
+    {
+        [$userId, $planId, $wasEnabled, $csrf] = $this->billingFixture();
+        try {
+            $this->assertSame(['queues'], Billing::userPlanFeatures($userId));
+            $this->assertTrue(hasModulePermission('queues', 'access'), 'plan with feat_queues must open Queues');
+            $this->assertTrue(hasModulePermission('queues', 'view'));
+            $this->assertTrue(hasModulePermission('queues', 'edit'));
+            $this->assertTrue(hasModulePermission('queues', 'delete'));
+            $this->assertFalse(hasModulePermission('ivrs', 'access'), 'plan without feat_ivrs must not open IVRs');
+            $this->assertFalse(hasModulePermission('system_users', 'access'), 'a plan must never open the circuit-breaker modules');
+            $this->assertTrue(BillingRoleBridge::isBillingScoped());
+            $this->assertSame('8809', BillingRoleBridge::scopedExtension());
+            $this->assertSame($userId, BillingRoleBridge::scopedUserId());
+        } finally {
+            $this->billingCleanup($userId, $planId, $wasEnabled, $csrf);
+        }
+    }
+
+    public function testLapsedSubscriptionLocksTheModulesAgain(): void
+    {
+        [$userId, $planId, $wasEnabled, $csrf] = $this->billingFixture();
+        try {
+            $this->assertTrue(hasModulePermission('queues', 'access'));
+            $db = getDB();
+            $db->prepare("UPDATE plg_billing_customers SET status = 'canceled' WHERE user_id = ?")->execute([$userId]);
+            BillingRoleBridge::resetCache();
+            $this->assertSame([], Billing::userPlanFeatures($userId));
+            $this->assertFalse(hasModulePermission('queues', 'access'), 'canceled subscription must lock Queues again');
+            $this->assertFalse(BillingRoleBridge::isBillingScoped());
+        } finally {
+            $this->billingCleanup($userId, $planId, $wasEnabled, $csrf);
+        }
+    }
+
+    public function testPlanRoleTieLimitsTheGrantToThatRole(): void
+    {
+        [$userId, $planId, $wasEnabled, $csrf] = $this->billingFixture();
+        try {
+            $db = getDB();
+            $db->prepare("UPDATE plg_billing_plans SET role_key = 'cc_manager' WHERE id = ?")->execute([$planId]);
+            BillingRoleBridge::resetCache();
+            $this->assertSame([], Billing::userPlanFeatures($userId), 'plan tied to another role must grant nothing');
+            $this->assertFalse(hasModulePermission('queues', 'access'));
+            $db->prepare("UPDATE plg_billing_plans SET role_key = 'user' WHERE id = ?")->execute([$planId]);
+            BillingRoleBridge::resetCache();
+            $this->assertTrue(hasModulePermission('queues', 'access'), 'plan tied to the user role must grant again');
+        } finally {
+            $this->billingCleanup($userId, $planId, $wasEnabled, $csrf);
+        }
+    }
+
+    public function testPlanOverrideWinsOverThePlan(): void
+    {
+        [$userId, $planId, $wasEnabled, $csrf] = $this->billingFixture();
+        try {
+            $db = getDB();
+            $db->prepare('INSERT INTO plg_billing_overrides (user_id, feature, value) VALUES (?, ?, ?)')->execute([$userId, 'feat_ivrs', 1]);
+            BillingRoleBridge::resetCache();
+            $this->assertTrue(hasModulePermission('ivrs', 'access'), 'feat_ivrs exception must open IVRs');
+            $db->prepare('INSERT INTO plg_billing_overrides (user_id, feature, value) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)')
+                ->execute([$userId, 'feat_queues', 0]);
+            BillingRoleBridge::resetCache();
+            $this->assertFalse(hasModulePermission('queues', 'access'), 'feat_queues exception of 0 must close Queues');
+        } finally {
+            $this->billingCleanup($userId, $planId, $wasEnabled, $csrf);
+        }
+    }
 }
 

@@ -8,6 +8,15 @@ class TimeConditionService {
     public static function saveTimeCondition($data) {
         return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($data) {
             $tc_id = intval($data['tc_id'] ?? 0);
+            // Billing roles (Layer 1): a billing user may only touch their
+            // own conditions, and only attach them to their own time groups
+            // (the fallback group 1 is admin-owned, so a scoped user with no
+            // group of their own is refused until they make one).
+            if ($tc_id > 0) {
+                BillingRoleBridge::assertMayTouchRow('pbx_time_conditions', $tc_id);
+            } else {
+                BillingRoleBridge::assertMayCreate();
+            }
             $title = trim($data['title'] ?? '');
             $rules_post = $data['rules'] ?? [];
             $rules_list = [];
@@ -35,6 +44,12 @@ class TimeConditionService {
             $rules_json = !empty($rules_list) ? json_encode($rules_list, JSON_UNESCAPED_UNICODE) : null;
             $first_rule = $rules_list[0] ?? [];
             $time_group_id = intval($first_rule['time_group_id'] ?? ($data['time_group_id'] ?? 1));
+            // Every group this condition uses must be the viewer's own.
+            $group_ids = [$time_group_id];
+            foreach ($rules_list as $rl) {
+                $group_ids[] = (int) $rl['time_group_id'];
+            }
+            BillingRoleBridge::assertTimeGroupsOwned(array_values(array_unique($group_ids)));
             $match_dest_type = sanitizeDestType($first_rule['match_dest_type'] ?? ($data['match_dest_type'] ?? 'queue'));
             $match_dest_id = $first_rule['match_dest_id'] ?? ($data['match_dest_id'] ?? '');
             $nomatch_dest_type = sanitizeDestType($data['nomatch_dest_type'] ?? 'announcement');
@@ -51,7 +66,7 @@ class TimeConditionService {
 
 
             $is_new = ($tc_id <= 0);
-            $id = DBHelper::save('pbx_time_conditions', [
+            $row = [
                 'id' => $tc_id,
                 'title' => $title,
                 'time_group_id' => $time_group_id,
@@ -62,7 +77,13 @@ class TimeConditionService {
                 'rules_json' => $rules_json,
                 'internal_number' => $internal_number !== '' ? $internal_number : null,
                 'is_active' => $is_active
-            ]);
+            ];
+            // A new condition belongs to its creator when they are a billing
+            // user; an update never moves the owner. Admins leave it NULL.
+            if ($is_new && BillingRoleBridge::ownerColumnExists('pbx_time_conditions')) {
+                $row['owner_extension'] = BillingRoleBridge::creatorOwnerExtension();
+            }
+            $id = DBHelper::save('pbx_time_conditions', $row);
 
             markPendingSync('time_conditions', 'time_condition', $id, "Time condition: {$title}", $is_new ? 'create' : 'update', $_SESSION['user_id'] ?? null);
             // When a number was added, changed or removed, the internal targets context must be rebuilt too.
@@ -79,6 +100,7 @@ class TimeConditionService {
     public static function deleteTimeCondition($tc_id, $csrf_token) {
         return PBXHelper::handleAction($csrf_token, function() use ($tc_id) {
             $tc_id = intval($tc_id);
+            BillingRoleBridge::assertMayTouchRow('pbx_time_conditions', $tc_id);
             $sid = (string)$tc_id;
             $refs = DBHelper::fetchColumn(
                 "SELECT COUNT(*) FROM (
@@ -120,6 +142,13 @@ class TimeConditionService {
     public static function saveTimeGroup($data) {
         return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($data) {
             $tg_id = intval($data['tg_id'] ?? 0);
+            // Billing roles (Layer 1): a billing user may only touch their
+            // own time groups.
+            if ($tg_id > 0) {
+                BillingRoleBridge::assertMayTouchRow('pbx_time_groups', $tg_id);
+            } else {
+                BillingRoleBridge::assertMayCreate();
+            }
             $title = trim($data['title'] ?? '');
             $time_start = trim($data['time_start'] ?? '08:30');
             $time_end = trim($data['time_end'] ?? '17:30');
@@ -145,8 +174,16 @@ class TimeConditionService {
                 $group_id = $tg_id;
                 $group_action = 'update';
             } else {
-                $stmt = $db->prepare("INSERT INTO pbx_time_groups (title, time_start, time_end, days_of_week, holidays_json, is_active) VALUES (?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$title, $time_start, $time_end, $days, $holidays_json, $is_active]);
+                // A new group belongs to its creator when they are a billing
+                // user; an update never moves the owner. Admins leave it NULL.
+                $cols = ['title', 'time_start', 'time_end', 'days_of_week', 'holidays_json', 'is_active'];
+                $vals = [$title, $time_start, $time_end, $days, $holidays_json, $is_active];
+                if (BillingRoleBridge::ownerColumnExists('pbx_time_groups')) {
+                    $cols[] = 'owner_extension';
+                    $vals[] = BillingRoleBridge::creatorOwnerExtension();
+                }
+                $stmt = $db->prepare('INSERT INTO pbx_time_groups (' . implode(', ', $cols) . ') VALUES (' . rtrim(str_repeat('?, ', count($cols)), ', ') . ')');
+                $stmt->execute($vals);
                 $msg = sprintf(t('srv_tc.group_added'), $title);
                 $group_id = $db->lastInsertId();
                 $group_action = 'create';
@@ -177,6 +214,7 @@ class TimeConditionService {
             if ($tg_id <= 0) {
                 throw new \Exception(t('srv_tc.err_group_id'));
             }
+            BillingRoleBridge::assertMayTouchRow('pbx_time_groups', $tg_id);
             $db = getDB();
             $check = $db->prepare("SELECT COUNT(*) FROM pbx_time_conditions WHERE time_group_id = ? OR rules_json LIKE ?");
             $check->execute([$tg_id, '%"time_group_id":' . $tg_id . '%']);

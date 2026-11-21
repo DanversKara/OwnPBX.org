@@ -23,7 +23,8 @@ class RingGroupController extends BaseController
             'delete_ring_group' => fn() => RingGroupService::deleteRingGroup($_POST['ring_group_id'] ?? 0, static::csrfToken()),
         ]);
 
-        $ring_groups = RingGroupService::getRingGroups();
+        // Billing roles (Layer 1): a billing user sees only their own ring groups.
+        $ring_groups = RingGroupService::getRingGroups(BillingRoleBridge::listOwnerExtension());
         $modules = DestinationRegistry::getModuleList();
 
         $page_title = t('ring_groups.title');

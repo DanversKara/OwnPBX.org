@@ -23,8 +23,11 @@ class BossSecretaryController extends BaseController
             'delete_group' => fn() => BossSecretaryService::deleteGroup($_POST['group_id'] ?? 0, static::csrfToken()),
         ]);
 
-        $groups = BossSecretaryService::getGroups();
-        $extensions = BossSecretaryService::getAvailableExtensions();
+        // Billing roles (Layer 1): a billing user sees only their own groups,
+        // and may only pick their own extension as boss or secretary.
+        $owner = BillingRoleBridge::listOwnerExtension();
+        $groups = BossSecretaryService::getGroups($owner);
+        $extensions = BossSecretaryService::getAvailableExtensions($owner);
         $modules = DestinationRegistry::getModuleList();
 
         $page_title = t('boss_secretary.title');

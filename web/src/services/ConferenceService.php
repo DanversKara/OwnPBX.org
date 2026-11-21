@@ -13,8 +13,21 @@ require_once dirname(__DIR__) . '/asterisk_sync.php';
  * (confbridge list/kick/mute).
  */
 class ConferenceService {
-    public static function getConferences() {
+    /**
+     * @param string|null $ownerExtension billing-role scope: only this
+     *   extension's rooms (null = everyone, as before). Without the owner
+     *   column yet, a scoped viewer sees nothing (fail closed).
+     */
+    public static function getConferences(?string $ownerExtension = null) {
         $db = getDB();
+        if ($ownerExtension !== null) {
+            if (!BillingRoleBridge::ownerColumnExists('pbx_conferences')) {
+                return [];
+            }
+            $stmt = $db->prepare("SELECT * FROM pbx_conferences WHERE owner_extension = ? ORDER BY id ASC");
+            $stmt->execute([$ownerExtension]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         $stmt = $db->query("SELECT * FROM pbx_conferences ORDER BY id ASC");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -29,6 +42,12 @@ class ConferenceService {
     public static function saveConference($data) {
         return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($data) {
             $id = intval($data['id'] ?? 0);
+            // Billing roles (Layer 1): a billing user may only touch their own rooms.
+            if ($id > 0) {
+                BillingRoleBridge::assertMayTouchRow('pbx_conferences', $id);
+            } else {
+                BillingRoleBridge::assertMayCreate();
+            }
             $room_number = internalNumberSanitize($data['room_number'] ?? '');
             $title = trim($data['title'] ?? '');
             $user_pin = preg_replace('/[^0-9]/', '', trim($data['user_pin'] ?? ''));
@@ -65,8 +84,16 @@ class ConferenceService {
                        ->execute([$room_number, $oldRoomNumber]);
                 }
             } else {
-                $stmt = $db->prepare("INSERT INTO pbx_conferences (room_number, internal_number, title, user_pin, admin_pin, wait_marked, end_marked, max_members, announce_join_leave, announce_user_count, record_conference, mute_on_join, video_mode, max_video_streams, music_on_hold, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([$room_number, $room_number, $title, $user_pin, $admin_pin, $wait_marked, $end_marked, $max_members, $announce_join_leave, $announce_user_count, $record_conference, $mute_on_join, $video_mode, $max_video_streams, $music_on_hold, $is_active]);
+                // A new room belongs to its creator when they are a billing
+                // user; an update never moves the owner. Admins leave it NULL.
+                $cols = ['room_number', 'internal_number', 'title', 'user_pin', 'admin_pin', 'wait_marked', 'end_marked', 'max_members', 'announce_join_leave', 'announce_user_count', 'record_conference', 'mute_on_join', 'video_mode', 'max_video_streams', 'music_on_hold', 'is_active'];
+                $vals = [$room_number, $room_number, $title, $user_pin, $admin_pin, $wait_marked, $end_marked, $max_members, $announce_join_leave, $announce_user_count, $record_conference, $mute_on_join, $video_mode, $max_video_streams, $music_on_hold, $is_active];
+                if (BillingRoleBridge::ownerColumnExists('pbx_conferences')) {
+                    $cols[] = 'owner_extension';
+                    $vals[] = BillingRoleBridge::creatorOwnerExtension();
+                }
+                $stmt = $db->prepare('INSERT INTO pbx_conferences (' . implode(', ', $cols) . ') VALUES (' . rtrim(str_repeat('?, ', count($cols)), ', ') . ')');
+                $stmt->execute($vals);
                 $id = (int)$db->lastInsertId();
             }
 
@@ -111,6 +138,7 @@ class ConferenceService {
     public static function deleteConference($id, $csrf_token = '') {
         return PBXHelper::handleAction($csrf_token, function() use ($id) {
             $id = intval($id);
+            BillingRoleBridge::assertMayTouchRow('pbx_conferences', $id);
             $db = getDB();
             $cf = self::getConference($id);
 
@@ -172,6 +200,10 @@ class ConferenceService {
     public static function getLiveMembers($roomNumber) {
         $room = preg_replace('/[^0-9]/', '', (string)$roomNumber);
         if ($room === '') return [];
+        // Billing roles (Layer 1): a billing user may only watch their own rooms.
+        if (!BillingRoleBridge::mayTouchRoom($room)) {
+            return [];
+        }
 
         @exec("asterisk -rx " . escapeshellarg("confbridge list {$room}"), $rawOutput);
         $members = [];
@@ -195,6 +227,10 @@ class ConferenceService {
         return PBXHelper::handleAction($csrf_token, function() use ($roomNumber, $channel) {
             $room = preg_replace('/[^0-9]/', '', (string)$roomNumber);
             $chan = preg_replace('/[^a-zA-Z0-9\/@_;.-]/', '', (string)$channel);
+            // Billing roles (Layer 1): a billing user may only manage their own rooms.
+            if (!BillingRoleBridge::mayTouchRoom($room)) {
+                throw new \Exception(t('billing_role.err_not_yours'));
+            }
             if ($room && $chan) {
                 @exec("asterisk -rx " . escapeshellarg("confbridge kick {$room} {$chan}"));
                 return t('srv_conf.kicked');
@@ -207,6 +243,10 @@ class ConferenceService {
         return PBXHelper::handleAction($csrf_token, function() use ($roomNumber, $channel, $mute) {
             $room = preg_replace('/[^0-9]/', '', (string)$roomNumber);
             $chan = preg_replace('/[^a-zA-Z0-9\/@_;.-]/', '', (string)$channel);
+            // Billing roles (Layer 1): a billing user may only manage their own rooms.
+            if (!BillingRoleBridge::mayTouchRoom($room)) {
+                throw new \Exception(t('billing_role.err_not_yours'));
+            }
             if ($room && $chan) {
                 $cmd = $mute ? "confbridge mute {$room} {$chan}" : "confbridge unmute {$room} {$chan}";
                 @exec("asterisk -rx " . escapeshellarg($cmd));

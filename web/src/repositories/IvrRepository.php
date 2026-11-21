@@ -12,15 +12,43 @@ class IvrRepository extends BaseRepository
 {
     protected static string $table = 'pbx_ivrs';
 
-    public static function allOrderedByTitle(): array
+    /**
+     * @param string|null $ownerExtension billing-role scope: only this
+     *   extension's IVRs (null = everyone, as before). Without the owner
+     *   column yet, a scoped viewer sees nothing (fail closed).
+     */
+    public static function allOrderedByTitle(?string $ownerExtension = null): array
     {
+        if ($ownerExtension !== null) {
+            if (!BillingRoleBridge::ownerColumnExists('pbx_ivrs')) {
+                return [];
+            }
+            $stmt = static::db()->prepare('SELECT * FROM pbx_ivrs WHERE owner_extension = ? ORDER BY title ASC');
+            $stmt->execute([$ownerExtension]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         return static::findAll('title ASC');
     }
 
-    public static function entriesByIvr(): array
+    /**
+     * @param int[]|null $ivrIds only entries of these IVRs (null = all).
+     *   An empty list returns nothing.
+     */
+    public static function entriesByIvr(?array $ivrIds = null): array
     {
         $entries_by_ivr = [];
-        $raw_entries = static::db()->query('SELECT * FROM pbx_ivr_entries ORDER BY digit ASC')->fetchAll(PDO::FETCH_ASSOC);
+        if ($ivrIds !== null) {
+            $ivrIds = array_values(array_unique(array_map('intval', $ivrIds)));
+            if ($ivrIds === []) {
+                return [];
+            }
+            $in = implode(',', array_fill(0, count($ivrIds), '?'));
+            $stmt = static::db()->prepare("SELECT * FROM pbx_ivr_entries WHERE ivr_id IN ({$in}) ORDER BY digit ASC");
+            $stmt->execute($ivrIds);
+            $raw_entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } else {
+            $raw_entries = static::db()->query('SELECT * FROM pbx_ivr_entries ORDER BY digit ASC')->fetchAll(PDO::FETCH_ASSOC);
+        }
         foreach ($raw_entries as $e) {
             $entries_by_ivr[$e['ivr_id']][] = $e;
         }

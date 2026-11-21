@@ -25,8 +25,11 @@ class IvrController extends BaseController
             'delete_ivr' => fn() => IVRService::deleteIVR($_POST['ivr_id'] ?? 0, static::csrfToken()),
         ]);
 
-        $ivrs = IvrRepository::allOrderedByTitle();
-        $entries_by_ivr = IvrRepository::entriesByIvr();
+        // Billing roles (Layer 1): a billing user sees only their own IVRs
+        // and their keys; admins see everyone, as before.
+        $owner = BillingRoleBridge::listOwnerExtension();
+        $ivrs = IvrRepository::allOrderedByTitle($owner);
+        $entries_by_ivr = IvrRepository::entriesByIvr(array_column($ivrs, 'id'));
         $modules = DestinationRegistry::getModuleList();
         $announcements = IvrRepository::activeAnnouncements();
 

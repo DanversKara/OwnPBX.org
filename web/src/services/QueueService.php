@@ -8,6 +8,12 @@ class QueueService {
     public static function saveQueue($data) {
         return PBXHelper::handleAction($data['csrf_token'] ?? '', function() use ($data) {
             $queue_id = intval($data['queue_id'] ?? 0);
+            // Billing roles (Layer 1): a billing user may only touch their own queues.
+            if ($queue_id > 0) {
+                BillingRoleBridge::assertMayTouchRow('pbx_queues', $queue_id);
+            } else {
+                BillingRoleBridge::assertMayCreate();
+            }
             $queue_name = preg_replace('/[^a-zA-Z0-9_-]/', '', trim($data['queue_name'] ?? ''));
             $title = trim($data['title'] ?? $queue_name);
             $strategy = trim($data['strategy'] ?? 'rrmemory');
@@ -90,6 +96,10 @@ class QueueService {
             $supervisors_json = json_encode(array_values($selected_supervisors));
             $primary_supervisor = !empty($selected_supervisors) ? $selected_supervisors[0] : null;
 
+            // Billing roles (Layer 1): a billing user's queue may only ring
+            // their own extension — agents and supervisors alike.
+            BillingRoleBridge::assertMembersSelfOnly(array_merge($selected_members, $selected_supervisors));
+
             $q_data = [
                 'id' => $queue_id,
                 'queue_name' => $queue_name,
@@ -123,6 +133,11 @@ class QueueService {
             ];
 
             $is_new = ($queue_id <= 0);
+            // A new queue belongs to its creator when they are a billing
+            // user; an update never moves the owner. Admins leave it NULL.
+            if ($is_new && BillingRoleBridge::ownerColumnExists('pbx_queues')) {
+                $q_data['owner_extension'] = BillingRoleBridge::creatorOwnerExtension();
+            }
             $id = DBHelper::save('pbx_queues', $q_data);
             QueueHelper::syncQueueToDetails($q_data);
 
@@ -152,6 +167,7 @@ class QueueService {
     public static function deleteQueue($queue_id, $csrf_token) {
         return PBXHelper::handleAction($csrf_token, function() use ($queue_id) {
             $queue_id = intval($queue_id);
+            BillingRoleBridge::assertMayTouchRow('pbx_queues', $queue_id);
             $q_row = DBHelper::fetchOne("SELECT queue_name, title FROM pbx_queues WHERE id = ?", [$queue_id]);
             $q_name = $q_row['queue_name'] ?? null;
             if (!empty($q_name)) {

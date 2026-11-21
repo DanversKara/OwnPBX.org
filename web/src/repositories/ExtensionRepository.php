@@ -12,8 +12,10 @@ class ExtensionRepository extends BaseRepository
     /**
      * $resellerId scopes the list to one tenant: a reseller admin sees only
      * their own extensions. NULL (the main admin) sees everyone, as before.
+     * $onlyUserId scopes it to one user (billing roles: a billing user sees
+     * only their own extension row). NULL sees everyone.
      */
-    public static function allWithExtension(?int $resellerId = null): array
+    public static function allWithExtension(?int $resellerId = null, ?int $onlyUserId = null): array
     {
         $sql = "SELECT u.id, u.username, u.full_name, u.email, u.extension, u.sip_password, u.sip_auth_digest, u.sip_send_pai,
                     u.extension_type, u.outbound_group, u.cid_internal, u.cid_external, u.is_active, u.role,
@@ -27,13 +29,19 @@ class ExtensionRepository extends BaseRepository
              LEFT JOIN pbx_permission_groups pg ON u.permission_group_id = pg.id
              LEFT JOIN pbx_boss_secretary_groups bsg ON u.boss_secretary_group_id = bsg.id
              WHERE u.extension IS NOT NULL AND u.extension != '' AND COALESCE(u.extension_type, 'sip') <> 'fax'";
+        $params = [];
         if ($resellerId !== null) {
             $sql .= ' AND u.reseller_id = ?';
+            $params[] = $resellerId;
+        }
+        if ($onlyUserId !== null) {
+            $sql .= ' AND u.id = ?';
+            $params[] = $onlyUserId;
         }
         $sql .= ' ORDER BY u.extension ASC';
-        if ($resellerId !== null) {
+        if ($params !== []) {
             $stmt = static::db()->prepare($sql);
-            $stmt->execute([$resellerId]);
+            $stmt->execute($params);
             $rows = $stmt->fetchAll();
         } else {
             $rows = static::db()->query($sql)->fetchAll();

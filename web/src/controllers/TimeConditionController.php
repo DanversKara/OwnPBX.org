@@ -27,8 +27,11 @@ class TimeConditionController extends BaseController
             'delete_time_group' => fn() => TimeConditionService::deleteTimeGroup($_POST['tg_id'] ?? 0, static::csrfToken()),
         ]);
 
-        $tcs = TimeConditionRepository::allWithGroupInfo();
-        $time_groups = TimeConditionRepository::allTimeGroups();
+        // Billing roles (Layer 1): a billing user sees only their own
+        // conditions and time groups; admins see everyone, as before.
+        $owner = BillingRoleBridge::listOwnerExtension();
+        $tcs = TimeConditionRepository::allWithGroupInfo($owner);
+        $time_groups = TimeConditionRepository::allTimeGroups($owner);
         $tg_map = TimeConditionRepository::timeGroupMap($time_groups);
         $modules = DestinationRegistry::getModuleList();
         $day_names = [1 => t('tc.day_mon'), 2 => t('tc.day_tue'), 3 => t('tc.day_wed'), 4 => t('tc.day_thu'), 5 => t('tc.day_fri'), 6 => t('tc.day_sat'), 7 => t('tc.day_sun')];

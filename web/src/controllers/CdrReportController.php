@@ -22,8 +22,10 @@ class CdrReportController extends BaseController
         $user_ext = $user['extension'] ?? '';
 
         // Permission checks
-        $can_view_all = ($role === 'admin' || !empty($user['can_view_all_cdrs']));
-        $can_listen_all = ($role === 'admin' || !empty($user['can_listen_recordings']));
+        // Billing roles (Layer 1): a billing user never sees or listens to
+        // anyone else's CDRs, even if an admin ticked can_view_all_cdrs for them.
+        $can_view_all = ($role === 'admin' || !empty($user['can_view_all_cdrs'])) && !BillingRoleBridge::isBillingScoped();
+        $can_listen_all = ($role === 'admin' || !empty($user['can_listen_recordings'])) && !BillingRoleBridge::isBillingScoped();
         $can_delete_cdr = ($role === 'admin' || hasModulePermission('cdr_reports', 'delete') || hasModulePermission('cc_reports', 'delete'));
 
         // Handle Delete CDR Submission
@@ -35,7 +37,7 @@ class CdrReportController extends BaseController
             // Unauthorized/CSRF error: like the original behaviour, keep rendering normally (no redirect).
         }
 
-        $agents = CdrReportRepository::agentsForFilter();
+        $agents = CdrReportRepository::agentsForFilter(BillingRoleBridge::listOwnerExtension());
 
         // Date Filter Setup
         $date_filter = trim($_GET['date_range'] ?? 'today');

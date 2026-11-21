@@ -431,6 +431,12 @@ function sessionGuestDenies(string $rule): bool
 }
 
 function hasModulePermission($module_key, $action = 'access') {
+    // Billing roles (Layer 1): an active plan subscription grants its
+    // modules in addition to the role permissions, never instead of them —
+    // so a lapsed or cancelled subscription locks them again at once.
+    if (billingRoleGrants($module_key, $action)) {
+        return true;
+    }
     // A remote admin is judged by the EFFECTIVE roles (user+fax_user), not
     // by the true admin role — any-match union, so the remote admin keeps
     // exactly what a basic user and a fax user may do, and nothing more.
@@ -440,6 +446,29 @@ function hasModulePermission($module_key, $action = 'access') {
         }
     }
     return false;
+}
+
+/**
+ * Billing-role plan grant (Layer 1): true when the signed-in user's active
+ * plan unlocks $module_key. The bridge file is required here (guarded) so
+ * the check works even before the composer classmap is regenerated for it.
+ */
+function billingRoleGrants(string $module_key, string $action): bool
+{
+    try {
+        if (!class_exists('BillingRoleBridge')) {
+            $bridge = __DIR__ . '/src/services/BillingRoleBridge.php';
+            if (is_file($bridge)) {
+                require_once $bridge;
+            }
+        }
+        if (!class_exists('BillingRoleBridge')) {
+            return false;
+        }
+        return BillingRoleBridge::planGrantsModule($module_key, $action);
+    } catch (\Throwable $e) {
+        return false;
+    }
 }
 
 /**

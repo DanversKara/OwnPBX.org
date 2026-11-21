@@ -9,13 +9,37 @@ class QueueRepository extends BaseRepository
 {
     protected static string $table = 'pbx_queues';
 
-    public static function allOrderedById(): array
+    /**
+     * @param string|null $ownerExtension billing-role scope: only this
+     *   extension's queues (null = everyone, as before). Without the owner
+     *   column yet, a scoped viewer sees nothing (fail closed).
+     */
+    public static function allOrderedById(?string $ownerExtension = null): array
     {
+        if ($ownerExtension !== null) {
+            if (!BillingRoleBridge::ownerColumnExists('pbx_queues')) {
+                return [];
+            }
+            $stmt = static::db()->prepare('SELECT * FROM pbx_queues WHERE owner_extension = ? ORDER BY id ASC');
+            $stmt->execute([$ownerExtension]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         return static::findAll('id ASC');
     }
 
-    public static function extensionAgents(): array
+    /**
+     * @param string|null $onlyExtension billing-role scope: only this
+     *   extension (null = everyone, as before).
+     */
+    public static function extensionAgents(?string $onlyExtension = null): array
     {
+        if ($onlyExtension !== null) {
+            $stmt = static::db()->prepare(
+                "SELECT id, username, full_name, extension, role FROM sys_users WHERE extension IS NOT NULL AND extension != '' AND extension = ? ORDER BY role ASC, extension ASC"
+            );
+            $stmt->execute([$onlyExtension]);
+            return $stmt->fetchAll();
+        }
         return static::db()->query(
             "SELECT id, username, full_name, extension, role FROM sys_users WHERE extension IS NOT NULL AND extension != '' ORDER BY role ASC, extension ASC"
         )->fetchAll();
@@ -29,14 +53,21 @@ class QueueRepository extends BaseRepository
     /**
      * The "Agents" list of the queue form: extensions whose role may take queue calls —
      * fax lines, viewer/read-only accounts and inactive users cannot be made queue members.
+     * @param string|null $onlyExtension billing-role scope: only this extension.
      */
-    public static function queueAgents(): array
+    public static function queueAgents(?string $onlyExtension = null): array
     {
         $in = implode(',', array_fill(0, count(self::AGENT_ROLES), '?'));
+        $params = self::AGENT_ROLES;
+        $extra = '';
+        if ($onlyExtension !== null) {
+            $extra = ' AND extension = ?';
+            $params[] = $onlyExtension;
+        }
         $stmt = static::db()->prepare(
-            "SELECT id, username, full_name, extension, role FROM sys_users WHERE role IN ({$in}) AND (extension_type IS NULL OR extension_type != 'fax') AND (is_active IS NULL OR is_active = 1) AND extension IS NOT NULL AND extension != '' ORDER BY extension ASC"
+            "SELECT id, username, full_name, extension, role FROM sys_users WHERE role IN ({$in}) AND (extension_type IS NULL OR extension_type != 'fax') AND (is_active IS NULL OR is_active = 1) AND extension IS NOT NULL AND extension != ''{$extra} ORDER BY extension ASC"
         );
-        $stmt->execute(self::AGENT_ROLES);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
@@ -47,14 +78,21 @@ class QueueRepository extends BaseRepository
 
     /**
      * The "Queue managers" list of the queue form: the queue manager and admin roles.
+     * @param string|null $onlyExtension billing-role scope: only this extension.
      */
-    public static function queueManagers(): array
+    public static function queueManagers(?string $onlyExtension = null): array
     {
         $in = implode(',', array_fill(0, count(self::MANAGER_ROLES), '?'));
+        $params = self::MANAGER_ROLES;
+        $extra = '';
+        if ($onlyExtension !== null) {
+            $extra = ' AND extension = ?';
+            $params[] = $onlyExtension;
+        }
         $stmt = static::db()->prepare(
-            "SELECT id, username, full_name, extension, role FROM sys_users WHERE role IN ({$in}) AND (extension_type IS NULL OR extension_type != 'fax') AND (is_active IS NULL OR is_active = 1) AND extension IS NOT NULL AND extension != '' ORDER BY extension ASC"
+            "SELECT id, username, full_name, extension, role FROM sys_users WHERE role IN ({$in}) AND (extension_type IS NULL OR extension_type != 'fax') AND (is_active IS NULL OR is_active = 1) AND extension IS NOT NULL AND extension != ''{$extra} ORDER BY extension ASC"
         );
-        $stmt->execute(self::MANAGER_ROLES);
+        $stmt->execute($params);
         return $stmt->fetchAll();
     }
 
@@ -65,11 +103,25 @@ class QueueRepository extends BaseRepository
      * would silently drop off the assignment when the queue is saved.
      * @param string $jsonColumn 'members_json' | 'supervisors_json'
      * @param string[] $roles the list's normal roles (e.g. AGENT_ROLES | MANAGER_ROLES)
+     * @param int[]|null $queueIds only these queues (null = all). A billing
+     *   user passes only their own queue ids, so nobody else's members leak.
      */
-    public static function assignedOutsideRole(string $jsonColumn, array $roles): array
+    public static function assignedOutsideRole(string $jsonColumn, array $roles, ?array $queueIds = null): array
     {
         $exts = [];
-        foreach (static::db()->query("SELECT {$jsonColumn} AS j, supervisor_extension FROM pbx_queues")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $where = '';
+        $params = [];
+        if ($queueIds !== null) {
+            $queueIds = array_values(array_unique(array_map('intval', $queueIds)));
+            if ($queueIds === []) {
+                return [];
+            }
+            $where = ' WHERE id IN (' . implode(',', array_fill(0, count($queueIds), '?')) . ')';
+            $params = $queueIds;
+        }
+        $stmt = static::db()->prepare("SELECT {$jsonColumn} AS j, supervisor_extension FROM pbx_queues{$where}");
+        $stmt->execute($params);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             foreach (json_decode($row['j'] ?? '[]', true) ?: [] as $e) $exts[] = (string)$e;
             if ($jsonColumn === 'supervisors_json' && !empty($row['supervisor_extension'])) $exts[] = (string)$row['supervisor_extension'];
         }

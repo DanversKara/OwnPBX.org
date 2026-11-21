@@ -22,6 +22,7 @@ require_once __DIR__ . '/services/SoundPackService.php';
 require_once __DIR__ . '/services/ExtensionService.php';
 require_once __DIR__ . '/services/FeatureCodeService.php';
 require_once __DIR__ . '/services/HangupActionService.php';
+require_once __DIR__ . '/services/BillingRoleBridge.php';
 
 class PBXHelper {
     /**
@@ -89,6 +90,13 @@ class PBXHelper {
             $row = DBHelper::fetchOne("SELECT is_active, {$meta['label_col']} AS label" . ($table === 'sys_users' ? ', extension' : '') . " FROM {$table} WHERE id = ?", [$id]);
             if (!$row || $row['is_active'] === null) {
                 throw new \Exception(t('common.not_found'));
+            }
+            // Billing roles (Layer 1): a billing user may only toggle their
+            // own rows (owner_extension) — or, for sys_users, their own user.
+            if (in_array($table, ['pbx_queues', 'pbx_time_conditions', 'pbx_ivrs', 'pbx_time_groups'], true)) {
+                BillingRoleBridge::assertMayTouchRow($table, $id);
+            } elseif ($table === 'sys_users') {
+                BillingRoleBridge::assertMayTouchUserId($id);
             }
             $current = $row['is_active'];
             $new_status = ($current == 1) ? 0 : 1;

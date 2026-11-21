@@ -16,7 +16,8 @@ class PauseReportController extends BaseController
         $user = getCurrentUser();
         $role = $_SESSION['user_role'] ?? 'user';
         $user_ext = $user['extension'] ?? '';
-        $can_view_all = ($role === 'admin' || !empty($user['can_view_all_cdrs']));
+        // Billing roles (Layer 1): a billing user never sees anyone else's pauses.
+        $can_view_all = ($role === 'admin' || !empty($user['can_view_all_cdrs'])) && !BillingRoleBridge::isBillingScoped();
 
         $start_date = trim($_GET['start_date'] ?? date('Y-m-d'));
         $end_date = trim($_GET['end_date'] ?? date('Y-m-d'));

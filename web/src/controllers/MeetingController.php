@@ -20,6 +20,12 @@ class MeetingController extends BaseController
         if (isset($_GET['ics'])) {
             $meetingId = (int)$_GET['ics'];
             $m = MeetingService::getMeeting($meetingId);
+            // Billing roles (Layer 1): a billing user may only download their own meetings.
+            if ($m && BillingRoleBridge::isBillingScoped() && (int) ($m['host_user_id'] ?? 0) !== BillingRoleBridge::scopedUserId()) {
+                http_response_code(403);
+                echo t('billing_role.err_not_yours');
+                exit;
+            }
             if ($m) {
                 $ics = MeetingService::generateIcs($m);
                 header('Content-Type: text/calendar; charset=utf-8');
@@ -59,7 +65,8 @@ class MeetingController extends BaseController
             },
         ]);
 
-        $meetings = MeetingService::getMeetings();
+        // Billing roles (Layer 1): a billing user sees only their own meetings.
+        $meetings = MeetingService::getMeetings(null, BillingRoleBridge::isBillingScoped() ? BillingRoleBridge::scopedUserId() : null);
         $pageTitle = t('meetings.title');
 
         static::renderPage('meetings/index', [

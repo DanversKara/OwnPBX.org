@@ -7,8 +7,22 @@ require_once dirname(__DIR__) . '/helpers.php';
 require_once dirname(__DIR__) . '/asterisk_sync.php';
 
 class BossSecretaryService {
-    public static function getGroups() {
+    /**
+     * @param string|null $onlyBossExtension billing-role scope: only groups
+     *   whose boss is this extension (null = everyone, as before). Groups use
+     *   the existing boss_extension — no new owner column.
+     */
+    public static function getGroups(?string $onlyBossExtension = null) {
         $db = getDB();
+        if ($onlyBossExtension !== null) {
+            $stmt = $db->prepare("SELECT bs.*, u.full_name AS boss_name
+            FROM pbx_boss_secretary_groups bs
+            LEFT JOIN sys_users u ON u.extension = bs.boss_extension
+            WHERE bs.boss_extension = ?
+            ORDER BY bs.group_number ASC");
+            $stmt->execute([$onlyBossExtension]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         $stmt = $db->query("SELECT bs.*, u.full_name AS boss_name 
             FROM pbx_boss_secretary_groups bs 
             LEFT JOIN sys_users u ON u.extension = bs.boss_extension 
@@ -23,8 +37,17 @@ class BossSecretaryService {
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
-    public static function getAvailableExtensions() {
+    /**
+     * @param string|null $onlyExtension billing-role scope: only this
+     *   extension (null = everyone, as before).
+     */
+    public static function getAvailableExtensions(?string $onlyExtension = null) {
         $db = getDB();
+        if ($onlyExtension !== null) {
+            $stmt = $db->prepare("SELECT id, extension, full_name FROM sys_users WHERE extension IS NOT NULL AND extension != '' AND is_active = 1 AND extension_type = 'sip' AND extension = ? ORDER BY extension ASC");
+            $stmt->execute([$onlyExtension]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
         return $db->query("SELECT id, extension, full_name FROM sys_users WHERE extension IS NOT NULL AND extension != '' AND is_active = 1 AND extension_type = 'sip' ORDER BY extension ASC")->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -47,6 +70,16 @@ class BossSecretaryService {
             if (empty($group_name) || empty($boss_extension)) {
                 throw new \Exception(t('srv_boss.err_required'));
             }
+
+            // Billing roles (Layer 1): a billing user's group is their own —
+            // the boss must be their extension, and so must every secretary
+            // (saving a group reassigns those users' boss/secretary roles).
+            if ($id > 0) {
+                $existingBoss = DBHelper::fetchColumn('SELECT boss_extension FROM pbx_boss_secretary_groups WHERE id = ?', [$id]);
+                BillingRoleBridge::assertMayTouchBossExtension($existingBoss === false || $existingBoss === null ? '' : (string) $existingBoss);
+            }
+            BillingRoleBridge::assertMayTouchBossExtension($boss_extension);
+            BillingRoleBridge::assertMembersSelfOnly($secretaries);
 
             $db = getDB();
             // Check group_number uniqueness if new or changed
@@ -82,6 +115,10 @@ class BossSecretaryService {
         return PBXHelper::handleAction($csrf_token, function() use ($id) {
             $id = intval($id);
             $db = getDB();
+
+            // Billing roles (Layer 1): a billing user may only delete their own group.
+            $existingBoss = DBHelper::fetchColumn('SELECT boss_extension FROM pbx_boss_secretary_groups WHERE id = ?', [$id]);
+            BillingRoleBridge::assertMayTouchBossExtension($existingBoss === false || $existingBoss === null ? '' : (string) $existingBoss);
 
             // Clear users referencing this group
             $db->prepare("UPDATE sys_users SET boss_secretary_group_id = NULL, boss_secretary_role = 'none' WHERE boss_secretary_group_id = ?")->execute([$id]);

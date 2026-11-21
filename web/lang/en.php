@@ -412,6 +412,7 @@ return [
     'blocked.msg_unblocked' => 'Unblocked. That number can call you again.',
     'blocked.err_no_extension' => 'Your account has no extension.',
     'blocked.err_not_yours' => 'That entry is not yours.',
+    'billing_role.err_not_yours' => 'That belongs to another user — you can only change your own.',
     'blocked.err_not_allowed' => 'An administrator has switched call blocking off for you.',
     'blacklist.group_pbx_wide' => 'Blocked for the whole PBX',
     'blacklist.group_user_note' => '— blocked for this person only',
