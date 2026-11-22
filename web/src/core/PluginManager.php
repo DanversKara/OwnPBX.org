@@ -774,7 +774,6 @@ final class PluginManager
                 CURLOPT_USERAGENT => 'AiPBX/' . (defined('AIPBX_VERSION') ? AIPBX_VERSION : 'dev')]);
             $ok = curl_exec($ch) === true;
             $code = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-            curl_close($ch);
             if ($ok && !$tooBig && $code === 200) {
                 return $body;
             }
