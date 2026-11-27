@@ -97,6 +97,16 @@ class LoginService {
             // Regenerate Session ID to prevent Session Fixation Attacks
             session_regenerate_id(true);
 
+            if ($user['role'] === 'admin') {
+                // Admins enter a PIN after the password (and after the TOTP
+                // code when 2FA is enabled — that step redirects here too).
+                $_SESSION['pending_pin_user_id'] = $user['id'];
+                $_SESSION['pending_pin_username'] = $user['username'];
+                $_SESSION['pending_pin_full_name'] = $user['full_name'];
+                unset($_SESSION['captcha_num1'], $_SESSION['captcha_num2']);
+                return ['redirect' => '/login-pin'];
+            }
+
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['full_name'] = $user['full_name'];
