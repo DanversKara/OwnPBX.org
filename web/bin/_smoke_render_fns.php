@@ -44,10 +44,12 @@ function smoke_module_key(string $path): string
     static $routes = null;
     if ($routes === null) {
         // routes.php returns its array, so it is read once and kept rather than re-required per
-        // page. SMOKE_ROOT is defined by smoke.php; the render subprocess sets $SMOKE_ROOT.
-        $root = defined('SMOKE_ROOT') ? (string) constant('SMOKE_ROOT') : (string) ($GLOBALS['SMOKE_ROOT'] ?? '');
-        $file = $root . '/src/routes.php';
-        $routes = ($root !== '' && is_file($file)) ? (array) require $file : [];
+        // page. The web root comes from this file's own location - it lives in web/bin - and not
+        // from SMOKE_ROOT or $GLOBALS: those exist in the runner and the render subprocess but
+        // not in a PHPUnit process, where this silently resolved every module to '' and so
+        // reported every page as not granted.
+        $file = dirname(__DIR__) . '/src/routes.php';
+        $routes = is_file($file) ? (array) require $file : [];
     }
     $module = (string) ($routes[$path]['module'] ?? '');
     if ($module === '') {
