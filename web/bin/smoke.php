@@ -44,7 +44,6 @@ foreach (array_slice($argv, 1) as $a) {
 }
 
 $FAILS   = [];
-$NOTICES = [];
 $COUNTS  = [];
 
 function fail(string $group, string $what, string $detail): void
@@ -62,12 +61,30 @@ function fail(string $group, string $what, string $detail): void
  */
 function notice(string $group, string $what, string $detail): void
 {
-    global $NOTICES, $strict;
+    global $strict;
     if ($strict) {
         fail($group, $what, $detail . ' [--strict]');
         return;
     }
-    $NOTICES[] = ['group' => $group, 'what' => $what, 'detail' => $detail];
+    notices(['group' => $group, 'what' => $what, 'detail' => $detail]);
+}
+
+/**
+ * The notices so far; called with one, records it.
+ *
+ * A static rather than another global, so that reading the list back is something the analyser
+ * can follow: it cannot see a write made through `global`, and reports the read as always empty.
+ *
+ * @param  array{group: string, what: string, detail: string}|null $add
+ * @return list<array{group: string, what: string, detail: string}>
+ */
+function notices(?array $add = null): array
+{
+    static $all = [];
+    if ($add !== null) {
+        $all[] = $add;
+    }
+    return $all;
 }
 
 function group_done(string $group, int $n, string $note = ''): void
@@ -990,10 +1007,11 @@ foreach ($COUNTS as $g => $c) {
     printf("  %-14s %d checks%s\n", $g, $c['n'], $c['note'] !== '' ? '   ' . $c['note'] : '');
 }
 
-if (!empty($NOTICES)) {
-    echo "\n" . count($NOTICES) . " NOT CHECKED (not a fault in the system; run with --strict to"
-        . " treat these as errors):\n";
-    foreach ($NOTICES as $t) {
+$pendingNotices = notices();
+if ($pendingNotices !== []) {
+    echo "\n" . count($pendingNotices) . " NOT CHECKED (not a fault in the system; run with"
+        . " --strict to treat these as errors):\n";
+    foreach ($pendingNotices as $t) {
         echo "  [{$t['group']}] {$t['what']}\n      {$t['detail']}\n";
     }
 }
