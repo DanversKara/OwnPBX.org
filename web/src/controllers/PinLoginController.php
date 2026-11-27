@@ -129,6 +129,12 @@ class PinLoginController extends BaseController
                         return;
                     }
                     $error = t('admin_pin.invalid_pin');
+                    $remaining = AdminPinService::MAX_FAILURES - (int) ($res['failures'] ?? 0);
+                    if ($remaining === 2) {
+                        $error .= ' ' . t('admin_pin.attempts_remaining_2');
+                    } elseif ($remaining === 1) {
+                        $error .= ' ' . t('admin_pin.attempts_remaining_1');
+                    }
                 }
             }
         }
