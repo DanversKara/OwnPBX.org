@@ -30,6 +30,12 @@ final class SecurityLockdownTest extends TestCase
         setSystemSetting(SmsGuardService::SETTING_USED_CODE, '');
         setSystemSetting(SmsGuardService::SETTING_FAILS, '');
         setSystemSetting(SecurityLockdownService::SETTING_ACTIVE, '0');
+        // Point the vault at a closed port rather than leaving the configured address in place.
+        // There is no OpenBao in a test run either way, but a refused connection comes back at
+        // once where an unroutable address costs the full timeout on every reply - and these
+        // tests send a lot of replies. It also makes "unreachable" the deliberate condition
+        // under test instead of an accident of whatever network the tests happen to run on.
+        putenv('OPENBAO_ADDR=http://127.0.0.1:1');
     }
 
     protected function tearDown(): void
@@ -37,6 +43,7 @@ final class SecurityLockdownTest extends TestCase
         setSystemSetting(SmsGuardService::SETTING_ENABLED, '0');
         setSystemSetting(SecurityLockdownService::SETTING_ACTIVE, '0');
         setSystemSetting(SmsGuardService::SETTING_FAILS, '');
+        putenv('OPENBAO_ADDR');
     }
 
     private function code(): string
@@ -138,7 +145,7 @@ final class SecurityLockdownTest extends TestCase
     public function testThereIsNoCommandThatOpensAnything(): void
     {
         SecurityLockdownService::enable('test');
-        foreach (['UNLOCK 611', 'LOCKDOWN OFF', 'OPEN', 'DISABLE', 'OVERRIDE 611'] as $attempt) {
+        foreach (['UNLOCK 611', 'LOCKDOWN OFF', 'OPEN', 'DISABLE', 'OVERRIDE 611', 'UNSEAL', 'SEAL OFF'] as $attempt) {
             setSystemSetting(SmsGuardService::SETTING_USED_CODE, '');
             SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' ' . $attempt);
             $this->assertTrue(
@@ -239,5 +246,76 @@ final class SecurityLockdownTest extends TestCase
 
         SecurityLockdownService::unlockUser($id, 'test');
         $this->assertNull($db->query("SELECT locked_at FROM sys_users WHERE id = {$id}")->fetchColumn());
+    }
+
+    // ------------------------------------------------------------ sealing the vault
+
+    /**
+     * SEAL belongs on this channel because it only ever shuts something.
+     *
+     * There is no vault in a test run, so what is checked here is the half that matters more:
+     * that a seal which did not happen is reported as a seal that did not happen. Unlike a
+     * lockdown there is no second mechanism behind it - if the PUT to OpenBao failed, the vault
+     * is open and only this reply will say so.
+     */
+    public function testSealSaysPlainlyWhenTheVaultWasNotSealed(): void
+    {
+        $reply = (string) SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' SEAL');
+        $this->assertStringContainsString('NOT sealed', $reply, 'A failed seal must never read as success.');
+        $this->assertDoesNotMatchRegularExpression('/^Vault SEALED/', $reply);
+    }
+
+    /** Every reply carries the vault's state, because that is the question a text is asked to answer. */
+    public function testEveryReplyEndsWithTheVaultState(): void
+    {
+        foreach (['STATUS', 'LOCKDOWN'] as $command) {
+            setSystemSetting(SmsGuardService::SETTING_USED_CODE, '');
+            $reply = (string) SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' ' . $command);
+            $this->assertStringContainsString('vault ', $reply, "{$command} must report the vault too.");
+        }
+    }
+
+    /**
+     * An unreachable vault is reported as unknown, never as unsealed.
+     *
+     * This is the reading that would invite the owner to stop worrying, so it is the one the code
+     * must not produce. In a test run there is no vault to reach, which is exactly the case.
+     */
+    public function testAVaultItCannotReachIsNeverCalledUnsealed(): void
+    {
+        $reply = (string) SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' STATUS');
+        $this->assertStringContainsString('vault UNKNOWN', $reply);
+        $this->assertStringNotContainsString('vault unsealed', $reply);
+    }
+
+    /** SEAL has to be listed, or nobody knows it is there. */
+    public function testTheCommandListMentionsSeal(): void
+    {
+        $reply = (string) SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' HELP');
+        $this->assertStringContainsString('SEAL', $reply);
+    }
+
+    /**
+     * The emergency channel must not depend on how the carrier happens to deliver.
+     *
+     * There is no autoloader, and for several releases the only file that required
+     * SmsGuardService was the SMS worker. A text that arrived on the provider's webhook therefore
+     * met class_exists() === false and was dropped without a word - so LOCKDOWN worked or did
+     * nothing depending on whether the carrier posted to us or we polled it. Nothing in a reply
+     * would have shown it, which is why this is pinned here.
+     */
+    public function testTheInboundPathLoadsTheGuardItselfRatherThanHopingItIsLoaded(): void
+    {
+        $sms = (string) file_get_contents(dirname(__DIR__, 3) . '/plugins/sms/lib/Sms.php');
+        $this->assertStringContainsString(
+            "/services/SmsGuardService.php",
+            $sms,
+            'The inbound path must load SmsGuardService, not assume something else did.'
+        );
+        $guardCall = strpos($sms, 'SmsGuardService::handle');
+        $load      = strpos($sms, '/services/SmsGuardService.php');
+        $this->assertNotFalse($guardCall);
+        $this->assertNotFalse($load);
+        $this->assertLessThan($guardCall, $load, 'It has to be loaded before it is called.');
     }
 }

@@ -2,6 +2,10 @@
 
 declare(strict_types=1);
 
+// SEAL and the vault state in every reply need it, and there is no autoloader: whoever requires
+// this file must get a working SmsGuardService, not one that fatals on the SEAL branch.
+require_once __DIR__ . '/VaultSealService.php';
+
 /**
  * Shutting the PBX down by text message, for the day you cannot sign in to do it.
  *
@@ -118,7 +122,25 @@ final class SmsGuardService
         $state = SecurityLockdownService::state();
         $locked = count(SecurityLockdownService::lockedUsers());
         return 'lockdown ' . ($state['active'] ? 'ON since ' . $state['at'] : 'off')
-             . ', ' . $locked . ' locked.';
+             . ', ' . $locked . ' locked, vault ' . self::vaultState() . '.';
+    }
+
+    /**
+     * Sealed, unsealed, or not known - and the third one is never dressed up as either.
+     *
+     * This goes into the reply to every command, which is the point: the one thing worth knowing
+     * about a vault is whether it is shut, and this channel exists for the times when nothing
+     * else can be checked. If the vault cannot be reached, the answer says so. Reporting
+     * "unsealed" for a vault we simply could not ask would be the one wrong answer here - it is
+     * the reading that invites the owner to go back to sleep.
+     */
+    private static function vaultState(): string
+    {
+        $s = VaultSealService::status();
+        if (!$s['ok']) {
+            return 'UNKNOWN (' . $s['error'] . ')';
+        }
+        return $s['sealed'] ? 'SEALED' : 'unsealed';
     }
 
     /** Carries out one command. Every one of these tightens access; none of them loosens it. */
@@ -154,11 +176,35 @@ final class SmsGuardService
                 SecurityLockdownService::lockUser((int) $user['id'], $by);
                 return "{$who} is locked out. Unlock from the LAN or the console.";
 
+            case 'SEAL':
+                // Sealing is a tightening, so it belongs on this channel. There is still no
+                // UNSEAL and there cannot be one: unsealing needs the unseal keys themselves,
+                // which live in BaoLock on your phone and never touch this PBX.
+                $seal = VaultSealService::seal();
+                if (function_exists('writeAuditLog')) {
+                    writeAuditLog(
+                        'security',
+                        'system',
+                        'openbao',
+                        'OpenBao seal ordered by text message from ' . self::mask($from)
+                            . ($seal['ok'] ? ': sealed.' : ': FAILED — ' . $seal['error']),
+                        'openbao_seal_sms'
+                    );
+                }
+                if ($seal['ok']) {
+                    return 'Vault SEALED. No service can read a secret until you unseal it with '
+                         . 'BaoLock.';
+                }
+                // Said plainly, because a seal that did not happen is the one thing the owner
+                // must not assume: unlike a lockdown there is no second mechanism behind it.
+                return 'Vault NOT sealed — ' . $seal['error'] . '. Try again, or seal it from '
+                     . 'BaoLock.';
+
             case 'STATUS':
                 return 'Status:';
 
             default:
-                return 'Commands: LOCKDOWN, KICK [who], LOCK <who>, STATUS.';
+                return 'Commands: LOCKDOWN, SEAL, KICK [who], LOCK <who>, STATUS.';
         }
     }
 

@@ -124,10 +124,29 @@ class AdminPinService
             $stmt->execute([$failures, $userId]);
         }
         // Do NOT log a wrong PIN to the password throttle (logLoginAttempt):
-        // the PIN has its own 3-strike lockout and audit log. Feeding the
-        // password brute-force throttle would double-lock the admin — the
-        // throttle fires before verifyPin is even reached, so the correct
-        // PIN bounces too — and it also feeds the fail2ban log.
+        // the PIN has its own 3-strike lockout. Feeding the password
+        // brute-force throttle would double-lock the admin — the throttle
+        // fires before verifyPin is even reached, so the correct PIN bounces
+        // too — and it also feeds the fail2ban log.
+        //
+        // It still has to leave a trace. Keeping the attempt out of the
+        // throttle is not a reason to keep it out of the audit log: the
+        // lockout record below is written only on the third try, so without
+        // this an attacker could guess two PINs an hour forever and the
+        // owner would find nothing when they came looking. The IP is
+        // recorded because "was someone trying my PIN, and from where?" is
+        // the question this entry exists to answer.
+        if (function_exists('writeAuditLog')) {
+            writeAuditLog(
+                'security',
+                'sys_users',
+                (string) $userId,
+                "Wrong admin PIN for '{$row['username']}' from {$clientIp} (attempt {$failures} of "
+                    . self::MAX_FAILURES . ' in the hour).',
+                'admin_pin_failed',
+                $userId
+            );
+        }
 
         if ($failures >= self::MAX_FAILURES) {
             // Third wrong PIN in the window: seal the vault. Even if the

@@ -32,18 +32,42 @@ $only = null;
 // --route=<path>: scans a single route. For debugging, and to shorten the
 // window in which the live page stays broken during fault-injection checks.
 $onlyRoute = null;
+// --strict: a check that could not run counts as a failure. CI passes this, because there a
+// missing fixture is a defect in CI. aipbx-update does NOT, because on a working PBX a check
+// this tool cannot run is not a fault in the update it has just installed, and raising the
+// "test of every page found a problem" banner over one would teach the admin to ignore it.
+$strict = false;
 foreach (array_slice($argv, 1) as $a) {
     if (strpos($a, '--only=') === 0)  { $only = substr($a, 7); }
     if (strpos($a, '--route=') === 0) { $onlyRoute = substr($a, 8); }
+    if ($a === '--strict')            { $strict = true; }
 }
 
-$FAILS  = [];
-$COUNTS = [];
+$FAILS   = [];
+$NOTICES = [];
+$COUNTS  = [];
 
 function fail(string $group, string $what, string $detail): void
 {
     global $FAILS;
     $FAILS[] = ['group' => $group, 'what' => $what, 'detail' => $detail];
+}
+
+/**
+ * Something this tool could not check, as opposed to something it found wrong.
+ *
+ * Always printed, so it can never be the silent skip that made the permission sweep useless for
+ * fourteen releases - but only counted as a failure under --strict. The distinction matters
+ * because the exit code decides whether an update tells the admin it broke something.
+ */
+function notice(string $group, string $what, string $detail): void
+{
+    global $NOTICES, $strict;
+    if ($strict) {
+        fail($group, $what, $detail . ' [--strict]');
+        return;
+    }
+    $NOTICES[] = ['group' => $group, 'what' => $what, 'detail' => $detail];
 }
 
 function group_done(string $group, int $n, string $note = ''): void
@@ -153,9 +177,9 @@ function check_routes(?string $onlyRoute = null): void
             // every route in both languages is how this check produced 398 errors that blamed
             // the pages for a deleted account, and that is what made it ignorable.
             if (($d['no_role_account'] ?? '') !== '') {
-                fail('routes', 'all pages', 'no active admin account to render as, so no page was'
-                    . ' tested — the pages are not the problem; create an administrator');
-                group_done('routes', $n);
+                notice('routes', 'all pages', 'no active admin account to render as, so no page'
+                    . ' was tested — the pages are not the problem; create an administrator');
+                group_done('routes', 0, 'NOT CHECKED');
                 return;
             }
 
@@ -358,11 +382,12 @@ function check_rbac(): void
     // last made itself ignorable.
     $LOW_ROLE = smoke_low_role();
     if ($LOW_ROLE === '') {
-        fail('rbac', 'all admin pages', 'no active account holds any of '
-            . implode(', ', SMOKE_LOW_ROLES) . ', so no page was tested against a'
-            . ' low-privilege role — create one, or this check proves nothing'
+        notice('rbac', 'all admin pages', 'no active account holds any of '
+            . implode(', ', SMOKE_LOW_ROLES) . ', so the admin pages were not tried against a'
+            . ' low-privilege role. Nothing here says they are open; it says this check could'
+            . ' not run. Give one account any of those roles and it will.'
             . smoke_low_role_note());
-        group_done('rbac', 0, 'NOT TESTED');
+        group_done('rbac', 0, 'NOT CHECKED');
         return;
     }
 
@@ -426,11 +451,12 @@ function check_api(): void
     // smoke_low_role() answers from cache, so this costs nothing the second time.
     $LOW_ROLE = smoke_low_role();
     if ($LOW_ROLE === '') {
-        fail('api', 'all admin endpoints', 'no active account holds any of '
-            . implode(', ', SMOKE_LOW_ROLES) . ', so no endpoint was called as a'
-            . ' low-privilege role — create one, or this check proves nothing'
+        notice('api', 'all admin endpoints', 'no active account holds any of '
+            . implode(', ', SMOKE_LOW_ROLES) . ', so the endpoints were not called as a'
+            . ' low-privilege role. Nothing here says they are open; it says this check could'
+            . ' not run. Give one account any of those roles and it will.'
             . smoke_low_role_note());
-        group_done('api', 0, 'NOT TESTED');
+        group_done('api', 0, 'NOT CHECKED');
         return;
     }
 
@@ -962,6 +988,14 @@ if ($only === null || $only === 'lint') { check_lint(); }
 echo "\n";
 foreach ($COUNTS as $g => $c) {
     printf("  %-14s %d checks%s\n", $g, $c['n'], $c['note'] !== '' ? '   ' . $c['note'] : '');
+}
+
+if (!empty($NOTICES)) {
+    echo "\n" . count($NOTICES) . " NOT CHECKED (not a fault in the system; run with --strict to"
+        . " treat these as errors):\n";
+    foreach ($NOTICES as $t) {
+        echo "  [{$t['group']}] {$t['what']}\n      {$t['detail']}\n";
+    }
 }
 
 if (empty($FAILS)) {

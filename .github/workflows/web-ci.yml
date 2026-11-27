@@ -160,7 +160,10 @@ jobs:
         run: |
           export ASTERISK_PBX_DIR="$RUNNER_TEMP/aipbx-pbx"
           mkdir -p "$ASTERISK_PBX_DIR"
-          php bin/smoke.php
+          # --strict: here a check that cannot run is a defect in this workflow's fixtures, so it
+          # fails the build. aipbx-update deliberately does not pass it - see notice() in
+          # bin/smoke.php for why an admin's post-update banner must mean "something is broken".
+          php bin/smoke.php --strict
 
   chat:
     name: Go — gofmt, vet, tests

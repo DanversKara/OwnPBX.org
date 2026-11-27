@@ -1931,6 +1931,7 @@ return [
     'lockdown.col_reason' => 'By',
     'lockdown.sms_title' => 'Lock down by text message',
     'lockdown.sms_help' => 'For the day you cannot sign in at all. Text one of the numbers on this PBX from a phone on the list below. The sending number proves nothing on its own, so the message carries a passphrase and a code from your authenticator app.',
+    'lockdown.sms_seal_help' => 'SEAL shuts the OpenBao vault, so no service on the PBX can read a stored secret until you unseal it again with BaoLock on your phone. Every reply ends with the vault\'s state, so a text also answers "is it still sealed?". If the reply says UNKNOWN the PBX could not reach the vault — that is not the same as unsealed, and it is worth looking into.',
     'lockdown.sms_no_unlock' => 'There is deliberately no command that unlocks anything. A text can only shut doors; opening them again is done from the local network or the console.',
     'lockdown.sms_numbers' => 'Phones allowed to command the PBX (comma separated)',
     'lockdown.sms_passphrase' => 'Passphrase',

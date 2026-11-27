@@ -118,10 +118,12 @@ $csrf = getCSRFToken();
     <div class="u-p-16">
         <p class="u-hint"><?php echo $h(t('lockdown.sms_help')); ?></p>
         <pre class="u-p-16 u-overflow-x-auto u-bg-subtle">&lt;passphrase&gt; &lt;6-digit code&gt; LOCKDOWN
+&lt;passphrase&gt; &lt;6-digit code&gt; SEAL
 &lt;passphrase&gt; &lt;6-digit code&gt; KICK
 &lt;passphrase&gt; &lt;6-digit code&gt; KICK 611
 &lt;passphrase&gt; &lt;6-digit code&gt; LOCK 611
 &lt;passphrase&gt; &lt;6-digit code&gt; STATUS</pre>
+        <p class="u-hint"><?php echo $h(t('lockdown.sms_seal_help')); ?></p>
         <p class="u-hint"><?php echo $h(t('lockdown.sms_no_unlock')); ?></p>
 
         <?php if ($new_secret !== null): ?>

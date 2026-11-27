@@ -46,7 +46,20 @@ final class AdminPinTest extends TestCase
         $db = getDB();
         $db->exec("DELETE FROM sys_users WHERE username IN ('zz_pin_admin', 'zz_pin_user')");
         $db->exec("DELETE FROM sys_login_logs WHERE ip_address = '" . self::IP . "'");
+        $db->exec("DELETE FROM sys_audit_log WHERE action IN ('admin_pin_failed', 'admin_pin_lockout')"
+            . " AND entity_id = '" . (int) $this->adminId . "'");
         $_SESSION = [];
+    }
+
+    /** @return list<array<string,mixed>> the PIN audit rows for this test's admin, oldest first */
+    private function pinAuditRows(string $action): array
+    {
+        $q = getDB()->prepare(
+            'SELECT entity_label, ip_address FROM sys_audit_log
+              WHERE action = ? AND entity_id = ? ORDER BY id'
+        );
+        $q->execute([$action, (string) $this->adminId]);
+        return $q->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     private function failures(): int
@@ -186,5 +199,69 @@ final class AdminPinTest extends TestCase
         }
         $this->assertSame('/system-users', $m->invoke(null, '/system-users'));
         $this->assertSame('/plugins?tab=catalog', $m->invoke(null, '/plugins?tab=catalog'));
+    }
+
+    // ------------------------------------------------------- the trail it leaves
+
+    /**
+     * A wrong PIN must not feed the password throttle - and must still be recorded.
+     *
+     * Those are two separate requirements and the fix for the first one removed the second.
+     * checkBruteForceLockout() runs before verifyPin() is ever reached, so logging a wrong PIN
+     * as a failed login locked the admin out of the PIN page as well: the correct PIN then
+     * bounced too, and the only way back in was to wait. Right to stop doing that. But the
+     * lockout record is written only on the third try, so with nothing here an attacker could
+     * guess two PINs an hour indefinitely and leave the owner nothing to find.
+     */
+    public function testEveryWrongPinIsRecordedWithoutTouchingThePasswordThrottle(): void
+    {
+        AdminPinService::verifyPin($this->adminId, '999999', self::IP);
+        AdminPinService::verifyPin($this->adminId, '888888', self::IP);
+
+        $rows = $this->pinAuditRows('admin_pin_failed');
+        $this->assertCount(2, $rows, 'Each wrong PIN leaves one audit entry.');
+        $this->assertStringContainsString(self::IP, (string) $rows[0]['entity_label'], 'It records where from.');
+        $this->assertStringContainsString('attempt 1', (string) $rows[0]['entity_label']);
+        $this->assertStringContainsString('attempt 2', (string) $rows[1]['entity_label']);
+
+        // And nothing in the login log, which is what the password throttle and fail2ban read.
+        $q = getDB()->prepare("SELECT COUNT(*) FROM sys_login_logs WHERE ip_address = ?");
+        $q->execute([self::IP]);
+        $this->assertSame(
+            0,
+            (int) $q->fetchColumn(),
+            'A wrong PIN must not reach the password throttle, or the right PIN cannot get in either.'
+        );
+    }
+
+    /** The third try keeps its own, louder record on top of the per-attempt one. */
+    public function testTheLockoutIsRecordedSeparatelyFromTheAttempts(): void
+    {
+        for ($i = 0; $i < 3; $i++) {
+            AdminPinService::verifyPin($this->adminId, '777777', self::IP);
+        }
+        $this->assertCount(3, $this->pinAuditRows('admin_pin_failed'));
+        $this->assertCount(1, $this->pinAuditRows('admin_pin_lockout'));
+    }
+
+    /**
+     * The wait shown on the PIN page is computed from the window start, so that value has to be
+     * an epoch. It is the field that caused the original bug: read with strtotime() against a
+     * database eight hours off PHP's clock, the window looked expired on every attempt and the
+     * third strike never arrived. A DATETIME string here would cast to its year and the page
+     * would promise "try again in 0 minutes" forever.
+     */
+    public function testTheWindowStartIsAnEpochSoTheWaitCanBeShown(): void
+    {
+        AdminPinService::verifyPin($this->adminId, '999999', self::IP);
+        $row = AdminPinService::loadPinRow($this->adminId);
+        $startedAt = (int) ($row['admin_pin_failures_at'] ?? 0);
+
+        $this->assertGreaterThan(time() - 300, $startedAt, 'The window start must be a recent epoch.');
+        $this->assertLessThanOrEqual(time() + 5, $startedAt);
+
+        $remaining = $startedAt + AdminPinService::FAILURE_WINDOW_SECONDS - time();
+        $this->assertGreaterThan(0, $remaining, 'The page must have a positive wait to show.');
+        $this->assertLessThanOrEqual(AdminPinService::FAILURE_WINDOW_SECONDS, $remaining);
     }
 }

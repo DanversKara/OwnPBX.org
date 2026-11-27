@@ -57,4 +57,47 @@ class VaultSealService
         }
         return ['ok' => true, 'error' => ''];
     }
+
+    /**
+     * Is the vault sealed? ['ok' => bool, 'sealed' => bool, 'error' => string].
+     *
+     * sys/seal-status is unauthenticated in OpenBao, so this deliberately sends no token: asking
+     * whether the door is shut should not need the key, and the seal-only token's policy would
+     * not permit a read anyway.
+     *
+     * The timeout is short on purpose. This is called to put the vault's state into the reply to
+     * every emergency text, and that reply is composed inside the SMS provider's webhook request
+     * - the provider gives up on us after about fifteen seconds and then reports an error for a
+     * message it did in fact deliver. An unreachable vault must cost a second or two and be
+     * reported as unknown, never hold the webhook open.
+     */
+    public static function status(): array
+    {
+        $addr = rtrim((string) portalEnv('OPENBAO_ADDR', 'http://192.168.8.100:8200'), '/');
+        $ch = curl_init($addr . '/v1/sys/seal-status');
+        if ($ch === false) {
+            return ['ok' => false, 'sealed' => false, 'error' => 'cURL init failed'];
+        }
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => 2,
+            CURLOPT_CONNECTTIMEOUT => 2,
+        ]);
+        $raw = curl_exec($ch);
+        $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $err = curl_error($ch);
+        if ($raw === false) {
+            return ['ok' => false, 'sealed' => false, 'error' => 'cURL error: ' . $err];
+        }
+        // 503 is what a sealed vault answers with, and it carries the same body, so it is a
+        // perfectly good reply here rather than an error.
+        if ($code !== 200 && $code !== 503) {
+            return ['ok' => false, 'sealed' => false, 'error' => 'OpenBao HTTP ' . $code];
+        }
+        $data = json_decode((string) $raw, true);
+        if (!is_array($data) || !array_key_exists('sealed', $data)) {
+            return ['ok' => false, 'sealed' => false, 'error' => 'OpenBao gave no seal state'];
+        }
+        return ['ok' => true, 'sealed' => (bool) $data['sealed'], 'error' => ''];
+    }
 }
