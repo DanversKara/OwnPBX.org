@@ -94,6 +94,33 @@ final class SmokeRendererUserTest extends TestCase
         }
     }
 
+    /**
+     * The roles the sweep may stand in for must all be ones with no business on an admin page.
+     *
+     * read_only_admin is the trap: hasPermission() falls back to letting it VIEW any module that
+     * has no explicit permission row, so it renders admin pages quite legitimately. Used as the
+     * low-privilege role it would report every page in the list as a permission hole - and the
+     * cure for a sweep that cries wolf is for somebody to stop reading it.
+     */
+    public function testTheStandInRolesCannotLegitimatelySeeAdminPages(): void
+    {
+        $runner = (string) file_get_contents(dirname(__DIR__, 2) . '/bin/smoke.php');
+        $this->assertSame(
+            1,
+            preg_match("/define\('SMOKE_LOW_ROLES',\s*\[([^\]]*)\]/", $runner, $m),
+            'The candidate roles must be declared in one place.'
+        );
+        $roles = array_map(static fn($r) => trim($r, " '\""), explode(',', $m[1]));
+        $this->assertNotEmpty(array_filter($roles), 'There must be at least one candidate role.');
+        foreach (['read_only_admin', 'admin', 'cc_manager'] as $forbidden) {
+            $this->assertNotContains(
+                $forbidden,
+                $roles,
+                $forbidden . ' can legitimately reach admin pages, so the sweep would report holes that are not there.'
+            );
+        }
+    }
+
     public function testTheRunnerFailsWhenTheRoleCouldNotBeTested(): void
     {
         $runner = (string) file_get_contents(dirname(__DIR__, 2) . '/bin/smoke.php');

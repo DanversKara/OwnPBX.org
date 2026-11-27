@@ -20,10 +20,13 @@ if (PHP_SAPI !== 'cli') { http_response_code(403); exit(1); }
 // Repo root (/var/www/html points here on the server; the checkout directory in CI).
 define('SMOKE_ROOT', dirname(__DIR__));
 
-// The role the permission checks try admin-only pages and endpoints as. One name in one place:
-// the page check and the API check must use the same role, or the account prepared for one of
-// them is not the account the other signs in as.
-define('SMOKE_LOW_ROLE', 'fax_user');
+// The roles the permission checks try admin-only pages and endpoints as, most preferred first.
+// One list in one place: the page check and the API check must agree, or they are not testing
+// the same thing. Every one of these must be a role with no business on an admin page, which is
+// why read_only_admin is NOT among them: hasPermission() falls back to letting it VIEW any module
+// with no explicit permission row, so it may legitimately render these pages and the sweep would
+// report every one as a hole. Nor cc_manager, which is given the queue and agent modules.
+define('SMOKE_LOW_ROLES', ['fax_user', 'user', 'cc_agent']);
 
 $only = null;
 // --route=<path>: scans a single route. For debugging, and to shorten the
@@ -43,10 +46,10 @@ function fail(string $group, string $what, string $detail): void
     $FAILS[] = ['group' => $group, 'what' => $what, 'detail' => $detail];
 }
 
-function group_done(string $group, int $n): void
+function group_done(string $group, int $n, string $note = ''): void
 {
     global $COUNTS;
-    $COUNTS[$group] = $n;
+    $COUNTS[$group] = ['n' => $n, 'note' => $note];
 }
 
 /**
@@ -104,11 +107,15 @@ function check_routes(?string $onlyRoute = null): void
     // /login-2fa   → goes to /login without $_SESSION['pending_2fa_user_id'].
     // /login-pin  → goes to /login without $_SESSION['pending_pin_user_id'].
     // /admin-pin-setup → goes to /login without $_SESSION['pending_pin_setup_user_id'].
+    // /admin-pin  → goes to /admin-pin-setup when the signed-in admin has no PIN hash yet, and
+    //               to / for anyone who is not an active admin. Both are correct, and a fresh
+    //               database has no PIN set, so there is no page to measure here.
     $REDIRECT_OK = [
         '/force-reset',
         '/login-2fa',
         '/login-pin',
         '/admin-pin-setup',
+        '/admin-pin',
         '/auth/google',
         '/auth/google/callback',
         '/auth/oidc',
@@ -220,46 +227,62 @@ if ($only === null || $only === 'routes') { check_routes($onlyRoute); }
  * tests/unit/RbacTest.php).
  */
 /**
- * Makes sure an account exists that really holds $role, on a TEST database only.
+ * A low-privilege role that an active account actually holds, or '' when there is none.
  *
- * The RBAC check needs to sign in as the role it is testing, and a live PBX must never have
- * accounts invented under it by a self-test - so on anything but a *_test database this does
- * nothing, and the check reports that it could not run.
+ * The permission sweep has to sign in as the role it is testing, and it has to be an account
+ * whose own row carries that role: applyRemoteAdminRestriction() re-reads the role from the
+ * sys_users row of the signed-in id on every request and writes it back over the session, so a
+ * forged session carried on an administrator's id is an administrator. That is what made this
+ * check report 42 admin pages as open to fax_user - and, far worse, left it unable to notice a
+ * page that really was.
+ *
+ * Which role is not the point; "not an administrator" is. So the first one below that somebody
+ * actually holds is used, rather than insisting on fax_user and reporting nothing on a system
+ * that has no fax user. Nothing is created here: this tool only reads (see the file header), and
+ * a self-test must not invent accounts on a live PBX. Fixtures belong in the CI workflow, which
+ * seeds one so the role under test is the same there every run.
  */
-function smoke_ensure_role_account(string $role): void
+function smoke_low_role(): string
 {
-    try {
-        $pdo = getDB();
-        // The connection is asked its own name rather than reading DB_NAME or the environment:
-        // this decides whether an account may be created, so it has to be the database actually
-        // being written to, not whatever a constant was set to earlier.
-        $name = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
-        if (!str_ends_with($name, '_test')) {
-            return;
-        }
-        $q = $pdo->prepare('SELECT COUNT(*) FROM sys_users WHERE role = ? AND is_active = 1');
-        $q->execute([$role]);
-        if ((int) $q->fetchColumn() > 0) {
-            return;
-        }
-        // ON DUPLICATE because the name is fixed: a leftover from an earlier run that was left
-        // deactivated does not show up in the count above, and a plain INSERT would then hit the
-        // unique key on username and leave the check untestable. The password is a throwaway
-        // nobody is told, so the account cannot be signed into from the outside.
-        $ins = $pdo->prepare(
-            'INSERT INTO sys_users (username, password_hash, full_name, role, is_active)
-             VALUES (?, ?, ?, ?, 1)
-             ON DUPLICATE KEY UPDATE role = VALUES(role), is_active = 1'
-        );
-        $ins->execute([
-            'zz_smoke_' . $role,
-            password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
-            'Smoke ' . $role,
-            $role,
-        ]);
-    } catch (\Throwable $e) {
-        // Leave it: the check below reports that the role could not be tested.
+    static $role = null;
+    if ($role !== null) {
+        return $role;
     }
+    $role = '';
+    try {
+        // config.php defines getDB(); the runner does not otherwise load it until
+        // check_conventions(), and an undefined-function Error here would land in the catch and
+        // leave the sweep unable to say why it could not run.
+        require_once SMOKE_ROOT . '/config.php';
+        $pdo = getDB();
+        foreach (SMOKE_LOW_ROLES as $candidate) {
+            $q = $pdo->prepare('SELECT COUNT(*) FROM sys_users WHERE role = ? AND is_active = 1');
+            $q->execute([$candidate]);
+            if ((int) $q->fetchColumn() > 0) {
+                $role = $candidate;
+                return $role;
+            }
+        }
+    } catch (\Throwable $e) {
+        smoke_low_role_note(get_class($e) . ': ' . $e->getMessage());
+    }
+    return $role;
+}
+
+/**
+ * Why no low-privilege account could be found, appended to the checks that then cannot run.
+ *
+ * Called with a reason it records one; called with nothing it gives back what it has. An earlier
+ * version swallowed the reason, and a plain "undefined function getDB()" came out as 50 checks
+ * politely declining to run with nothing to say why.
+ */
+function smoke_low_role_note(?string $reason = null): string
+{
+    static $note = '';
+    if ($reason !== null) {
+        $note = ' (looking for one failed: ' . $reason . ')';
+    }
+    return $note;
 }
 
 function check_rbac(): void
@@ -331,8 +354,17 @@ function check_rbac(): void
     // as an admin: this whole check reported every admin page as a hole, and could no longer
     // have seen one that was. On a test database an account is made for the purpose; on a real
     // PBX one has to exist, and if it does not, the check says so rather than testing nothing.
-    $LOW_ROLE = SMOKE_LOW_ROLE;
-    smoke_ensure_role_account($LOW_ROLE);
+    // One line, before the loop: the same cause repeated against 42 pages is how this check
+    // last made itself ignorable.
+    $LOW_ROLE = smoke_low_role();
+    if ($LOW_ROLE === '') {
+        fail('rbac', 'all admin pages', 'no active account holds any of '
+            . implode(', ', SMOKE_LOW_ROLES) . ', so no page was tested against a'
+            . ' low-privilege role — create one, or this check proves nothing'
+            . smoke_low_role_note());
+        group_done('rbac', 0, 'NOT TESTED');
+        return;
+    }
 
     foreach ($ADMIN_ONLY as $path) {
         // Canary: admin must be able to see this page. Otherwise the real
@@ -349,9 +381,11 @@ function check_rbac(): void
         // The real check: the low-privilege role must not see it.
         $asLow = render_route($path, 'tr', $LOW_ROLE);
         $n++;
+        // Belt and braces: smoke_low_role() just said somebody holds it, so if the renderer
+        // disagrees the two are reading different databases and nothing below means anything.
         if (($asLow['no_role_account'] ?? '') !== '') {
-            fail('rbac', $path, "no active account holds the {$LOW_ROLE} role, so this page was"
-                . ' never tested against it — add one, or this check proves nothing');
+            fail('rbac', $path, "the renderer found no {$LOW_ROLE} account although this runner"
+                . ' did — the two are not looking at the same database');
             continue;
         }
         $lowBytes = $asLow['bytes'] ?? 0;
@@ -360,7 +394,7 @@ function check_rbac(): void
                 . " admin {$adminBytes} bytes) — permission hole!");
         }
     }
-    group_done('rbac', $n);
+    group_done('rbac', $n, 'as ' . $LOW_ROLE);
 }
 
 if ($only === null || $only === 'rbac') { check_rbac(); }
@@ -388,8 +422,17 @@ function check_api(): void
 {
     // Same account the page check needs, and for the same reason: the role in the session is
     // overwritten from the signed-in account's own row, so this has to be called as an account
-    // that really holds the low role. Repeated here because --only=api skips check_rbac().
-    smoke_ensure_role_account(SMOKE_LOW_ROLE);
+    // that really holds the low role. Looked up here too because --only=api skips check_rbac();
+    // smoke_low_role() answers from cache, so this costs nothing the second time.
+    $LOW_ROLE = smoke_low_role();
+    if ($LOW_ROLE === '') {
+        fail('api', 'all admin endpoints', 'no active account holds any of '
+            . implode(', ', SMOKE_LOW_ROLES) . ', so no endpoint was called as a'
+            . ' low-privilege role — create one, or this check proves nothing'
+            . smoke_low_role_note());
+        group_done('api', 0, 'NOT TESTED');
+        return;
+    }
 
     // [endpoint, query the page itself sends]
     $ADMIN_ONLY = [
@@ -429,19 +472,19 @@ function check_api(): void
             continue;
         }
 
-        $asLow = call_api($script, SMOKE_LOW_ROLE, $query);
+        $asLow = call_api($script, $LOW_ROLE, $query);
         $n++;
         if ($asLow === null) {
             fail('api', $label, 'the subprocess produced no result');
             continue;
         }
         if (($asLow['no_role_account'] ?? '') !== '') {
-            fail('api', $label, 'no active account holds the ' . SMOKE_LOW_ROLE . ' role, so this'
-                . ' endpoint was never called as it — add one, or this check proves nothing');
+            fail('api', $label, "the caller found no {$LOW_ROLE} account although this runner did"
+                . ' — the two are not looking at the same database');
             continue;
         }
         if ((int) ($asLow['code'] ?? 0) !== 403) {
-            fail('api', $label, 'the ' . SMOKE_LOW_ROLE . ' role got HTTP ' . ($asLow['code'] ?? '?')
+            fail('api', $label, "the {$LOW_ROLE} role got HTTP " . ($asLow['code'] ?? '?')
                 . ' instead of 403 — the endpoint has no permission check');
             continue;
         }
@@ -450,7 +493,7 @@ function check_api(): void
                 . mb_strcut((string) ($asLow['body'] ?? ''), 0, 200, 'UTF-8'));
         }
     }
-    group_done('api', $n);
+    group_done('api', $n, 'as ' . $LOW_ROLE);
 }
 
 if ($only === null || $only === 'api') { check_api(); }
@@ -917,7 +960,9 @@ if ($only === null || $only === 'lint') { check_lint(); }
 
 // ---------------------------------------------------------------- RAPOR
 echo "\n";
-foreach ($COUNTS as $g => $n) { printf("  %-14s %d checks\n", $g, $n); }
+foreach ($COUNTS as $g => $c) {
+    printf("  %-14s %d checks%s\n", $g, $c['n'], $c['note'] !== '' ? '   ' . $c['note'] : '');
+}
 
 if (empty($FAILS)) {
     echo "\nCLEAN — all checks passed.\n";

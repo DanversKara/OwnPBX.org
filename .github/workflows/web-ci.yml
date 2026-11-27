@@ -131,11 +131,21 @@ jobs:
             ('fax_user', 'Fax', 'Fax', 1),
             ('cc_manager', 'Queue manager', 'Queue manager', 1),
             ('user', 'User', 'User', 1);"
-          # bin/smoke.php renders pages with a user_id=1 session (the first admin
-          # on servers); it has an extension for the pages that need one (My Phone, chat).
+          # bin/smoke.php renders pages as a real account holding the role it is testing.
+          # The admin has an extension for the pages that need one (My Phone, chat).
+          #
+          # The fax user is the other half of the permission sweep, and it has to be a SEPARATE
+          # account: auth.php re-reads the role from the signed-in account's own row on every
+          # request and overwrites the session with it, so "render this admin page as fax_user"
+          # on the admin's id renders as an admin. Without this account the sweep has no
+          # low-privilege role to try and reports that it could not run - which is the honest
+          # answer, but it is CI's job to give it one. Neither account can be signed into:
+          # password_hash is empty, which password_verify() never matches.
           mysql -h "$DB_HOST" -u root -pci-root "$DB_NAME" -e "INSERT IGNORE INTO sys_users
             (id, username, password_hash, full_name, email, role, extension, extension_type, sip_password, is_active)
-            VALUES (1, 'admin', '', 'CI Admin', 'admin@example.com', 'admin', '1000', 'sip', 'ci-not-a-secret', 1);"
+            VALUES
+            (1, 'admin', '', 'CI Admin', 'admin@example.com', 'admin', '1000', 'sip', 'ci-not-a-secret', 1),
+            (2, 'faxuser', '', 'CI Fax User', 'fax@example.com', 'fax_user', '', 'fax', '', 1);"
 
       - name: Unit tests
         # mail() must not send real email (no MTA in CI); the invitation tests only
