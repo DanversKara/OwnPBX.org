@@ -191,7 +191,12 @@ final class SecurityLockdownTest extends TestCase
             setSystemSetting(SmsGuardService::SETTING_USED_CODE, '');
             $reply = (string) SmsGuardService::handle('+15555550123', self::PASS . ' ' . $this->code() . ' ' . $command);
             $this->assertStringContainsString('lockdown ', $reply, "'{$command}' answered without the state.");
-            $this->assertStringContainsString(' locked.', $reply, "'{$command}' answered without the lock count.");
+            // Not ' locked.' — the vault's state was added after the lock count, and pinning the
+            // punctuation that happened to follow it only breaks the next time something is
+            // appended. What matters is that each piece of the state is in there.
+            $this->assertStringContainsString(' locked', $reply, "'{$command}' answered without the lock count.");
+            $this->assertStringContainsString('vault ', $reply, "'{$command}' answered without the vault state.");
+            $this->assertStringEndsWith('.', $reply, "'{$command}' answered with a half-finished sentence.");
         }
     }
 
