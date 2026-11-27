@@ -18,7 +18,7 @@ final class RoleMatrixTest extends TestCase
     private const ROOT = __DIR__ . '/../..';
 
     /** Pages that are not permission-controlled modules (login flow, own account, OAuth, SAML). */
-    private const NOT_MODULES = ['login', 'login_2fa', 'logout', 'force_reset', 'reset_password', 'forgot_password', 'mobile_login', 'security', 'google_auth', 'google_auth_callback', 'oidc_auth', 'oidc_auth_callback', 'saml_auth', 'saml_auth_acs', 'saml_auth_metadata'];
+    private const NOT_MODULES = ['login', 'login_2fa', 'login_pin', 'admin_pin', 'admin_pin_setup', 'logout', 'force_reset', 'reset_password', 'forgot_password', 'mobile_login', 'security', 'google_auth', 'google_auth_callback', 'oidc_auth', 'oidc_auth_callback', 'saml_auth', 'saml_auth_acs', 'saml_auth_metadata'];
 
     /** Sidebar group id => matrix group. */
     private const SIDEBAR_GROUPS = [
@@ -109,10 +109,11 @@ final class RoleMatrixTest extends TestCase
 
     public function testAdminOnlyModulesMatchTheCircuitBreaker(): void
     {
-        $auth = (string) file_get_contents(self::ROOT . '/auth.php');
-        $this->assertMatchesRegularExpression("/if \(in_array\(\\\$module_key, \[([^\]]+)\], true\)\) \{\s*return \\\$role === 'admin';/", $auth);
-        preg_match("/if \(in_array\(\\\$module_key, \[([^\]]+)\], true\)\) \{\s*return \\\$role === 'admin';/", $auth, $m);
-        $locked = array_map(fn($s) => trim($s, " '"), explode(',', $m[1]));
+        // Read the list from the function that holds it, rather than scraping auth.php for an
+        // array literal: the literal moved into adminOnlyModuleKeys() when sudo-mode arrived,
+        // and a test that only knows the old shape reports the refactor as a missing breaker.
+        $this->assertTrue(function_exists('adminOnlyModuleKeys'), 'auth.php must define the admin-only list.');
+        $locked = adminOnlyModuleKeys();
         sort($locked);
         $flagged = RoleRepository::adminOnlyModules();
         sort($flagged);

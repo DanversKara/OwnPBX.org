@@ -476,7 +476,9 @@ function check_conventions(): void
         if (!str_ends_with($p, '.php') || str_contains($p, '/vendor/') || str_contains($p, '/tests/') || str_ends_with($p, 'bin/smoke.php')) {
             continue;
         }
-        $src = (string) file_get_contents($p);
+        // Comments stripped first: a file that explains why it does NOT call curl_close() was
+        // reported as calling it, which teaches people to stop writing the explanation.
+        $src = php_code_without_comments($p);
         if (preg_match('/\b(curl_close|curl_share_close)\s*\(/', $src, $m) === 1) {
             fail('conventions', $rel($p), "{$m[1]}() is deprecated in PHP 8.5 and does nothing: remove it");
         }
@@ -670,6 +672,12 @@ $n++;
         'GoogleAuthController.php',
         'OidcAuthController.php',
         'SamlAuthController.php',
+        // The admin PIN is a sign-in step, like the password and the TOTP code before it: these
+        // run before there is a session to check, and guard themselves with the pending_pin_*
+        // marks the earlier step left behind. (AdminPinController is the sudo-mode prompt and
+        // does require a session, so it is not listed.)
+        'PinLoginController.php',
+        'AdminPinSetupController.php',
         // Desk phones fetch their configuration without a session; the token,
         // allowed networks and rate limit guard it (PhoneProvisionService).
         'ProvisionController.php',

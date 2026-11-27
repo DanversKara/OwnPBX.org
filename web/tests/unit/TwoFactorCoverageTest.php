@@ -245,13 +245,13 @@ final class TwoFactorCoverageTest extends TestCase
         ];
         TestableTwoFactorLoginController::index();
 
-        $this->assertSame('/dashboard', TestableTwoFactorLoginController::$redirectedTo);
-        $this->assertSame($this->testUserId, $_SESSION['user_id']);
-        $this->assertSame('zz_cov_2fa_7901', $_SESSION['username']);
-        $this->assertSame('admin', $_SESSION['user_role']);
-        $this->assertSame('admin', $_SESSION['role']);
-        $this->assertGreaterThan(0, $_SESSION['last_activity']);
-        $this->assertSame('7901', $_SESSION['extension']);
+        // This account is an admin, so a correct TOTP code finishes the second step and hands
+        // over to the third: the PIN. The session must NOT be signed in yet - if user_id were
+        // set here, the PIN would be a screen an attacker could simply navigate away from.
+        $this->assertSame('/login-pin', TestableTwoFactorLoginController::$redirectedTo);
+        $this->assertArrayNotHasKey('user_id', $_SESSION);
+        $this->assertSame($this->testUserId, $_SESSION['pending_pin_user_id']);
+        $this->assertSame('zz_cov_2fa_7901', $_SESSION['pending_pin_username']);
         $this->assertArrayNotHasKey('pending_2fa_user_id', $_SESSION);
         $this->assertArrayNotHasKey('pending_2fa_failures', $_SESSION);
 
@@ -313,8 +313,10 @@ final class TwoFactorCoverageTest extends TestCase
         $_POST['recovery_code'] = $this->testRecoveryCode;
         TestableTwoFactorLoginController::resetTestState();
         TestableTwoFactorLoginController::index();
-        $this->assertSame('/dashboard', TestableTwoFactorLoginController::$redirectedTo);
-        $this->assertSame($this->testUserId, $_SESSION['user_id']);
+        // An admin: the recovery code clears the 2FA step and the PIN step comes next.
+        $this->assertSame('/login-pin', TestableTwoFactorLoginController::$redirectedTo);
+        $this->assertArrayNotHasKey('user_id', $_SESSION);
+        $this->assertSame($this->testUserId, $_SESSION['pending_pin_user_id']);
 
         // 4. Reusing the same recovery code on a new login must be refused
         $_SESSION = [];

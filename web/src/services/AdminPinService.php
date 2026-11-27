@@ -49,7 +49,12 @@ class AdminPinService
     public static function loadPinRow(int $userId): ?array
     {
         $db = getDB();
-        $stmt = $db->prepare('SELECT id, username, full_name, role, extension, theme_preference, language_preference, is_active, must_reset_password, admin_pin_hash, admin_pin_failures, admin_pin_failures_at FROM sys_users WHERE id = ?');
+        // UNIX_TIMESTAMP, not the datetime string: the database and PHP do not have to agree
+        // about the time zone, and reading the string with strtotime() made the failure window
+        // look expired on every attempt wherever they differ by more than the window - which
+        // reset the counter each time, so the third wrong PIN never arrived and neither the
+        // lockout nor the seal ever fired.
+        $stmt = $db->prepare('SELECT id, username, full_name, role, extension, theme_preference, language_preference, is_active, must_reset_password, admin_pin_hash, admin_pin_failures, UNIX_TIMESTAMP(admin_pin_failures_at) AS admin_pin_failures_at FROM sys_users WHERE id = ?');
         $stmt->execute([$userId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         return $row ?: null;
@@ -93,7 +98,7 @@ class AdminPinService
         }
 
         $failures = (int) ($row['admin_pin_failures'] ?? 0);
-        $failuresAt = !empty($row['admin_pin_failures_at']) ? strtotime((string) $row['admin_pin_failures_at']) : 0;
+        $failuresAt = (int) ($row['admin_pin_failures_at'] ?? 0);
         $windowExpired = $failuresAt > 0 && (time() - $failuresAt) >= self::FAILURE_WINDOW_SECONDS;
         if ($windowExpired) {
             $failures = 0;

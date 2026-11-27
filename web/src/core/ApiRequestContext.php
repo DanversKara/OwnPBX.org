@@ -70,7 +70,15 @@ final class ApiRequestContext
     {
         $hash = hash('sha256', $rawToken);
         $db = getDB();
-        $stmt = $db->prepare('SELECT * FROM sys_api_tokens WHERE token_hash = ? LIMIT 1');
+        // The two timestamps are asked for as unix seconds as well as themselves: comparing a
+        // datetime string parsed by PHP against PHP's own clock is only right while the database
+        // and PHP agree about the time zone. Where they do not, a token expires early or - with
+        // the gap the other way round - keeps working after it should have stopped.
+        $stmt = $db->prepare(
+            'SELECT *, UNIX_TIMESTAMP(expires_at) AS expires_at_unix,
+                    UNIX_TIMESTAMP(last_used_at) AS last_used_at_unix
+             FROM sys_api_tokens WHERE token_hash = ? LIMIT 1'
+        );
         $stmt->execute([$hash]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -78,7 +86,7 @@ final class ApiRequestContext
             ApiResponse::error('INVALID_TOKEN', 'API token is invalid or has been revoked.', 401);
         }
 
-        if (!empty($row['expires_at']) && strtotime((string)$row['expires_at']) < time()) {
+        if (!empty($row['expires_at']) && (int) ($row['expires_at_unix'] ?? 0) < time()) {
             ApiResponse::error('TOKEN_EXPIRED', 'API token has expired.', 401);
         }
 
@@ -91,7 +99,7 @@ final class ApiRequestContext
         self::enforceRateLimit((int)$row['id'], $rateLimit);
 
         // Throttled update of last_used_at (at most once every 30 seconds)
-        $lastUsed = !empty($row['last_used_at']) ? strtotime((string)$row['last_used_at']) : 0;
+        $lastUsed = (int) ($row['last_used_at_unix'] ?? 0);
         if ((time() - $lastUsed) >= 30 || ($row['last_used_ip'] ?? '') !== $clientIp) {
             try {
                 $upd = $db->prepare('UPDATE sys_api_tokens SET last_used_at = NOW(), last_used_ip = ? WHERE id = ?');

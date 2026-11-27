@@ -35,8 +35,10 @@ final class TwoFactorAndPasskeyTest extends TestCase
         $stmt->execute(['test_2fa_user', $passHash, 'Test 2FA User', 'test2fa@example.com', 'admin', 1, 'tr']);
         $this->testUserId = (int)$db->lastInsertId();
 
-        // Create a normal user without 2FA
-        $stmt->execute(['test_normal_user', $passHash, 'Test Normal User', 'testnormal@example.com', 'admin', 1, 'tr']);
+        // Create a normal user without 2FA. Role 'user', not 'admin': this test asserts that
+        // somebody with no second factor lands straight on the dashboard, and an admin now has
+        // one more step (the PIN), so an admin here would be testing the wrong thing.
+        $stmt->execute(['test_normal_user', $passHash, 'Test Normal User', 'testnormal@example.com', 'user', 1, 'tr']);
     }
 
     protected function tearDown(): void
