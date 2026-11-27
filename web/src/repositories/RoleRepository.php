@@ -31,7 +31,7 @@ class RoleRepository extends BaseRepository
             'call_quality'       => ['title' => 'Call Quality', 'group' => 'General', 'actions' => self::VAE, 'admin_only' => true],
             'system_users'       => ['title' => 'Users', 'group' => 'Administration', 'actions' => $all, 'admin_only' => true],
             'roles'              => ['title' => 'Roles & Permissions', 'group' => 'Administration', 'actions' => $all, 'admin_only' => true],
-            'asterisk_settings'  => ['title' => 'PBX Settings', 'group' => 'Administration', 'actions' => self::VAE],
+            'asterisk_settings'  => ['title' => 'PBX Settings', 'group' => 'Administration', 'actions' => self::VAE, 'admin_only' => true],
             'brand_settings'     => ['title' => 'Branding & Appearance', 'group' => 'Administration', 'actions' => self::VAE],
             'push_settings'      => ['title' => 'Mobile Push', 'group' => 'Administration', 'actions' => self::VAE, 'admin_only_edit' => true],
             'mail_settings'      => ['title' => 'E-mail & Relay', 'group' => 'Administration', 'actions' => self::VAE, 'admin_only' => true],

@@ -127,4 +127,52 @@ final class RoleMatrixTest extends TestCase
         }
         $_SESSION['user_role'] = $prev;
     }
+
+    /**
+     * PBX Settings is admin-only, and a permission row cannot hand it to anybody else.
+     *
+     * Moved under the breaker on 2026-11-27 at the owner's request. The 'asterisk_settings' key
+     * covers PBX Settings, Transports and the UI kit, and what it writes is the call path: PJSIP
+     * and RTP settings, the TLS transport, T.38. A role with 'edit' could move signalling onto a
+     * plain transport or send RTP somewhere of its choosing, which is every call on the system,
+     * and 'view' alone still shows the transport layout and the TLS domain.
+     *
+     * Written as its own test rather than left to the list comparison above because this one has
+     * a consequence worth being deliberate about: the breaker is symmetric, so read_only_admin
+     * loses even 'view', which it had before. That is the intended trade and it should fail
+     * loudly if someone quietly reverses it.
+     */
+    public function testPbxSettingsCannotBeDelegatedToAnyNonAdminRole(): void
+    {
+        $this->assertContains('asterisk_settings', adminOnlyModuleKeys());
+        $this->assertContains('asterisk_settings', RoleRepository::adminOnlyModules());
+
+        $db = getDB();
+        $ins = $db->prepare(
+            'INSERT INTO sys_role_permissions (role_key, module_key, can_view, can_access, can_edit, can_delete)
+             VALUES (?, ?, 1, 1, 1, 1)
+             ON DUPLICATE KEY UPDATE can_view = 1, can_access = 1, can_edit = 1, can_delete = 1'
+        );
+        $roles = ['zz_matrix_role', 'read_only_admin', 'user', 'cc_agent', 'cc_manager', 'fax_user'];
+        foreach ($roles as $role) {
+            $ins->execute([$role, 'asterisk_settings']);
+        }
+        try {
+            foreach ($roles as $role) {
+                foreach (['view', 'access', 'edit'] as $action) {
+                    $this->assertFalse(
+                        hasModulePermissionForRole('asterisk_settings', $action, $role),
+                        "'{$action}' on PBX Settings must be refused to {$role} even with a row granting it."
+                    );
+                }
+            }
+            // Symmetric: the admin can never be locked out of it either.
+            $this->assertTrue(hasModulePermissionForRole('asterisk_settings', 'edit', 'admin'));
+        } finally {
+            $q = $db->prepare("DELETE FROM sys_role_permissions WHERE module_key = 'asterisk_settings' AND role_key = ?");
+            foreach ($roles as $role) {
+                $q->execute([$role]);
+            }
+        }
+    }
 }

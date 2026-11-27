@@ -481,7 +481,7 @@ function billingRoleGrants(string $module_key, string $action): bool
  */
 function adminOnlyModuleKeys(): array
 {
-    return ['advanced_config', 'roles', 'system_users', 'firewall', 'fail2ban', 'mail_settings', 'system_update', 'backup', 'scheduled_tasks', 'certificates', 'privacy', 'plugins', 'api_keys', 'webhooks', 'external_dbs', 'google_integration', 'phones', 'web_widgets', 'file_storage', 'ai_models', 'ai_cloud', 'ai_apps', 'assistant', 'health', 'call_quality', 'custom_dialplan'];
+    return ['advanced_config', 'roles', 'system_users', 'firewall', 'fail2ban', 'mail_settings', 'system_update', 'backup', 'scheduled_tasks', 'certificates', 'privacy', 'plugins', 'api_keys', 'webhooks', 'external_dbs', 'google_integration', 'phones', 'web_widgets', 'file_storage', 'ai_models', 'ai_cloud', 'ai_apps', 'assistant', 'health', 'call_quality', 'custom_dialplan', 'asterisk_settings'];
 }
 
 /**
@@ -542,6 +542,13 @@ function hasModulePermissionForRole($module_key, $action, string $role): bool {
     // 'ai_models': installs software as root and downloads models (disk, RAM, CPU).
     // 'ai_cloud': holds the API keys of paid cloud AI services.
     // 'ai_apps': an application's lookup URL is requested by the server itself.
+    // 'asterisk_settings' (2026-11-27, at the owner's request): this key covers PBX Settings,
+    // Transports and the UI kit, and what it writes is the call path itself - PJSIP and RTP
+    // settings, the TLS transport and the T.38 configuration. A role given 'edit' here could
+    // move signalling onto a plain transport or point RTP somewhere of its choosing, which is
+    // every call on the system; 'view' alone still shows the transport layout and the TLS
+    // domain. The sweep had it in its list of admin pages all along while auth.php left it
+    // delegable, and that disagreement is what this settles.
     // Keep in sync with RoleRepository::modulesDefinition() 'admin_only' (RbacTest checks it).
     if (in_array($module_key, adminOnlyModuleKeys(), true)) {
         return $role === 'admin';
