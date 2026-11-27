@@ -50,6 +50,9 @@ final class RbacTest extends TestCase
         'call_quality',
         'custom_dialplan',
         'advanced_config',
+        // Added 2026-11-27: this key covers PBX Settings, Transports and the UI kit, and what it
+        // writes is the call path - PJSIP and RTP settings, the TLS transport, T.38.
+        'asterisk_settings',
     ];
 
     protected function setUp(): void
