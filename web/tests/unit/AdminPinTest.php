@@ -19,6 +19,13 @@ final class AdminPinTest extends TestCase
     private int $adminId = 0;
     private int $userId = 0;
     private const PIN = '482915';
+    /**
+     * Not 127.0.0.1. A wrong PIN is recorded as a failed sign-in against the client IP - which is
+     * right, and gives PIN guessing the same five-tries-per-IP ceiling as the password - but it
+     * means a dozen deliberate wrong PINs here would lock out the address every other test signs
+     * in from. A documentation address of its own keeps this test's noise to itself.
+     */
+    private const IP = '203.0.113.77';
 
     protected function setUp(): void
     {
@@ -36,7 +43,9 @@ final class AdminPinTest extends TestCase
 
     protected function tearDown(): void
     {
-        getDB()->exec("DELETE FROM sys_users WHERE username IN ('zz_pin_admin', 'zz_pin_user')");
+        $db = getDB();
+        $db->exec("DELETE FROM sys_users WHERE username IN ('zz_pin_admin', 'zz_pin_user')");
+        $db->exec("DELETE FROM sys_login_logs WHERE ip_address = '" . self::IP . "'");
         $_SESSION = [];
     }
 
@@ -74,28 +83,28 @@ final class AdminPinTest extends TestCase
 
     public function testTheRightPinOpensItAndClearsTheCount(): void
     {
-        AdminPinService::verifyPin($this->adminId, '000000', '127.0.0.1');
+        AdminPinService::verifyPin($this->adminId, '000000', self::IP);
         $this->assertSame(1, $this->failures());
 
-        $res = AdminPinService::verifyPin($this->adminId, self::PIN, '127.0.0.1');
+        $res = AdminPinService::verifyPin($this->adminId, self::PIN, self::IP);
         $this->assertTrue($res['ok']);
         $this->assertSame(0, $this->failures(), 'A correct PIN wipes the slate.');
     }
 
     public function testEachWrongPinCostsExactlyOneTry(): void
     {
-        $first = AdminPinService::verifyPin($this->adminId, '000000', '127.0.0.1');
+        $first = AdminPinService::verifyPin($this->adminId, '000000', self::IP);
         $this->assertSame(1, $first['failures']);
-        $second = AdminPinService::verifyPin($this->adminId, '000001', '127.0.0.1');
+        $second = AdminPinService::verifyPin($this->adminId, '000001', self::IP);
         $this->assertSame(2, $second['failures']);
         $this->assertSame(2, $this->failures());
     }
 
     public function testTheThirdWrongPinSealsAndThenRefusesEvenTheRightOne(): void
     {
-        AdminPinService::verifyPin($this->adminId, '000000', '127.0.0.1');
-        AdminPinService::verifyPin($this->adminId, '000001', '127.0.0.1');
-        $third = AdminPinService::verifyPin($this->adminId, '000002', '127.0.0.1');
+        AdminPinService::verifyPin($this->adminId, '000000', self::IP);
+        AdminPinService::verifyPin($this->adminId, '000001', self::IP);
+        $third = AdminPinService::verifyPin($this->adminId, '000002', self::IP);
 
         $this->assertTrue($third['sealed'] ?? false, 'The third wrong PIN must trip the seal.');
         $this->assertFalse($third['ok']);
@@ -103,17 +112,17 @@ final class AdminPinTest extends TestCase
         // Fail closed: with no seal token configured the seal cannot be confirmed, and the
         // lockout must apply anyway - otherwise an unreachable vault would mean endless tries.
         $this->assertArrayHasKey('seal_ok', $third);
-        $locked = AdminPinService::verifyPin($this->adminId, self::PIN, '127.0.0.1');
+        $locked = AdminPinService::verifyPin($this->adminId, self::PIN, self::IP);
         $this->assertTrue($locked['locked'] ?? false, 'Even the correct PIN is refused once locked.');
         $this->assertFalse($locked['ok'] ?? false);
     }
 
     public function testTheWindowExpiringGivesTheAdminTheirTriesBack(): void
     {
-        AdminPinService::verifyPin($this->adminId, '000000', '127.0.0.1');
-        AdminPinService::verifyPin($this->adminId, '000001', '127.0.0.1');
-        AdminPinService::verifyPin($this->adminId, '000002', '127.0.0.1');
-        $this->assertTrue(AdminPinService::verifyPin($this->adminId, self::PIN, '127.0.0.1')['locked'] ?? false);
+        AdminPinService::verifyPin($this->adminId, '000000', self::IP);
+        AdminPinService::verifyPin($this->adminId, '000001', self::IP);
+        AdminPinService::verifyPin($this->adminId, '000002', self::IP);
+        $this->assertTrue(AdminPinService::verifyPin($this->adminId, self::PIN, self::IP)['locked'] ?? false);
 
         // Age the window out: this is the whole recovery path, so it has to work. The database
         // does the arithmetic on its own clock - handing it a timestamp PHP formatted would put
@@ -122,7 +131,7 @@ final class AdminPinTest extends TestCase
         $q = getDB()->prepare('UPDATE sys_users SET admin_pin_failures_at = DATE_SUB(NOW(), INTERVAL ? SECOND) WHERE id = ?');
         $q->execute([AdminPinService::FAILURE_WINDOW_SECONDS + 60, $this->adminId]);
 
-        $res = AdminPinService::verifyPin($this->adminId, self::PIN, '127.0.0.1');
+        $res = AdminPinService::verifyPin($this->adminId, self::PIN, self::IP);
         $this->assertTrue($res['ok'] ?? false, 'Once the window has passed the PIN works again.');
     }
 
@@ -130,7 +139,7 @@ final class AdminPinTest extends TestCase
 
     public function testANonAdminIsNeverAskedForAPin(): void
     {
-        $res = AdminPinService::verifyPin($this->userId, self::PIN, '127.0.0.1');
+        $res = AdminPinService::verifyPin($this->userId, self::PIN, self::IP);
         $this->assertFalse($res['ok'] ?? false);
         $this->assertSame('not_admin', $res['error'] ?? '');
     }
@@ -138,7 +147,7 @@ final class AdminPinTest extends TestCase
     public function testAnAdminWithNoPinYetIsSentToSetUpOne(): void
     {
         getDB()->prepare('UPDATE sys_users SET admin_pin_hash = NULL WHERE id = ?')->execute([$this->adminId]);
-        $res = AdminPinService::verifyPin($this->adminId, self::PIN, '127.0.0.1');
+        $res = AdminPinService::verifyPin($this->adminId, self::PIN, self::IP);
         $this->assertTrue($res['needs_setup'] ?? false);
         $this->assertFalse($res['ok'] ?? false);
     }
@@ -146,7 +155,7 @@ final class AdminPinTest extends TestCase
     public function testADisabledAccountIsRefused(): void
     {
         getDB()->prepare('UPDATE sys_users SET is_active = 0 WHERE id = ?')->execute([$this->adminId]);
-        $res = AdminPinService::verifyPin($this->adminId, self::PIN, '127.0.0.1');
+        $res = AdminPinService::verifyPin($this->adminId, self::PIN, self::IP);
         $this->assertSame('invalid', $res['error'] ?? '');
     }
 
