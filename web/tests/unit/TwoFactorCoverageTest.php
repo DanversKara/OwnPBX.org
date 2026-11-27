@@ -255,11 +255,13 @@ final class TwoFactorCoverageTest extends TestCase
         $this->assertArrayNotHasKey('pending_2fa_user_id', $_SESSION);
         $this->assertArrayNotHasKey('pending_2fa_failures', $_SESSION);
 
-        // Verify successful login log in DB
+        // No successful sign-in is logged yet, and that is the point: for an admin the TOTP code
+        // is the second of three steps, so recording a success here would put a sign-in in the
+        // log for somebody who never got past the PIN. The PIN step writes it.
         $db = getDB();
         $stmt = $db->prepare("SELECT COUNT(*) FROM sys_login_logs WHERE username = 'zz_cov_2fa_7901' AND status = 'SUCCESS'");
         $stmt->execute();
-        $this->assertGreaterThan(0, (int)$stmt->fetchColumn());
+        $this->assertSame(0, (int) $stmt->fetchColumn());
     }
 
     public function testFiveFailuresLockoutPendingSession(): void

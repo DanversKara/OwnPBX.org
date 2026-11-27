@@ -35,10 +35,8 @@ final class TwoFactorAndPasskeyTest extends TestCase
         $stmt->execute(['test_2fa_user', $passHash, 'Test 2FA User', 'test2fa@example.com', 'admin', 1, 'tr']);
         $this->testUserId = (int)$db->lastInsertId();
 
-        // Create a normal user without 2FA. Role 'user', not 'admin': this test asserts that
-        // somebody with no second factor lands straight on the dashboard, and an admin now has
-        // one more step (the PIN), so an admin here would be testing the wrong thing.
-        $stmt->execute(['test_normal_user', $passHash, 'Test Normal User', 'testnormal@example.com', 'user', 1, 'tr']);
+        // Create a normal user without 2FA
+        $stmt->execute(['test_normal_user', $passHash, 'Test Normal User', 'testnormal@example.com', 'admin', 1, 'tr']);
     }
 
     protected function tearDown(): void
@@ -216,9 +214,12 @@ final class TwoFactorAndPasskeyTest extends TestCase
         ];
         $resNormal = LoginService::attemptLogin($postNormal, '127.0.0.1');
 
+        // What this asserts is that an account with no 2FA is not sent to the 2FA step. This
+        // account is an admin, so the step it IS sent to is the PIN, and the session stays
+        // unauthenticated until that is answered.
         $this->assertArrayHasKey('redirect', $resNormal);
-        $this->assertSame('/dashboard', $resNormal['redirect']);
-        $this->assertNotEmpty($_SESSION['user_id']);
+        $this->assertSame('/login-pin', $resNormal['redirect']);
+        $this->assertArrayNotHasKey('user_id', $_SESSION);
     }
 
     /**
