@@ -123,9 +123,11 @@ class AdminPinService
             $stmt = $db->prepare('UPDATE sys_users SET admin_pin_failures = ? WHERE id = ?');
             $stmt->execute([$failures, $userId]);
         }
-        if (function_exists('logLoginAttempt')) {
-            logLoginAttempt($clientIp, (string) $row['username'], 'FAILED');
-        }
+        // Do NOT log a wrong PIN to the password throttle (logLoginAttempt):
+        // the PIN has its own 3-strike lockout and audit log. Feeding the
+        // password brute-force throttle would double-lock the admin — the
+        // throttle fires before verifyPin is even reached, so the correct
+        // PIN bounces too — and it also feeds the fail2ban log.
 
         if ($failures >= self::MAX_FAILURES) {
             // Third wrong PIN in the window: seal the vault. Even if the

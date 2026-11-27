@@ -2523,6 +2523,8 @@ return [
     'admin_pin.enter_valid_pin' => 'Please enter a 6-12 digit PIN.',
     'admin_pin.mismatch' => 'The two PINs do not match.',
     'admin_pin.invalid_pin' => 'Wrong PIN. Please try again.',
+    'admin_pin.attempts_remaining_2' => '2 attempts remaining.',
+    'admin_pin.attempts_remaining_1' => '1 attempt remaining.',
     'admin_pin.too_many_failures' => 'Too many wrong PINs. Please sign in again later.',
     'admin_pin.sealed' => 'Too many wrong PINs. The vault was sealed — unseal it with BaoLock and sign in again.',
     'security.page_title' => 'Account Security',
