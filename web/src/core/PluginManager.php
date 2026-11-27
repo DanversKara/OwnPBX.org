@@ -777,7 +777,7 @@ final class PluginManager
             if ($ok && !$tooBig && $code === 200) {
                 return $body;
             }
-            if (!$ok || $tooBig || !in_array($code, [301, 302, 303, 307, 308], true) || $location === null || $location === '') {
+            if (!$ok || $tooBig || !in_array($code, [301, 302, 303, 307, 308], true) || $location === null) {
                 return null;
             }
             $next = trim($location);

@@ -84,7 +84,8 @@ class BillingRoleBridge
             } catch (\Throwable $e) {
                 $features = [];
             }
-            self::$planFeatures[$userId] = is_array($features) ? array_values($features) : [];
+            // userPlanFeatures() is declared : array, and the catch above sets [].
+            self::$planFeatures[$userId] = array_values($features);
         }
         return self::$planFeatures[$userId];
     }
@@ -244,7 +245,9 @@ class BillingRoleBridge
         } catch (\Throwable $e) {
             $found = false;
         }
-        if (!$found || !self::mayTouchOwner($found ? ($owner === null ? null : (string) $owner) : null)) {
+        // Past the short-circuit $found is true, so $owner is the column's value: a string,
+        // or null for a row that has no owner.
+        if (!$found || !self::mayTouchOwner($owner === null ? null : (string) $owner)) {
             throw new \Exception(t('billing_role.err_not_yours'));
         }
     }

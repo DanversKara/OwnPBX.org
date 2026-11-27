@@ -26,6 +26,8 @@ parameters:
         # The Billing plugin's classes, used through src/services/BillingBridge.php.
         - ../plugins/billing/lib/Stripe.php
         - ../plugins/billing/lib/Billing.php
+        # The Reseller plugin's class, used through src/services/ResellerBridge.php.
+        - ../plugins/reseller/lib/Reseller.php
         - ../plugins/ha-texts/lib/HaTexts.php
         - ../plugins/invites/lib/Invites.php
         - ../plugins/launcher/lib/LauncherFeed.php
@@ -36,3 +38,10 @@ parameters:
         # The define() constants of config.php are read from /etc/ai-pbx.env at
         # run time; PHPStan cannot see them.
         - identifier: constant.notFound
+        # BillingBridge checks a method exists before calling it, because the Billing class
+        # loaded at run time can be an OLDER copy installed under /var/lib/aipbx/plugins,
+        # which shadows the bundled one PHPStan reads here. The guard turns an out-of-date
+        # plugin into a no-op instead of a fatal error, so it stays.
+        -
+            identifier: function.alreadyNarrowedType
+            path: src/services/BillingBridge.php
