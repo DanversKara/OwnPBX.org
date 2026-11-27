@@ -40,21 +40,79 @@ final class SmokeRendererUserTest extends TestCase
         );
     }
 
-    public function testItPicksARealAccountPreferringTheRoleBeingRendered(): void
+    public function testItPicksAnAccountThatReallyHoldsTheRole(): void
     {
         require_once dirname(__DIR__, 2) . '/bin/_smoke_render_fns.php';
         $db = getDB();
 
         $adminId = (int) $db->query("SELECT id FROM sys_users WHERE role = 'admin' AND is_active = 1 ORDER BY id LIMIT 1")->fetchColumn();
-        if ($adminId > 0) {
-            $this->assertSame($adminId, smoke_user_id('admin'), 'It should render as a real admin.');
+        if ($adminId === 0) {
+            $this->markTestSkipped('no active admin account to render as');
         }
+        $this->assertSame($adminId, smoke_user_id('admin'), 'It should render as a real admin.');
 
-        // A role nobody holds still has to give back an account that exists, or the sweep is
-        // measuring the login page instead of the page it asked for.
-        $chosen = smoke_user_id('no_such_role_exists');
-        $q = $db->prepare('SELECT COUNT(*) FROM sys_users WHERE id = ? AND is_active = 1');
-        $q->execute([$chosen]);
-        $this->assertSame(1, (int) $q->fetchColumn(), 'The fallback must still be a real, active account.');
+        // And the account it chose really holds that role - the point of the whole change.
+        $q = $db->prepare('SELECT role FROM sys_users WHERE id = ? AND is_active = 1');
+        $q->execute([smoke_user_id('admin')]);
+        $this->assertSame('admin', (string) $q->fetchColumn(), 'The account chosen must hold the role asked for.');
+    }
+
+    /**
+     * The second half of the same bug, and the dangerous half.
+     *
+     * Borrowing somebody else's account to stand in for a role looks harmless, because the role
+     * is written into the session. It is not: applyRemoteAdminRestriction() reads the role from
+     * the sys_users row of the signed-in id on every request and writes it back over the session.
+     * So standing in for fax_user with an admin's id renders as an admin. That is why the RBAC
+     * sweep reported 42 admin pages as open to fax_user, and why - far worse than the noise - it
+     * could no longer have noticed a page that really was open. It must refuse instead.
+     */
+    public function testNoAccountForTheRoleMeansNoAccountAtAll(): void
+    {
+        require_once dirname(__DIR__, 2) . '/bin/_smoke_render_fns.php';
+        $this->assertSame(
+            0,
+            smoke_user_id('no_such_role_exists'),
+            'With nobody holding the role it must answer 0, never somebody else.'
+        );
+    }
+
+    public function testBothHarnessesStopWhenNobodyHoldsTheRole(): void
+    {
+        foreach (['_smoke_render.php', '_smoke_api.php'] as $harness) {
+            $src = (string) file_get_contents(dirname(__DIR__, 2) . '/bin/' . $harness);
+            $this->assertMatchesRegularExpression(
+                '/SMOKE_NO_ROLE_ACCOUNT/',
+                $src,
+                $harness . ' must report that it could not test the role.'
+            );
+            $this->assertMatchesRegularExpression(
+                '/<=\s*0\s*\)\s*\{/',
+                $src,
+                $harness . ' must check the id before signing in with it.'
+            );
+        }
+    }
+
+    public function testTheRunnerFailsWhenTheRoleCouldNotBeTested(): void
+    {
+        $runner = (string) file_get_contents(dirname(__DIR__, 2) . '/bin/smoke.php');
+        // Three call sites - the route sweep, the permission sweep and the API sweep. A silent
+        // skip in any one of them is a green check that tested nothing, which is the whole
+        // subject of this class.
+        $this->assertGreaterThanOrEqual(
+            3,
+            preg_match_all('/no_role_account/', $runner),
+            'Every sweep that signs in must react to a role it could not test.'
+        );
+        foreach (['check_routes', 'check_rbac', 'check_api'] as $fn) {
+            $body = (string) preg_replace('/^.*?function ' . $fn . '\(/s', '', $runner);
+            $body = (string) preg_replace('/\nfunction .*$/s', '', $body);
+            $this->assertStringContainsString(
+                'no_role_account',
+                $body,
+                $fn . '() signs in, so it must say when it could not.'
+            );
+        }
     }
 }

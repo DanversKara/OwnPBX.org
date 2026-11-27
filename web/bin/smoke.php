@@ -20,6 +20,11 @@ if (PHP_SAPI !== 'cli') { http_response_code(403); exit(1); }
 // Repo root (/var/www/html points here on the server; the checkout directory in CI).
 define('SMOKE_ROOT', dirname(__DIR__));
 
+// The role the permission checks try admin-only pages and endpoints as. One name in one place:
+// the page check and the API check must use the same role, or the account prepared for one of
+// them is not the account the other signs in as.
+define('SMOKE_LOW_ROLE', 'fax_user');
+
 $only = null;
 // --route=<path>: scans a single route. For debugging, and to shorten the
 // window in which the live page stays broken during fault-injection checks.
@@ -137,6 +142,15 @@ function check_routes(?string $onlyRoute = null): void
                 fail('routes', "$path [$lang]", $d['error']);
                 continue;
             }
+            // Nobody to render as. Said once and then stopped: the same cause reported against
+            // every route in both languages is how this check produced 398 errors that blamed
+            // the pages for a deleted account, and that is what made it ignorable.
+            if (($d['no_role_account'] ?? '') !== '') {
+                fail('routes', 'all pages', 'no active admin account to render as, so no page was'
+                    . ' tested — the pages are not the problem; create an administrator');
+                group_done('routes', $n);
+                return;
+            }
 
             $html = $d['output'] ?? '';
 
@@ -205,6 +219,49 @@ if ($only === null || $only === 'routes') { check_routes($onlyRoute); }
  * the isolated test database, where permission rows can be controlled (see
  * tests/unit/RbacTest.php).
  */
+/**
+ * Makes sure an account exists that really holds $role, on a TEST database only.
+ *
+ * The RBAC check needs to sign in as the role it is testing, and a live PBX must never have
+ * accounts invented under it by a self-test - so on anything but a *_test database this does
+ * nothing, and the check reports that it could not run.
+ */
+function smoke_ensure_role_account(string $role): void
+{
+    try {
+        $pdo = getDB();
+        // The connection is asked its own name rather than reading DB_NAME or the environment:
+        // this decides whether an account may be created, so it has to be the database actually
+        // being written to, not whatever a constant was set to earlier.
+        $name = (string) $pdo->query('SELECT DATABASE()')->fetchColumn();
+        if (!str_ends_with($name, '_test')) {
+            return;
+        }
+        $q = $pdo->prepare('SELECT COUNT(*) FROM sys_users WHERE role = ? AND is_active = 1');
+        $q->execute([$role]);
+        if ((int) $q->fetchColumn() > 0) {
+            return;
+        }
+        // ON DUPLICATE because the name is fixed: a leftover from an earlier run that was left
+        // deactivated does not show up in the count above, and a plain INSERT would then hit the
+        // unique key on username and leave the check untestable. The password is a throwaway
+        // nobody is told, so the account cannot be signed into from the outside.
+        $ins = $pdo->prepare(
+            'INSERT INTO sys_users (username, password_hash, full_name, role, is_active)
+             VALUES (?, ?, ?, ?, 1)
+             ON DUPLICATE KEY UPDATE role = VALUES(role), is_active = 1'
+        );
+        $ins->execute([
+            'zz_smoke_' . $role,
+            password_hash(bin2hex(random_bytes(16)), PASSWORD_DEFAULT),
+            'Smoke ' . $role,
+            $role,
+        ]);
+    } catch (\Throwable $e) {
+        // Leave it: the check below reports that the role could not be tested.
+    }
+}
+
 function check_rbac(): void
 {
     $ADMIN_ONLY = [
@@ -268,6 +325,15 @@ function check_rbac(): void
     $ALLOWED_MIN    = 10000;
     $BLOCKED_MAX  = 5000;
 
+    // The low-privilege role has to be a role some account really holds. A session's role is
+    // overwritten from the signed-in account's own row on every request
+    // (applyRemoteAdminRestriction), so rendering "as fax_user" from an admin's account renders
+    // as an admin: this whole check reported every admin page as a hole, and could no longer
+    // have seen one that was. On a test database an account is made for the purpose; on a real
+    // PBX one has to exist, and if it does not, the check says so rather than testing nothing.
+    $LOW_ROLE = SMOKE_LOW_ROLE;
+    smoke_ensure_role_account($LOW_ROLE);
+
     foreach ($ADMIN_ONLY as $path) {
         // Canary: admin must be able to see this page. Otherwise the real
         // check below would stay green for no reason.
@@ -281,11 +347,16 @@ function check_rbac(): void
         }
 
         // The real check: the low-privilege role must not see it.
-        $asLow = render_route($path, 'tr', 'fax_user');
+        $asLow = render_route($path, 'tr', $LOW_ROLE);
         $n++;
+        if (($asLow['no_role_account'] ?? '') !== '') {
+            fail('rbac', $path, "no active account holds the {$LOW_ROLE} role, so this page was"
+                . ' never tested against it — add one, or this check proves nothing');
+            continue;
+        }
         $lowBytes = $asLow['bytes'] ?? 0;
         if ($lowBytes > $BLOCKED_MAX) {
-            fail('rbac', $path, "the fax_user role COULD RENDER this admin page ({$lowBytes} bytes,"
+            fail('rbac', $path, "the {$LOW_ROLE} role COULD RENDER this admin page ({$lowBytes} bytes,"
                 . " admin {$adminBytes} bytes) — permission hole!");
         }
     }
@@ -315,6 +386,11 @@ if ($only === null || $only === 'rbac') { check_rbac(); }
  */
 function check_api(): void
 {
+    // Same account the page check needs, and for the same reason: the role in the session is
+    // overwritten from the signed-in account's own row, so this has to be called as an account
+    // that really holds the low role. Repeated here because --only=api skips check_rbac().
+    smoke_ensure_role_account(SMOKE_LOW_ROLE);
+
     // [endpoint, query the page itself sends]
     $ADMIN_ONLY = [
         ['api/notices.php', ''],
@@ -353,14 +429,19 @@ function check_api(): void
             continue;
         }
 
-        $asLow = call_api($script, 'fax_user', $query);
+        $asLow = call_api($script, SMOKE_LOW_ROLE, $query);
         $n++;
         if ($asLow === null) {
             fail('api', $label, 'the subprocess produced no result');
             continue;
         }
+        if (($asLow['no_role_account'] ?? '') !== '') {
+            fail('api', $label, 'no active account holds the ' . SMOKE_LOW_ROLE . ' role, so this'
+                . ' endpoint was never called as it — add one, or this check proves nothing');
+            continue;
+        }
         if ((int) ($asLow['code'] ?? 0) !== 403) {
-            fail('api', $label, 'the fax_user role got HTTP ' . ($asLow['code'] ?? '?')
+            fail('api', $label, 'the ' . SMOKE_LOW_ROLE . ' role got HTTP ' . ($asLow['code'] ?? '?')
                 . ' instead of 403 — the endpoint has no permission check');
             continue;
         }

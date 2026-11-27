@@ -96,6 +96,8 @@ register_shutdown_function(function () use ($path, $lang, $role, $outfile) {
         'status' => $error === '' ? 'ok' : 'fatal',
         'error'  => $error,
         'bytes'  => strlen($html),
+        // Set when no active account holds the role this render was asked for.
+        'no_role_account' => (string) ($GLOBALS['SMOKE_NO_ROLE_ACCOUNT'] ?? ''),
         'closed'     => stripos($html, '</html>') !== false,
         'php_errors' => array_values(array_unique($GLOBALS['SMOKE_PHP_ERRORS'] ?? [])),
         // Unlike substr, mb_strcut does not split a multibyte UTF-8 character
@@ -145,7 +147,15 @@ if (!in_array($path, $ANON, true)) {
     // A real account, not a hardcoded id 1. Every page checks that the signed-in user exists,
     // so once that account was deleted on a live PBX every render bounced to /login and the
     // sweep reported "0 bytes" for all 398 of them - the pages were fine, the visitor was not.
-    $_SESSION['user_id']       = smoke_user_id($role);
+    $smokeUserId = smoke_user_id($role);
+    if ($smokeUserId <= 0) {
+        // No account holds this role, so this page cannot be rendered as it. Saying so beats
+        // signing in as somebody else: the role in the session is overwritten from the account's
+        // own row, so borrowing an admin would render as an admin and call it a pass.
+        $GLOBALS['SMOKE_NO_ROLE_ACCOUNT'] = $role;
+        exit;   // the shutdown handler writes the result, including the note above
+    }
+    $_SESSION['user_id']       = $smokeUserId;
     $_SESSION['user_role']     = $role;
     $_SESSION['username']      = 'smoke';
     $_SESSION['last_activity'] = time();

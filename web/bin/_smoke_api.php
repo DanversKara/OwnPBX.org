@@ -89,6 +89,8 @@ register_shutdown_function(function () use ($script, $query, $role, $outfile) {
         'error'  => $error,
         // http_response_code() answers 200 when the endpoint never set one.
         'code'   => (int) (http_response_code() ?: 200),
+        // Set when no active account holds the role this call was asked for.
+        'no_role_account' => (string) ($GLOBALS['SMOKE_NO_ROLE_ACCOUNT'] ?? ''),
         'json'   => is_array($decoded) ? $decoded : null,
         'body'   => mb_strcut($body, 0, 4000, 'UTF-8'),
         'php_errors' => array_values(array_unique($GLOBALS['SMOKE_PHP_ERRORS'] ?? [])),
@@ -114,7 +116,16 @@ if (session_status() !== PHP_SESSION_ACTIVE) { session_start(); }
 // account was deleted on a live PBX, and requireApiLogin() bounces a session
 // whose user does not exist, so every API check failed with 401 while the
 // pages (fixed the same way in _smoke_render.php) passed.
-$_SESSION['user_id']       = smoke_user_id($role);
+$smokeUserId = smoke_user_id($role);
+if ($smokeUserId <= 0) {
+    // Nobody holds this role, so the endpoint cannot be called as it. Borrowing another
+    // account would be worse than skipping: the role in the session is overwritten from
+    // that account's own row, so an admin's id answers as an admin whatever the session
+    // says, and a 200 would be read as a permission hole that is not there.
+    $GLOBALS['SMOKE_NO_ROLE_ACCOUNT'] = $role;
+    exit;   // the shutdown handler writes the result, including the note above
+}
+$_SESSION['user_id']       = $smokeUserId;
 $_SESSION['user_role']     = $role;
 $_SESSION['username']      = 'smoke';
 $_SESSION['last_activity'] = time();
