@@ -97,9 +97,13 @@ function check_routes(?string $onlyRoute = null): void
     // no page is correct, only "no fatal/PHP error" is checked.
     // /force-reset → goes to /login without $_SESSION['pending_reset_user_id'].
     // /login-2fa   → goes to /login without $_SESSION['pending_2fa_user_id'].
+    // /login-pin  → goes to /login without $_SESSION['pending_pin_user_id'].
+    // /admin-pin-setup → goes to /login without $_SESSION['pending_pin_setup_user_id'].
     $REDIRECT_OK = [
         '/force-reset',
         '/login-2fa',
+        '/login-pin',
+        '/admin-pin-setup',
         '/auth/google',
         '/auth/google/callback',
         '/auth/oidc',

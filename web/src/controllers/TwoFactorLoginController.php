@@ -95,6 +95,19 @@ class TwoFactorLoginController extends BaseController
                         return;
                     }
 
+                    // Admins enter a PIN after the TOTP code (the PIN step
+                    // logs the completed sign-in). The 2FA success itself is
+                    // not logged as a sign-in yet — the PIN has not been
+                    // entered, so the login is not complete.
+                    if ($user['role'] === 'admin') {
+                        unset($_SESSION['pending_2fa_user_id'], $_SESSION['pending_2fa_username'], $_SESSION['pending_2fa_full_name']);
+                        $_SESSION['pending_pin_user_id'] = $user['id'];
+                        $_SESSION['pending_pin_username'] = $user['username'];
+                        $_SESSION['pending_pin_full_name'] = $user['full_name'];
+                        static::redirect('/login-pin');
+                        return;
+                    }
+
                     $_SESSION['user_id'] = $user['id'];
                     $_SESSION['username'] = $user['username'];
                     $_SESSION['full_name'] = $user['full_name'];

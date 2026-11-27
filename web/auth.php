@@ -472,6 +472,49 @@ function billingRoleGrants(string $module_key, string $action): bool
 }
 
 /**
+ * The admin-only modules (the symmetric circuit breaker in
+ * hasModulePermissionForRole()): admin can always access them, no non-admin
+ * role ever can. These are the sensitive settings modules — the admin PIN
+ * (sudo-mode, requireAdminPin()) applies to exactly this list, so an admin
+ * re-enters the PIN before opening any of them. Keep in sync with
+ * RoleRepository::modulesDefinition() 'admin_only' (RbacTest checks it).
+ */
+function adminOnlyModuleKeys(): array
+{
+    return ['advanced_config', 'roles', 'system_users', 'firewall', 'fail2ban', 'mail_settings', 'system_update', 'backup', 'scheduled_tasks', 'certificates', 'privacy', 'plugins', 'api_keys', 'webhooks', 'external_dbs', 'google_integration', 'phones', 'web_widgets', 'file_storage', 'ai_models', 'ai_cloud', 'ai_apps', 'assistant', 'health', 'call_quality', 'custom_dialplan'];
+}
+
+/**
+ * Sudo-mode admin PIN: before an admin-only settings module opens, an admin
+ * whose PIN is not fresh (within AdminPinService::SUDO_WINDOW_SECONDS) is
+ * sent to /admin-pin to re-enter it. Non-admins never reach this — the
+ * caller has already confirmed access — and smoke-test renders skip it.
+ * The destination is preserved in ?next= so the admin lands back on the
+ * page they wanted.
+ */
+function requireAdminPin(): void
+{
+    if (!empty($_SESSION['_smoke_render'])) {
+        return;
+    }
+    $svc = __DIR__ . '/src/services/AdminPinService.php';
+    if (is_file($svc)) {
+        require_once $svc;
+    }
+    if (!class_exists('AdminPinService')) {
+        // The PIN service is missing: fail closed, deny the settings page.
+        header('Location: /login');
+        exit;
+    }
+    if (AdminPinService::sudoFresh()) {
+        return;
+    }
+    $next = (string) ($_SERVER['REQUEST_URI'] ?? '/dashboard');
+    header('Location: /admin-pin?next=' . rawurlencode($next));
+    exit;
+}
+
+/**
  * Single-role half of hasModulePermission(): every rule below reads $role,
  * never the session, so a remote admin (effective roles user+fax_user) is
  * judged exactly like a user with those roles. The admin-only circuit
@@ -500,7 +543,7 @@ function hasModulePermissionForRole($module_key, $action, string $role): bool {
     // 'ai_cloud': holds the API keys of paid cloud AI services.
     // 'ai_apps': an application's lookup URL is requested by the server itself.
     // Keep in sync with RoleRepository::modulesDefinition() 'admin_only' (RbacTest checks it).
-    if (in_array($module_key, ['advanced_config', 'roles', 'system_users', 'firewall', 'fail2ban', 'mail_settings', 'system_update', 'backup', 'scheduled_tasks', 'certificates', 'privacy', 'plugins', 'api_keys', 'webhooks', 'external_dbs', 'google_integration', 'phones', 'web_widgets', 'file_storage', 'ai_models', 'ai_cloud', 'ai_apps', 'assistant', 'health', 'call_quality', 'custom_dialplan'], true)) {
+    if (in_array($module_key, adminOnlyModuleKeys(), true)) {
         return $role === 'admin';
     }
 
@@ -626,6 +669,14 @@ function requireModulePermission($module_key, $action = 'access') {
         echo '</div></body></html>';
         exit;
     }
+
+    // Sudo-mode admin PIN: an admin-only settings module needs a fresh PIN
+    // (within the window); requireAdminPin() sends the admin to /admin-pin
+    // and back. Only reached when access was already allowed, so a remote
+    // admin (no access here) gets the 403 above, never a PIN prompt.
+    if (in_array($module_key, adminOnlyModuleKeys(), true)) {
+        requireAdminPin();
+    }
 }
 
 /**
@@ -683,6 +734,12 @@ function requireRole($allowed_roles) {
     }
 
     if (hasModulePermission($module_key, 'access')) {
+        // Sudo-mode admin PIN: an admin-only settings module needs a fresh
+        // PIN before it opens (GET or POST); requireAdminPin() sends the
+        // admin to /admin-pin and back.
+        if (in_array($module_key, adminOnlyModuleKeys(), true)) {
+            requireAdminPin();
+        }
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (isPostDeleteRequest()) {
                 if (!hasModulePermission($module_key, 'delete')) {
