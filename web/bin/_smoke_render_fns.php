@@ -31,3 +31,61 @@ function smoke_user_id(string $role): int
         return 0;
     }
 }
+
+/**
+ * The module key a page's permissions are read from, or '' when it has none.
+ *
+ * routes.php names the module file for each page and auth.php maps that file to a key; this walks
+ * the same two steps the real request does, rather than keeping a third list to drift out of step
+ * with them.
+ */
+function smoke_module_key(string $path): string
+{
+    static $routes = null;
+    if ($routes === null) {
+        // routes.php returns its array, so it is read once and kept rather than re-required per
+        // page. SMOKE_ROOT is defined by smoke.php; the render subprocess sets $SMOKE_ROOT.
+        $root = defined('SMOKE_ROOT') ? (string) constant('SMOKE_ROOT') : (string) ($GLOBALS['SMOKE_ROOT'] ?? '');
+        $file = $root . '/src/routes.php';
+        $routes = ($root !== '' && is_file($file)) ? (array) require $file : [];
+    }
+    $module = (string) ($routes[$path]['module'] ?? '');
+    if ($module === '') {
+        return '';
+    }
+    try {
+        return (string) getModuleKeyForPage($module);
+    } catch (\Throwable $e) {
+        // auth.php not loaded (both harnesses require it one line before this file, so this is
+        // the belt rather than the braces). An undefined function throws Error, which is a
+        // Throwable, so this is a real guard and not decoration - and it is written this way
+        // rather than with function_exists() because the analyser can see auth.php and reports
+        // that call as always true.
+        return '';
+    }
+}
+
+/**
+ * Would auth.php let this role reach this page? Asked of auth.php itself, never inferred.
+ *
+ * This is what separates a permission hole from a deliberate delegation. Most modules are
+ * delegable: an administrator may hand 'meetings' or 'conferences' to the user role on the Roles
+ * page, and then that role rendering the page is the system doing as it was told. Only the
+ * modules under adminOnlyModuleKeys() can never open to a non-admin, whatever the Roles page
+ * says. A sweep that cannot tell those apart has to call every delegation a hole, and a report
+ * full of holes that are not there is one nobody reads.
+ */
+function smoke_role_granted(string $path, string $role): bool
+{
+    $key = smoke_module_key($path);
+    if ($key === '') {
+        return false;
+    }
+    try {
+        return (bool) hasModulePermissionForRole($key, 'access', $role);
+    } catch (\Throwable $e) {
+        // Not granted is the safe answer: it makes the sweep report the page rather than excuse
+        // it, so a lookup that breaks can only ever cost a false alarm, never a missed hole.
+        return false;
+    }
+}

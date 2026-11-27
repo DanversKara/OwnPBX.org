@@ -397,6 +397,8 @@ function check_rbac(): void
     // PBX one has to exist, and if it does not, the check says so rather than testing nothing.
     // One line, before the loop: the same cause repeated against 42 pages is how this check
     // last made itself ignorable.
+    /** @var list<string> $delegated pages the role may legitimately see, named in the summary */
+    $delegated = [];
     $LOW_ROLE = smoke_low_role();
     if ($LOW_ROLE === '') {
         notice('rbac', 'all admin pages', 'no active account holds any of '
@@ -431,12 +433,36 @@ function check_rbac(): void
             continue;
         }
         $lowBytes = $asLow['bytes'] ?? 0;
-        if ($lowBytes > $BLOCKED_MAX) {
-            fail('rbac', $path, "the {$LOW_ROLE} role COULD RENDER this admin page ({$lowBytes} bytes,"
-                . " admin {$adminBytes} bytes) — permission hole!");
+        if ($lowBytes <= $BLOCKED_MAX) {
+            continue;   // blocked, as it should be
         }
+
+        // It rendered. Whether that is a hole turns on something this check used to skip:
+        // whether anybody granted the role access to the page's module. Most modules are
+        // delegable - an administrator may hand 'meetings' or 'conferences' to the user role on
+        // the Roles page - and then the page opening is the system doing as it was told. Only the
+        // modules under adminOnlyModuleKeys() can never open to a non-admin, whatever that page
+        // says. Calling both a hole is what put "/meetings - permission hole!" in front of an
+        // owner who had deliberately let users into video meetings, and a report full of holes
+        // that are not there is one nobody reads.
+        $moduleKey = (string) ($asLow['module_key'] ?? '');
+        if (!empty($asLow['granted'])) {
+            $delegated[] = $path . ($moduleKey !== '' ? " ({$moduleKey})" : '');
+            continue;
+        }
+        fail('rbac', $path, "the {$LOW_ROLE} role COULD RENDER this admin page ({$lowBytes} bytes,"
+            . " admin {$adminBytes} bytes) and auth.php grants it no access to"
+            . ($moduleKey !== '' ? " the '{$moduleKey}' module" : ' this page')
+            . ' — permission hole!');
     }
-    group_done('rbac', $n, 'as ' . $LOW_ROLE);
+    $note = 'as ' . $LOW_ROLE;
+    if ($delegated !== []) {
+        // Named, not hidden. The sweep has nothing to say about these pages while the grant
+        // stands, and the owner should be able to see which ones that covers: a page quietly
+        // dropped from a security check is how the check stops meaning anything.
+        $note .= '; granted on purpose, so not tested: ' . implode(', ', $delegated);
+    }
+    group_done('rbac', $n, $note);
 }
 
 if ($only === null || $only === 'rbac') { check_rbac(); }

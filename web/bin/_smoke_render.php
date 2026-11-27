@@ -99,6 +99,14 @@ register_shutdown_function(function () use ($path, $lang, $role, $outfile) {
         // Set when no active account holds the role this render was asked for.
         'no_role_account' => (string) ($GLOBALS['SMOKE_NO_ROLE_ACCOUNT'] ?? ''),
         'closed'     => stripos($html, '</html>') !== false,
+        // What auth.php would answer for this role and this page's module, asked directly rather
+        // than guessed from whether the page came out. The permission sweep needs it to tell the
+        // two apart: a page that is open BECAUSE somebody granted the role access to its module
+        // is the system working, while the same page open with no grant behind it is a hole. The
+        // sweep used to call both a hole, which is how it reported /meetings on a PBX whose
+        // owner had quite deliberately let users into video meetings.
+        'module_key' => smoke_module_key($path),
+        'granted'    => smoke_role_granted($path, $role),
         'php_errors' => array_values(array_unique($GLOBALS['SMOKE_PHP_ERRORS'] ?? [])),
         // Unlike substr, mb_strcut does not split a multibyte UTF-8 character
         // in the middle. With plain substr, once a page passed 200 KB the cut
