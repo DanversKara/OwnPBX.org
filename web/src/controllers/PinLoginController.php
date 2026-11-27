@@ -117,23 +117,27 @@ class PinLoginController extends BaseController
                         return;
                     }
                     if (!empty($res['locked'])) {
-                        unset($_SESSION['pending_pin_user_id'], $_SESSION['pending_pin_username'], $_SESSION['pending_pin_full_name']);
-                        notify(t('admin_pin.too_many_failures'), 'danger');
-                        static::redirect('/login');
-                        return;
-                    }
-                    if (!empty($res['needs_setup'])) {
+                        // Already locked out (counter at 3 in this window,
+                        // e.g. after unsealing the vault — the lockout is
+                        // independent of the seal). Stay on the PIN page and
+                        // show the remaining wait time instead of bouncing
+                        // to /login, where the notify would never display.
+                        $remainingSeconds = max(0, (int) ($row['admin_pin_failures_at'] ?? 0) + AdminPinService::FAILURE_WINDOW_SECONDS - time());
+                        $remainingMinutes = (int) ceil($remainingSeconds / 60);
+                        $error = t('admin_pin.too_many_failures') . ' ' . t('admin_pin.try_again_in') . ' ' . $remainingMinutes . ' ' . ($remainingMinutes === 1 ? t('admin_pin.minute') : t('admin_pin.minutes')) . '.';
+                    } elseif (!empty($res['needs_setup'])) {
                         $_SESSION['pending_pin_setup_user_id'] = $userId;
                         unset($_SESSION['pending_pin_user_id'], $_SESSION['pending_pin_username'], $_SESSION['pending_pin_full_name']);
                         static::redirect('/admin-pin-setup');
                         return;
-                    }
-                    $error = t('admin_pin.invalid_pin');
-                    $remaining = AdminPinService::MAX_FAILURES - (int) ($res['failures'] ?? 0);
-                    if ($remaining === 2) {
-                        $error .= ' ' . t('admin_pin.attempts_remaining_2');
-                    } elseif ($remaining === 1) {
-                        $error .= ' ' . t('admin_pin.attempts_remaining_1');
+                    } else {
+                        $error = t('admin_pin.invalid_pin');
+                        $remaining = AdminPinService::MAX_FAILURES - (int) ($res['failures'] ?? 0);
+                        if ($remaining === 2) {
+                            $error .= ' ' . t('admin_pin.attempts_remaining_2');
+                        } elseif ($remaining === 1) {
+                            $error .= ' ' . t('admin_pin.attempts_remaining_1');
+                        }
                     }
                 }
             }
