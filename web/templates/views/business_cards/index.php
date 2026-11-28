@@ -131,19 +131,19 @@ $badges = [
                         <a href="/business-cards?log=<?php echo (int) $c['id']; ?>" class="btn btn-secondary btn-sm" title="<?php echo $e(t('cards.view_log')); ?>"><i class="fas fa-list"></i></a>
                         <?php if ($canEdit): ?>
                             <a href="/business-cards?edit=<?php echo (int) $c['id']; ?>" class="btn btn-secondary btn-sm"><i class="fas fa-pen"></i></a>
-                            <form method="post" class="u-inline" onsubmit="return confirm('<?php echo $e(t('cards.confirm_reissue')); ?>')">
+                            <form method="post" class="u-inline" data-confirm="<?php echo $e(t('cards.confirm_reissue')); ?>">
                                 <input type="hidden" name="csrf_token" value="<?php echo $e($csrf); ?>">
                                 <input type="hidden" name="card_id" value="<?php echo (int) $c['id']; ?>">
                                 <button type="submit" name="reissue_card" value="1" class="btn btn-secondary btn-sm" title="<?php echo $e(t('cards.reissue')); ?>"><i class="fas fa-rotate"></i></button>
                             </form>
                             <?php if (!$revoked): ?>
-                            <form method="post" class="u-inline" onsubmit="return confirm('<?php echo $e(t('cards.confirm_revoke')); ?>')">
+                            <form method="post" class="u-inline" data-confirm="<?php echo $e(t('cards.confirm_revoke')); ?>">
                                 <input type="hidden" name="csrf_token" value="<?php echo $e($csrf); ?>">
                                 <input type="hidden" name="card_id" value="<?php echo (int) $c['id']; ?>">
                                 <button type="submit" name="revoke_card" value="1" class="btn btn-warning btn-sm" title="<?php echo $e(t('cards.revoke')); ?>"><i class="fas fa-ban"></i></button>
                             </form>
                             <?php endif; ?>
-                            <form method="post" class="u-inline" onsubmit="return confirm('<?php echo $e(t('cards.confirm_delete')); ?>')">
+                            <form method="post" class="u-inline" data-confirm="<?php echo $e(t('cards.confirm_delete')); ?>">
                                 <input type="hidden" name="csrf_token" value="<?php echo $e($csrf); ?>">
                                 <input type="hidden" name="card_id" value="<?php echo (int) $c['id']; ?>">
                                 <button type="submit" name="delete_card" value="1" class="btn btn-danger btn-sm"><i class="fas fa-trash"></i></button>

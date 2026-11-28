@@ -13,6 +13,18 @@
 (function () {
     'use strict';
 
+    // Asking before the irreversible ones. The question text lives in a data-confirm attribute
+    // rather than inside a quoted confirm('...') in the markup: a translation containing an
+    // apostrophe would break the handler, and a broken handler does not ask at all - it lets the
+    // click straight through, which here means killing a QR somebody already printed.
+    document.querySelectorAll('form[data-confirm]').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+            if (!window.confirm(form.dataset.confirm)) {
+                e.preventDefault();
+            }
+        });
+    });
+
     var addBtn = document.getElementById('cardAddLine');
     var host = document.getElementById('cardFields');
     if (!addBtn || !host) {
