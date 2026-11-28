@@ -34,7 +34,7 @@ class CardPublicController
         // second is matched against one literal word and anything else is simply not the
         // vCard, so no part of the path is ever used to build a filename or a path.
         $parts = explode('/', trim(substr($path, strlen('/card')), '/'), 2);
-        $token = $parts[0] ?? '';
+        $token = $parts[0];   // explode() always yields at least one element
         $suffix = $parts[1] ?? '';
         $wantsVcard = $suffix === 'vcard';
         if ($suffix !== '' && !$wantsVcard) {

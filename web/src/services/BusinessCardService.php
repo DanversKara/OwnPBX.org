@@ -448,9 +448,9 @@ class BusinessCardService
             @chmod($target, 0644);
             return $name;
         } finally {
-            if ($src instanceof \GdImage) {
-                imagedestroy($src);
-            }
+            // $src is a GdImage from here on - the match above returned one or we threw -
+            // and imagescale() only replaces it with another, so no check is needed.
+            imagedestroy($src);
         }
     }
 
