@@ -30,7 +30,19 @@ class CardPublicController
 {
     public static function serve(string $path): void
     {
-        $token = trim(substr($path, strlen('/card')), '/');
+        // /card/<token> and /card/<token>/vcard. Only the first segment is the token; the
+        // second is matched against one literal word and anything else is simply not the
+        // vCard, so no part of the path is ever used to build a filename or a path.
+        $parts = explode('/', trim(substr($path, strlen('/card')), '/'), 2);
+        $token = $parts[0] ?? '';
+        $suffix = $parts[1] ?? '';
+        $wantsVcard = $suffix === 'vcard';
+        if ($suffix !== '' && !$wantsVcard) {
+            // One known suffix and nothing else. /card/<token>/anything-else is not a card
+            // page with a decoration on the end, it is a URL this does not serve.
+            self::headers();
+            self::notFound();
+        }
         $method = (string) ($_SERVER['REQUEST_METHOD'] ?? 'GET');
 
         // index.php has already opened a session by the time it gets here, and this page never
@@ -76,7 +88,12 @@ class CardPublicController
             self::notFound();
         }
         if (isset($res['need_pin'])) {
+            // A PIN-protected card hands out no contact file before the PIN, or the .vcf
+            // would be a way round the PIN for everything the vCard carries.
             self::render(null, [], $token, $pin !== '');
+        }
+        if ($wantsVcard) {
+            self::sendVcard($res['card'], $token);
         }
         self::render($res['card'], $res['fields'], $token, false);
     }
@@ -125,6 +142,31 @@ class CardPublicController
         exit;
     }
 
+    /**
+     * Sends the card as a .vcf, so the person can keep the contact in their phone.
+     *
+     * The filename is built from the card's display name, not from anything in the URL, and
+     * it is reduced to letters, digits, dashes and underscores before it goes into the
+     * header - a quote or a newline in a Content-Disposition is how a header gets split.
+     */
+    private static function sendVcard(array $card, string $token): void
+    {
+        $vcf = BusinessCardService::vcard($card, $token);
+        if ($vcf === '') {
+            self::notFound();
+        }
+        $name = (string) preg_replace('/[^A-Za-z0-9_-]+/', '-', (string) ($card['display_name'] ?? 'contact'));
+        $name = trim($name, '-');
+        if ($name === '') {
+            $name = 'contact';
+        }
+        header('Content-Type: text/vcard; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . substr($name, 0, 60) . '.vcf"');
+        header('Content-Length: ' . (string) strlen($vcf));
+        echo $vcf;
+        exit;
+    }
+
     /** @param array<string,mixed>|null $card null renders the PIN prompt */
     private static function render(?array $card, array $fields, string $token, bool $pinWasWrong): void
     {
@@ -139,6 +181,7 @@ class CardPublicController
             exit;
         }
         $cardWidget = self::widgetPublicId($card);
+        $cardHasVcard = BusinessCardService::vcard($card, $token) !== '';
         require dirname(__DIR__, 2) . '/templates/views/card_public/card.php';
         exit;
     }

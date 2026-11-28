@@ -161,7 +161,7 @@ $badges = [
     <div class="card-header"><h3 class="u-m-0"><i class="fas fa-pen"></i>
         <?php echo $edit !== null ? $e(sprintf(t('cards.edit_title'), $edit['label'])) : t('cards.add'); ?></h3></div>
     <div class="card-body">
-    <form method="post">
+    <form method="post" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="<?php echo $e($csrf); ?>">
         <input type="hidden" name="id" value="<?php echo (int) ($edit['id'] ?? 0); ?>">
 
@@ -227,6 +227,91 @@ $badges = [
         <?php endforeach; ?>
         </div>
         <button type="button" class="btn btn-secondary btn-sm u-mb-16" id="cardAddLine"><i class="fas fa-plus"></i> <?php echo t('cards.f_add_line'); ?></button>
+
+        <h4><?php echo t('cards.f_pictures'); ?></h4>
+        <p class="u-hint u-fs-12"><?php echo t('cards.f_pictures_hint'); ?></p>
+        <div class="form-row">
+            <div class="form-group u-flex-1">
+                <label><?php echo t('cards.f_photo'); ?></label>
+                <?php $av = BusinessCardService::imageUrl((string) ($edit['avatar_file'] ?? '')); ?>
+                <?php if ($av !== ''): ?>
+                    <img src="<?php echo $e($av); ?>" alt="" class="bc-thumb-avatar">
+                <?php endif; ?>
+                <input type="file" name="avatar_file" accept="image/jpeg,image/png,image/webp" class="form-control">
+                <?php if ($av !== ''): ?>
+                    <label class="u-flex-center u-gap-8 u-mt-8"><input type="checkbox" name="remove_avatar" value="1"> <?php echo t('cards.f_remove_photo'); ?></label>
+                <?php endif; ?>
+            </div>
+            <div class="form-group bc-wide">
+                <label><?php echo t('cards.f_cover'); ?></label>
+                <?php $cv = BusinessCardService::imageUrl((string) ($edit['cover_file'] ?? '')); ?>
+                <?php if ($cv !== ''): ?>
+                    <img src="<?php echo $e($cv); ?>" alt="" class="bc-thumb-cover">
+                <?php endif; ?>
+                <input type="file" name="cover_file" accept="image/jpeg,image/png,image/webp" class="form-control">
+                <?php if ($cv !== ''): ?>
+                    <label class="u-flex-center u-gap-8 u-mt-8"><input type="checkbox" name="remove_cover" value="1"> <?php echo t('cards.f_remove_cover'); ?></label>
+                <?php endif; ?>
+                <small class="u-hint"><?php echo t('cards.f_cover_hint'); ?></small>
+            </div>
+        </div>
+
+        <h4><?php echo t('cards.f_vcard'); ?></h4>
+        <p class="u-hint u-fs-12"><?php echo t('cards.f_vcard_hint'); ?></p>
+        <div class="form-row">
+            <div class="form-group u-flex-1">
+                <label><?php echo t('cards.f_vc_first'); ?></label>
+                <input type="text" name="vcard_first_name" maxlength="120" class="form-control"
+                       value="<?php echo $e($edit['vcard_first_name'] ?? ''); ?>">
+            </div>
+            <div class="form-group u-flex-1">
+                <label><?php echo t('cards.f_vc_last'); ?></label>
+                <input type="text" name="vcard_last_name" maxlength="120" class="form-control"
+                       value="<?php echo $e($edit['vcard_last_name'] ?? ''); ?>">
+                <small class="u-hint"><?php echo t('cards.f_vc_last_hint'); ?></small>
+            </div>
+            <div class="form-group u-flex-center">
+                <label class="u-flex-center u-gap-8">
+                    <input type="checkbox" name="vcard_enabled" value="1"<?php echo (int) ($edit['vcard_enabled'] ?? 1) === 1 ? ' checked' : ''; ?>>
+                    <?php echo t('cards.f_vc_enabled'); ?>
+                </label>
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group u-flex-1">
+                <label><?php echo t('cards.f_vc_phone'); ?></label>
+                <input type="text" name="vcard_phone" maxlength="40" class="form-control"
+                       value="<?php echo $e($edit['vcard_phone'] ?? ''); ?>">
+            </div>
+            <div class="form-group u-flex-1">
+                <label><?php echo t('cards.f_vc_mobile'); ?></label>
+                <input type="text" name="vcard_mobile" maxlength="40" class="form-control"
+                       value="<?php echo $e($edit['vcard_mobile'] ?? ''); ?>">
+            </div>
+            <div class="form-group u-flex-1">
+                <label><?php echo t('cards.f_vc_email'); ?></label>
+                <input type="email" name="vcard_email" maxlength="190" class="form-control"
+                       value="<?php echo $e($edit['vcard_email'] ?? ''); ?>">
+            </div>
+        </div>
+        <div class="form-row">
+            <div class="form-group u-flex-1">
+                <label><?php echo t('cards.f_vc_website'); ?></label>
+                <input type="text" name="vcard_website" maxlength="255" class="form-control"
+                       value="<?php echo $e($edit['vcard_website'] ?? ''); ?>">
+            </div>
+            <div class="form-group bc-wide">
+                <label><?php echo t('cards.f_vc_address'); ?></label>
+                <input type="text" name="vcard_address" maxlength="255" class="form-control"
+                       value="<?php echo $e($edit['vcard_address'] ?? ''); ?>">
+            </div>
+        </div>
+        <div class="form-group">
+            <label><?php echo t('cards.f_vc_note'); ?></label>
+            <input type="text" name="vcard_note" maxlength="255" class="form-control"
+                   value="<?php echo $e($edit['vcard_note'] ?? ''); ?>">
+            <small class="u-hint"><?php echo t('cards.f_vc_note_hint'); ?></small>
+        </div>
 
         <h4><?php echo t('cards.f_calling'); ?></h4>
         <div class="form-row">

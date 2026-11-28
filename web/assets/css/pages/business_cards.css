@@ -33,3 +33,13 @@
 .bc-wide:not(#u):not(#u) {
     flex: 2;
 }
+
+/* Editor previews of the two pictures. */
+.bc-thumb-avatar:not(#u):not(#u) {
+    width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+    display: block; margin-bottom: 8px;
+}
+.bc-thumb-cover:not(#u):not(#u) {
+    width: 100%; max-width: 320px; height: 72px; object-fit: cover;
+    border-radius: 8px; display: block; margin-bottom: 8px;
+}

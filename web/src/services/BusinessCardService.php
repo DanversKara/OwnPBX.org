@@ -339,6 +339,258 @@ class BusinessCardService
         return true;
     }
 
+    // ---------------------------------------------------------------- pictures
+
+    /** Where card images live. Served as /assets/images/cards/<file>, like the brand logos. */
+    public const IMAGE_DIR = '/assets/images/cards';
+
+    /** The two pictures a card can carry, and the size each is reduced to. */
+    private const IMAGE_SPECS = [
+        'avatar' => ['w' => 512, 'h' => 512],
+        'cover'  => ['w' => 1200, 'h' => 400],
+    ];
+
+    private const IMAGE_MAX_BYTES = 6 * 1024 * 1024;
+
+    public static function imageDir(): string
+    {
+        return dirname(__DIR__, 2) . self::IMAGE_DIR;
+    }
+
+    /** The public URL for a stored card image, or '' - never a path from the database. */
+    public static function imageUrl(string $file): string
+    {
+        // The column holds a bare generated filename. Anything else is treated as absent
+        // rather than printed, so a row that somehow held "../../etc/passwd" links nowhere.
+        if (preg_match('/^card[0-9]+-(avatar|cover)-[a-f0-9]{16}\.(jpg|png)$/', $file) !== 1) {
+            return '';
+        }
+        return self::IMAGE_DIR . '/' . $file;
+    }
+
+    /**
+     * Stores an uploaded picture for a card and returns its filename, or '' when none came.
+     *
+     * The file is not trusted and not merely checked - it is re-encoded. getimagesize() says
+     * what it really is rather than what it is called, and then GD reads it and writes a
+     * fresh file from the pixels. That drops EXIF, colour profiles, trailing archives and
+     * anything else riding along, and it is what makes a polyglot (a file that is a valid
+     * JPEG and a valid something-else at once) land on disk as an ordinary JPEG.
+     *
+     * SVG is deliberately not accepted. A logo uploaded by an administrator is one thing;
+     * these can be uploaded by a sub-account, SVG is XML that can carry script, and scrubbing
+     * it with regular expressions is a game nobody wins. GIF is out too, for APNG/GIF
+     * animation payload surface we have no reason to take on.
+     *
+     * The filename is generated. Nothing the uploader sent reaches the disk - not the name,
+     * not the extension - so there is no path to traverse and no second extension to smuggle.
+     */
+    public static function saveImage(string $fileKey, int $cardId, string $kind): string
+    {
+        if (!isset(self::IMAGE_SPECS[$kind])) {
+            throw new \InvalidArgumentException('Unknown image kind.');
+        }
+        if (!isset($_FILES[$fileKey]) || ($_FILES[$fileKey]['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return '';
+        }
+        $f = $_FILES[$fileKey];
+        if ($f['error'] !== UPLOAD_ERR_OK) {
+            throw new \Exception(sprintf(t('cards.err_upload'), (int) $f['error']));
+        }
+        if ((int) $f['size'] > self::IMAGE_MAX_BYTES) {
+            throw new \Exception(sprintf(t('cards.err_image_big'), (int) round(self::IMAGE_MAX_BYTES / 1048576)));
+        }
+        // is_uploaded_file, so a path cannot be pointed at a local file by a crafted request.
+        if (!is_uploaded_file($f['tmp_name'])) {
+            throw new \Exception(t('cards.err_image_bad'));
+        }
+
+        $info = @getimagesize($f['tmp_name']);
+        if (!is_array($info)) {
+            throw new \Exception(t('cards.err_image_bad'));
+        }
+        $src = match ($info[2]) {
+            IMAGETYPE_JPEG => @imagecreatefromjpeg($f['tmp_name']),
+            IMAGETYPE_PNG  => @imagecreatefrompng($f['tmp_name']),
+            IMAGETYPE_WEBP => @imagecreatefromwebp($f['tmp_name']),
+            default => null,
+        };
+        if (!$src instanceof \GdImage) {
+            throw new \Exception(t('cards.err_image_type'));
+        }
+
+        try {
+            $spec = self::IMAGE_SPECS[$kind];
+            $w = imagesx($src);
+            $h = imagesy($src);
+            $scale = min(1.0, $spec['w'] / max(1, $w), $spec['h'] / max(1, $h));
+            if ($scale < 1.0) {
+                $resized = imagescale($src, max(1, (int) round($w * $scale)), max(1, (int) round($h * $scale)));
+                if ($resized instanceof \GdImage) {
+                    imagedestroy($src);
+                    $src = $resized;
+                }
+            }
+
+            // PNG keeps transparency, which a cut-out photo or a logo needs; everything else
+            // becomes JPEG, which is smaller for a photograph.
+            $png = $info[2] === IMAGETYPE_PNG;
+            $name = sprintf('card%d-%s-%s.%s', $cardId, $kind, bin2hex(random_bytes(8)), $png ? 'png' : 'jpg');
+            $dir = self::imageDir();
+            if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+                throw new \Exception(sprintf(t('cards.err_image_write'), $dir));
+            }
+            $target = $dir . '/' . $name;
+            $ok = $png ? imagepng($src, $target, 6) : imagejpeg($src, $target, 85);
+            if (!$ok) {
+                throw new \Exception(sprintf(t('cards.err_image_write'), $dir));
+            }
+            @chmod($target, 0644);
+            return $name;
+        } finally {
+            if ($src instanceof \GdImage) {
+                imagedestroy($src);
+            }
+        }
+    }
+
+    /**
+     * Applies the picture part of a save: new uploads, and the two remove boxes.
+     *
+     * Run after the row exists, so the generated filename can carry the card's id. The old
+     * file is deleted only once the new one is safely written, and never when the upload
+     * failed - a failed upload must not leave a card with no picture.
+     */
+    public static function applyImageUploads(int $cardId, array $post): void
+    {
+        $card = self::getCard($cardId);
+        if ($card === null) {
+            return;
+        }
+        $set = [];
+        foreach (['avatar', 'cover'] as $kind) {
+            $col = $kind . '_file';
+            $current = (string) ($card[$col] ?? '');
+            $new = self::saveImage($kind . '_file', $cardId, $kind);
+            if ($new !== '') {
+                $set[$col] = $new;
+                self::deleteImage($current);
+                continue;
+            }
+            if (!empty($post['remove_' . $kind])) {
+                $set[$col] = '';
+                self::deleteImage($current);
+            }
+        }
+        if ($set === []) {
+            return;
+        }
+        $sets = implode(' = ?, ', array_keys($set)) . ' = ?';
+        getDB()->prepare("UPDATE pbx_business_cards SET {$sets} WHERE id = ?")
+            ->execute(array_merge(array_values($set), [$cardId]));
+    }
+
+    /** Deletes a card's stored picture, if the name is one this class would have written. */
+    public static function deleteImage(string $file): void
+    {
+        if (self::imageUrl($file) === '') {
+            return;
+        }
+        @unlink(self::imageDir() . '/' . $file);
+    }
+
+    // ---------------------------------------------------------------- save to contacts
+
+    /**
+     * The card as a vCard 3.0, for "save to my phone", or '' when it is switched off.
+     *
+     * Version 3.0 rather than 4.0 deliberately: iOS and Android both read 3.0 without
+     * complaint, while 4.0 is still patchily handled, and a contact file that half the
+     * phones you hand a card to cannot open is worse than none.
+     *
+     * The card's own URL goes in as well, so whoever saved you can reopen the page later -
+     * the links, the call button, whatever you have added since. That is the one piece of
+     * information in here that is not already on the page, and it is their own link.
+     *
+     * Nothing is published that the page does not already show. The fields are the owner's
+     * own, and the only values that appear are the ones they typed.
+     */
+    public static function vcard(array $card, string $token): string
+    {
+        if ((int) ($card['vcard_enabled'] ?? 1) !== 1) {
+            return '';
+        }
+        $first = trim((string) ($card['vcard_first_name'] ?? ''));
+        $last = trim((string) ($card['vcard_last_name'] ?? ''));
+        if ($first === '' && $last === '') {
+            // Nothing filled in: fall back to the name on the card, splitting on the last
+            // space so "Kara Danvers" files under Danvers, as an address book expects.
+            $display = trim((string) ($card['display_name'] ?? ''));
+            if ($display === '') {
+                return '';
+            }
+            $pos = strrpos($display, ' ');
+            if ($pos === false) {
+                $first = $display;
+            } else {
+                $first = substr($display, 0, $pos);
+                $last = substr($display, $pos + 1);
+            }
+        }
+
+        $lines = ['BEGIN:VCARD', 'VERSION:3.0'];
+        $lines[] = 'N:' . self::vcardEscape($last) . ';' . self::vcardEscape($first) . ';;;';
+        $lines[] = 'FN:' . self::vcardEscape(trim($first . ' ' . $last));
+        foreach ([
+            'TITLE' => $card['job_title'] ?? '',
+            'ORG' => $card['company'] ?? '',
+            'TEL;TYPE=WORK,VOICE' => $card['vcard_phone'] ?? '',
+            'TEL;TYPE=CELL,VOICE' => $card['vcard_mobile'] ?? '',
+            'EMAIL;TYPE=INTERNET,WORK' => $card['vcard_email'] ?? '',
+            'ADR;TYPE=WORK' => $card['vcard_address'] ?? '',
+            'NOTE' => $card['vcard_note'] ?? '',
+        ] as $field => $value) {
+            $value = trim((string) $value);
+            if ($value === '') {
+                continue;
+            }
+            // An address is structured; a one-line address goes in the street component.
+            $lines[] = str_starts_with($field, 'ADR')
+                ? $field . ':;;' . self::vcardEscape($value) . ';;;;'
+                : $field . ':' . self::vcardEscape($value);
+        }
+        $site = trim((string) ($card['vcard_website'] ?? ''));
+        if ($site !== '') {
+            $href = self::linkHref('link', $site);
+            if ($href !== '') {
+                $lines[] = 'URL;TYPE=WORK:' . self::vcardEscape($href);
+            }
+        }
+        $lines[] = 'URL;TYPE=HOME:' . self::vcardEscape(self::cardUrl($token));
+        $lines[] = 'REV:' . gmdate('Ymd\\THis\\Z');
+        $lines[] = 'END:VCARD';
+
+        // CRLF between lines: RFC 6350 requires it, and some address books refuse a file
+        // without it even though every text editor shows the same thing.
+        return implode("\r\n", $lines) . "\r\n";
+    }
+
+    /**
+     * Escapes one vCard value.
+     *
+     * vCard has its own rules and htmlspecialchars is no use here: a comma, a semicolon or a
+     * backslash is structure in this format, and a newline would end the property and let
+     * whatever followed be read as a new one - which is how a "note" field turns into
+     * arbitrary vCard properties in somebody's address book. Backslash first, or it would
+     * escape the escapes added after it.
+     */
+    private static function vcardEscape(string $v): string
+    {
+        $v = str_replace("\\", "\\\\", $v);
+        $v = str_replace(["\r\n", "\n", "\r"], '\\n', $v);
+        return str_replace([';', ','], ['\\;', '\\,'], $v);
+    }
+
     // ---------------------------------------------------------------- the owner's side
 
     /** The full URL a QR, an NFC tag or a short link points at. */
@@ -534,6 +786,13 @@ class BusinessCardService
     public static function deleteCard(int $id): void
     {
         self::assertMine($id);
+        // The pictures go too, or they sit in assets/images/cards for ever with nothing
+        // pointing at them.
+        $card = self::getCard($id);
+        if ($card !== null) {
+            self::deleteImage((string) ($card['avatar_file'] ?? ''));
+            self::deleteImage((string) ($card['cover_file'] ?? ''));
+        }
         // The fields go with it through the foreign key; the views keep their rows with a null
         // card_id so a historical count is not silently rewritten.
         getDB()->prepare('UPDATE pbx_business_card_views SET card_id = NULL WHERE card_id = ?')->execute([$id]);
@@ -619,6 +878,18 @@ class BusinessCardService
             'expires_at' => $expires !== '' ? date('Y-m-d H:i:s', (int) strtotime($expires)) : null,
             'is_active' => !empty($d['is_active']) ? 1 : 0,
         ];
+        // The contact-file fields. Length-capped to the columns and otherwise taken as typed:
+        // they are escaped for vCard on the way out (vcardEscape) and for HTML on the way to
+        // the page, and the two need different escaping, so neither is baked in here.
+        foreach ([
+            'vcard_first_name' => 120, 'vcard_last_name' => 120, 'vcard_phone' => 40,
+            'vcard_mobile' => 40, 'vcard_email' => 190, 'vcard_website' => 255,
+            'vcard_address' => 255, 'vcard_note' => 255,
+        ] as $col => $limit) {
+            $row[$col] = substr(trim((string) ($d[$col] ?? '')), 0, $limit);
+        }
+        $row['vcard_enabled'] = !empty($d['vcard_enabled']) ? 1 : 0;
+
         // An empty PIN box on an edit means "leave it alone", not "remove it" - a form that
         // silently dropped the PIN every time it was saved would be worse than no PIN at all.
         // Removing one is its own checkbox.

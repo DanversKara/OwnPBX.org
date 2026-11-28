@@ -15,6 +15,8 @@
  * @var array<string,mixed>       $card
  * @var list<array<string,mixed>> $cardFields
  * @var string                    $cardWidget  widget public id, '' for no call button
+ * @var string                    $cardToken
+ * @var bool                      $cardHasVcard
  */
 $e = static fn($v): string => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 
@@ -44,15 +46,25 @@ body { margin: 0; padding: 24px 16px 48px; background: #0f172a; color: #e8edf7;
        font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
 .card { max-width: 420px; margin: 0 auto; background: #182135; border: 1px solid #2a3650;
         border-radius: 18px; overflow: hidden; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
-.top { padding: 28px 24px 24px; text-align: center; background:
-       linear-gradient(160deg, color-mix(in srgb, var(--accent) 34%, #182135), #182135); }
-.avatar { width: 76px; height: 76px; margin: 0 auto 14px; border-radius: 50%; background: var(--accent);
-          color: #fff; font-size: 28px; font-weight: 600; letter-spacing: .5px;
-          display: flex; align-items: center; justify-content: center; }
-h1 { margin: 0 0 4px; font-size: 23px; letter-spacing: -.2px; }
-.title { margin: 0; color: #aab7d1; font-size: 15px; }
-.company { margin: 2px 0 0; color: var(--accent); font-size: 15px; font-weight: 600; }
-.tagline { margin: 14px 0 0; color: #c3cde3; font-size: 14.5px; }
+/* A letterhead, then the photo breaking into it, then the name block - the way a CV reads,
+   rather than everything stacked down the middle. */
+.cover { height: 132px; background:
+         linear-gradient(135deg, color-mix(in srgb, var(--accent) 62%, #0b1220),
+                                 color-mix(in srgb, var(--accent) 22%, #0b1220)); }
+.cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.top { padding: 0 24px 22px; }
+.idrow { display: flex; align-items: flex-end; gap: 14px; margin-top: -38px; }
+.avatar { width: 92px; height: 92px; flex: none; border-radius: 18px; overflow: hidden;
+          background: var(--accent); color: #fff; font-size: 30px; font-weight: 600;
+          letter-spacing: .5px; display: flex; align-items: center; justify-content: center;
+          border: 3px solid #182135; box-shadow: 0 8px 22px rgba(0,0,0,.4); }
+.avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.namecol { padding-bottom: 6px; min-width: 0; }
+h1 { margin: 0 0 2px; font-size: 22px; letter-spacing: -.3px; line-height: 1.2; }
+.title { margin: 0; color: #aab7d1; font-size: 14.5px; }
+.company { margin: 1px 0 0; color: var(--accent); font-size: 14.5px; font-weight: 600; }
+.tagline { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid #2a3650;
+           color: #c3cde3; font-size: 14.5px; }
 .rows { padding: 8px 14px 18px; }
 .row { display: flex; gap: 12px; align-items: center; padding: 12px 10px; border-radius: 12px;
        text-decoration: none; color: inherit; }
@@ -62,23 +74,44 @@ a.row:focus-visible { box-shadow: 0 0 0 2px var(--accent); }
 .row .val { color: #e8edf7; word-break: break-word; }
 a.row .val { color: var(--accent); }
 .chev { margin-left: auto; color: #5d6b87; flex: none; }
-.callwrap { padding: 4px 24px 26px; }
+.callwrap { padding: 4px 24px 18px; }
+.savewrap { padding: 0 24px 22px; }
+.save { display: flex; align-items: center; justify-content: center; gap: 8px;
+        padding: 13px 16px; border-radius: 12px; text-decoration: none; font-weight: 600;
+        border: 1px solid var(--accent); color: var(--accent); background: transparent; }
+.save:hover, .save:focus { background: var(--accent); color: #fff; outline: none; }
 .foot { max-width: 420px; margin: 18px auto 0; text-align: center; color: #64748b; font-size: 12px; }
 @media (prefers-color-scheme: light) {
   body { background: #eef2f9; color: #16203a; }
   .card { background: #fff; border-color: #d8e0ee; }
-  .title { color: #5c6b8a; } .tagline { color: #41506f; }
+  .title { color: #5c6b8a; } .tagline { color: #41506f; border-top-color: #e2e8f4; }
+  .avatar { border-color: #fff; }
   .row .val { color: #16203a; } a.row:hover, a.row:focus { background: #f1f5fc; }
 }
 </style>
 </head>
 <body>
 <main class="card">
+  <?php
+  // Both come from imageUrl(), which only returns a path for a filename this PBX generated -
+  // so a row holding anything else links nowhere rather than being printed into the page.
+  $coverUrl = BusinessCardService::imageUrl((string) ($card['cover_file'] ?? ''));
+  $avatarUrl = BusinessCardService::imageUrl((string) ($card['avatar_file'] ?? ''));
+  ?>
+  <div class="cover"><?php if ($coverUrl !== '') { ?><img src="<?php echo $e($coverUrl); ?>" alt=""><?php } ?></div>
   <div class="top">
-    <?php if ($initials !== '') { ?><div class="avatar"><?php echo $e($initials); ?></div><?php } ?>
-    <?php if ($name !== '') { ?><h1><?php echo $e($name); ?></h1><?php } ?>
-    <?php if (($card['job_title'] ?? '') !== '') { ?><p class="title"><?php echo $e($card['job_title']); ?></p><?php } ?>
-    <?php if (($card['company'] ?? '') !== '') { ?><p class="company"><?php echo $e($card['company']); ?></p><?php } ?>
+    <div class="idrow">
+      <?php if ($avatarUrl !== '') { ?>
+        <div class="avatar"><img src="<?php echo $e($avatarUrl); ?>" alt="<?php echo $e($name); ?>"></div>
+      <?php } elseif ($initials !== '') { ?>
+        <div class="avatar"><?php echo $e($initials); ?></div>
+      <?php } ?>
+      <div class="namecol">
+        <?php if ($name !== '') { ?><h1><?php echo $e($name); ?></h1><?php } ?>
+        <?php if (($card['job_title'] ?? '') !== '') { ?><p class="title"><?php echo $e($card['job_title']); ?></p><?php } ?>
+        <?php if (($card['company'] ?? '') !== '') { ?><p class="company"><?php echo $e($card['company']); ?></p><?php } ?>
+      </div>
+    </div>
     <?php if (($card['tagline'] ?? '') !== '') { ?><p class="tagline"><?php echo $e($card['tagline']); ?></p><?php } ?>
   </div>
 
@@ -88,6 +121,16 @@ a.row .val { color: var(--accent); }
              widget's public id appears on the page; the SIP account and its secret stay
              behind /widget-api/call, which issues one-time credentials per call. */ ?>
     <div id="card-call"></div>
+  </div>
+  <?php } ?>
+
+  <?php if ($cardHasVcard) { ?>
+  <div class="savewrap">
+    <?php /* A plain link, not a script: tapping it on a phone opens the contact card with
+             "Add to Contacts" already offered. download= is a hint for a desktop browser. */ ?>
+    <a class="save" href="/card/<?php echo $e($cardToken); ?>/vcard" download>
+      <span aria-hidden="true">&plus;</span> Save to contacts
+    </a>
   </div>
   <?php } ?>
 

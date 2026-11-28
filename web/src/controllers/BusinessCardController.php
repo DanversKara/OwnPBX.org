@@ -40,6 +40,8 @@ class BusinessCardController extends BaseController
                         $fresh = ['id' => $id, 'token' => $made['token']];
                     }
                     BusinessCardService::saveFields($id, self::postedFields());
+                    // After the row exists, so a new card's pictures are named with its id.
+                    BusinessCardService::applyImageUploads($id, $_POST);
                     return t('cards.saved');
                 });
             },

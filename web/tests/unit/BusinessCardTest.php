@@ -617,4 +617,67 @@ final class BusinessCardTest extends TestCase
         $this->assertContains('phpunit tenant a', $labels);
         $this->assertContains('phpunit tenant admin', $labels);
     }
+
+    // --------------------------------------------------------------- save to contacts
+
+    public function testTheVcardCarriesTheDetailsAndTheCardsOwnLink(): void
+    {
+        $vcf = BusinessCardService::vcard([
+            'vcard_enabled' => 1,
+            'display_name' => 'Kara Danvers',
+            'job_title' => 'Owner',
+            'company' => 'Example, Inc.',
+            'vcard_first_name' => 'Kara',
+            'vcard_last_name' => 'Danvers',
+            'vcard_phone' => '+1 555 010 1234',
+            'vcard_email' => 'kara@example.com',
+        ], $this->token);
+
+        $this->assertStringContainsString('BEGIN:VCARD', $vcf);
+        $this->assertStringContainsString('VERSION:3.0', $vcf, '3.0 is what phones read without complaint.');
+        $this->assertStringContainsString('N:Danvers;Kara;;;', $vcf, 'A phone files a contact by surname.');
+        $this->assertStringContainsString('TEL;TYPE=WORK,VOICE:+1 555 010 1234', $vcf);
+        $this->assertStringContainsString('ORG:Example\\, Inc.', $vcf, 'A comma is structure in a vCard and must be escaped.');
+        $this->assertStringContainsString('/card/' . $this->token, $vcf, 'The card link travels with the contact.');
+        $this->assertStringContainsString("\r\n", $vcf, 'RFC 6350 wants CRLF, and some address books insist.');
+    }
+
+    /** No name anywhere means no contact file, rather than an empty one. */
+    public function testTheVcardFallsBackToTheNameOnTheCard(): void
+    {
+        $vcf = BusinessCardService::vcard(['vcard_enabled' => 1, 'display_name' => 'Kara Danvers'], $this->token);
+        $this->assertStringContainsString('N:Danvers;Kara;;;', $vcf);
+        $this->assertSame('', BusinessCardService::vcard(['vcard_enabled' => 1, 'display_name' => ''], $this->token));
+        $this->assertSame('', BusinessCardService::vcard(['vcard_enabled' => 0, 'display_name' => 'Kara'], $this->token));
+    }
+
+    /**
+     * A newline in a field must not start a new vCard property.
+     *
+     * This is the injection that matters in this format: htmlspecialchars is no use, because
+     * a comma, a semicolon and a line break are structure here. Unescaped, a "note" becomes
+     * arbitrary properties in somebody's address book - a premium-rate TEL, say, saved under
+     * your name.
+     */
+    public function testAFieldCannotSmuggleInExtraVcardProperties(): void
+    {
+        $vcf = BusinessCardService::vcard([
+            'vcard_enabled' => 1,
+            'vcard_first_name' => 'A',
+            'vcard_last_name' => 'B',
+            'vcard_note' => "harmless\r\nTEL;TYPE=WORK:+1-900-PREMIUM\r\nX-EVIL:1",
+            'vcard_email' => "x@example.com\nURL:http://evil.example",
+        ], $this->token);
+
+        $props = [];
+        foreach (explode("\r\n", $vcf) as $line) {
+            if ($line !== '' && preg_match('/^([A-Z][A-Z-]*)/', $line, $m) === 1) {
+                $props[] = $m[1];
+            }
+        }
+        $this->assertNotContains('TEL', $props, 'A TEL smuggled through a note must not become a property.');
+        $this->assertStringNotContainsString("\r\nX-EVIL", $vcf);
+        $this->assertStringNotContainsString("\r\nURL:http://evil.example", $vcf);
+        $this->assertStringContainsString('\\n', $vcf, 'The line breaks survive as escaped text inside the value.');
+    }
 }
