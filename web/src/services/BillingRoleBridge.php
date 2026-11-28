@@ -33,6 +33,10 @@ class BillingRoleBridge
         'pbx_queues',
         'pbx_conferences',
         'pbx_ring_groups',
+        // 1.75.84: a widget can place calls and a card publishes a page, so both are
+        // owned rows once a plan user can have them.
+        'pbx_web_widgets',
+        'pbx_business_cards',
     ];
 
     /** @var array<int, array<string, mixed>|null> sys_users row per user id */

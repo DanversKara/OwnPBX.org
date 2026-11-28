@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../services/BusinessCardService.php';
 require_once __DIR__ . '/../services/WebWidgetService.php';
+require_once __DIR__ . '/../services/BillingRoleBridge.php';
 
 /**
  * Integrations → Business cards: one card per person you hand a card to.
@@ -78,8 +79,14 @@ class BusinessCardController extends BaseController
         $viewLogFor = (int) ($_GET['log'] ?? 0);
 
         static::renderPage('business_cards/index', [
-            'cards' => BusinessCardService::allCards(),
-            'widgets' => WebWidgetService::listWidgets(),
+            'cards' => BusinessCardService::allCards(BillingRoleBridge::listOwnerExtension()),
+            // Only widgets the viewer owns, and only those with a profile turned on: a card
+            // calls through a widget, so offering someone else's would hand them a call path
+            // into an account that is not theirs.
+            'widgets' => array_values(array_filter(
+                WebWidgetService::listWidgets(BillingRoleBridge::listOwnerExtension()),
+                static fn(array $w): bool => (int) ($w['profile_enabled'] ?? 0) === 1
+            )),
             'fresh' => $freshView,
             'edit' => isset($_GET['edit']) ? BusinessCardService::getCard((int) $_GET['edit']) : null,
             'editFields' => isset($_GET['edit']) ? BusinessCardService::cardFields((int) $_GET['edit']) : [],

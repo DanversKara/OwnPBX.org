@@ -46,6 +46,13 @@ final class BusinessCardTest extends TestCase
         $db = getDB();
         $db->exec("DELETE FROM pbx_business_card_views WHERE ip LIKE '203.0.113.%'");
         $db->exec("DELETE FROM pbx_business_cards WHERE label LIKE 'phpunit%'");
+        $db->exec("DELETE FROM sys_users WHERE username LIKE 'zz_tenant_%'");
+        // The tenancy tests sign somebody in; leaving that behind would quietly scope every
+        // later test in the run to one extension.
+        unset($_SESSION['user_id'], $_SESSION['user_role']);
+        if (class_exists('BillingRoleBridge')) {
+            BillingRoleBridge::resetCache();
+        }
     }
 
     private function open(string $token, string $pin = '', string $ip = self::IP): ?array
@@ -486,5 +493,128 @@ final class BusinessCardTest extends TestCase
             $html,
             'Every value has to go through the escaper, never straight to output.'
         );
+    }
+
+    // --------------------------------------------------------------- sub-accounts
+
+    /** Makes the viewer a billing-scoped plan user on $ext, and returns their id. */
+    private function asPlanUser(string $ext): int
+    {
+        $db = getDB();
+        $db->prepare(
+            "INSERT INTO sys_users (username, password_hash, full_name, email, role, extension, extension_type, is_active)
+             VALUES (?, '', 'Tenancy test', ?, 'user', ?, 'sip', 1)
+             ON DUPLICATE KEY UPDATE role = 'user', extension = VALUES(extension), is_active = 1"
+        )->execute(['zz_tenant_' . $ext, "zz{$ext}@example.com", $ext]);
+        $id = (int) $db->query("SELECT id FROM sys_users WHERE username = 'zz_tenant_{$ext}'")->fetchColumn();
+
+        $_SESSION['user_id'] = $id;
+        $_SESSION['user_role'] = 'user';
+        BillingRoleBridge::resetCache();
+
+        // The billing plugin is not loaded in the test run, so BillingBridge::load() is false
+        // and no plan resolves. Seeding the plan-feature cache makes the bridge treat this as
+        // a real plan user, so every path below is the production one.
+        $prop = (new ReflectionClass('BillingRoleBridge'))->getProperty('planFeatures');
+        $prop->setAccessible(true);
+        $cache = $prop->getValue();
+        $cache[$id] = ['web_widgets', 'business_cards'];
+        $prop->setValue(null, $cache);
+        return $id;
+    }
+
+    private function cardOwnedBy(?string $ext, string $label): int
+    {
+        $db = getDB();
+        $db->prepare(
+            "INSERT INTO pbx_business_cards (label, owner_extension, token_hash, display_name)
+             VALUES (?, ?, ?, 'X')"
+        )->execute([$label, $ext, hash('sha256', bin2hex(random_bytes(16)))]);
+        return (int) $db->lastInsertId();
+    }
+
+    /**
+     * One account's cards must never appear in another's list.
+     *
+     * owner_extension is the column the billing role bridge already uses for time
+     * conditions, queues, IVRs and the rest; NULL means admin-owned. An admin stays
+     * unscoped and sees everything, which is what makes this safe to add to a live system
+     * without rewriting who owns what.
+     */
+    public function testEachAccountSeesOnlyItsOwnCards(): void
+    {
+        $this->cardOwnedBy('7001', 'phpunit tenant a');
+        $this->cardOwnedBy('7002', 'phpunit tenant b');
+        $this->cardOwnedBy(null, 'phpunit tenant admin');
+
+        try {
+            $this->asPlanUser('7001');
+            $labels = array_column(BusinessCardService::allCards(BillingRoleBridge::listOwnerExtension()), 'label');
+            $this->assertSame(['phpunit tenant a'], $labels, 'A plan user sees their own card and nothing else.');
+
+            $this->asPlanUser('7002');
+            $labels = array_column(BusinessCardService::allCards(BillingRoleBridge::listOwnerExtension()), 'label');
+            $this->assertSame(['phpunit tenant b'], $labels);
+        } finally {
+            unset($_SESSION['user_id'], $_SESSION['user_role']);
+            BillingRoleBridge::resetCache();
+            getDB()->exec("DELETE FROM sys_users WHERE username LIKE 'zz_tenant_%'");
+        }
+    }
+
+    /**
+     * A filtered list is not isolation on its own - the ids are sequential and guessable.
+     *
+     * So every read and every mutation is checked against the stored row too. "Not mine"
+     * reads as "not there" rather than as an error, because answering "exists but is not
+     * yours" would let one account enumerate another's cards by walking the ids.
+     */
+    public function testOneAccountCannotTouchAnothersCardById(): void
+    {
+        $mine = $this->cardOwnedBy('7001', 'phpunit tenant a');
+        $theirs = $this->cardOwnedBy('7002', 'phpunit tenant b');
+        $adminOwned = $this->cardOwnedBy(null, 'phpunit tenant admin');
+
+        try {
+            $this->asPlanUser('7001');
+
+            $this->assertNotNull(BusinessCardService::getCard($mine), 'Their own card is readable.');
+            $this->assertNull(BusinessCardService::getCard($theirs), "Another account's card must read as absent.");
+            $this->assertNull(BusinessCardService::getCard($adminOwned), 'An admin-owned card is not theirs either.');
+            $this->assertSame([], BusinessCardService::cardViews($theirs), 'Nor is its log.');
+            $this->assertSame([], BusinessCardService::cardFields($theirs));
+
+            foreach (['revokeCard', 'reissueCard', 'deleteCard'] as $op) {
+                $refused = false;
+                try {
+                    BusinessCardService::$op($theirs);
+                } catch (\Throwable $e) {
+                    $refused = true;
+                }
+                $this->assertTrue($refused, "{$op}() on another account's card must be refused.");
+            }
+            // And it is still there.
+            $q = getDB()->prepare('SELECT COUNT(*) FROM pbx_business_cards WHERE id = ?');
+            $q->execute([$theirs]);
+            $this->assertSame(1, (int) $q->fetchColumn(), "The other account's card must survive.");
+        } finally {
+            unset($_SESSION['user_id'], $_SESSION['user_role']);
+            BillingRoleBridge::resetCache();
+            getDB()->exec("DELETE FROM sys_users WHERE username LIKE 'zz_tenant_%'");
+        }
+    }
+
+    /** An admin is unscoped, as before, or adding this would hide their own rows from them. */
+    public function testAnAdminStillSeesEverything(): void
+    {
+        $this->cardOwnedBy('7001', 'phpunit tenant a');
+        $this->cardOwnedBy(null, 'phpunit tenant admin');
+        $_SESSION['user_role'] = 'admin';
+        BillingRoleBridge::resetCache();
+
+        $this->assertNull(BillingRoleBridge::listOwnerExtension(), 'An admin must not be scoped.');
+        $labels = array_column(BusinessCardService::allCards(BillingRoleBridge::listOwnerExtension()), 'label');
+        $this->assertContains('phpunit tenant a', $labels);
+        $this->assertContains('phpunit tenant admin', $labels);
     }
 }

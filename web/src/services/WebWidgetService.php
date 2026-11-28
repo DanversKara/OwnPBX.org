@@ -79,15 +79,30 @@ class WebWidgetService
 
     // ------------------------------------------------------------ widgets
 
-    public static function listWidgets(): array
+    /**
+     * The widgets this viewer may see.
+     *
+     * $owner is BillingRoleBridge::listOwnerExtension(): null means unscoped - an admin, who
+     * sees every widget as before - and a string means only that account's. An empty string
+     * is a plan user with no extension and matches nothing, which is the safe answer: an
+     * account that cannot own a row must see an empty list, never everybody else's.
+     */
+    public static function listWidgets(?string $owner = null): array
     {
-        $rows = getDB()->query(
+        $where = '';
+        $args = [];
+        if ($owner !== null) {
+            $where = 'WHERE w.owner_extension = ?';
+            $args = [$owner];
+        }
+        $stmt = getDB()->prepare(
             "SELECT w.*,
                     (SELECT COUNT(*) FROM pbx_web_widget_sessions s
                       WHERE s.widget_id = w.id AND s.result IN ('claimed', 'callback') AND s.created_at >= CURDATE()) AS calls_today
-             FROM pbx_web_widgets w ORDER BY w.name ASC, w.id ASC"
-        )->fetchAll(PDO::FETCH_ASSOC);
-        return $rows ?: [];
+             FROM pbx_web_widgets w {$where} ORDER BY w.name ASC, w.id ASC"
+        );
+        $stmt->execute($args);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
     public static function getWidget(int $id): ?array
@@ -129,6 +144,12 @@ class WebWidgetService
             if (self::getWidget($id) === null) {
                 throw new \Exception(t('web_widgets.err_not_found'));
             }
+            // A plan user may only edit a widget that is theirs. Checked against the stored
+            // row, not against anything the form sent, so a posted id for somebody else's
+            // widget is refused rather than used.
+            if (class_exists('BillingRoleBridge')) {
+                BillingRoleBridge::assertMayTouchRow('pbx_web_widgets', $id);
+            }
             $sets = implode(', ', array_map(fn($c) => "`{$c}` = ?", array_keys($row)));
             $db->prepare("UPDATE pbx_web_widgets SET {$sets} WHERE id = ?")
                 ->execute([...array_values($row), $id]);
@@ -136,6 +157,11 @@ class WebWidgetService
         } else {
             $row['public_id'] = self::newPublicId();
             $row['sip_secret'] = self::newSecret();
+            // NULL for an admin, the creator's extension for a plan user: the row is theirs
+            // and nobody else's list shows it. Never taken from the form.
+            if (class_exists('BillingRoleBridge')) {
+                $row['owner_extension'] = BillingRoleBridge::creatorOwnerExtension();
+            }
             $cols = implode(', ', array_map(fn($c) => "`{$c}`", array_keys($row)));
             $marks = implode(', ', array_fill(0, count($row), '?'));
             $db->prepare("INSERT INTO pbx_web_widgets ({$cols}) VALUES ({$marks})")->execute(array_values($row));

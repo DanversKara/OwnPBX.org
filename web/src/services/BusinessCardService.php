@@ -373,31 +373,77 @@ class BusinessCardService
         }
     }
 
-    /** Every card, newest first, with its view and call counts. */
-    public static function allCards(): array
+    /**
+     * The cards this viewer may see, newest first, with their view and call counts.
+     *
+     * $owner is BillingRoleBridge::listOwnerExtension(): null for an admin, who sees every
+     * card, and a string for one account's. An empty string matches nothing on purpose - a
+     * plan user with no extension gets an empty list rather than everyone's cards.
+     */
+    public static function allCards(?string $owner = null): array
     {
-        $rows = getDB()->query(
+        $where = '';
+        $args = [];
+        if ($owner !== null) {
+            $where = 'WHERE c.owner_extension = ?';
+            $args = [$owner];
+        }
+        $stmt = getDB()->prepare(
             "SELECT c.*, w.name AS widget_name, w.public_id AS widget_public_id,
                     (SELECT COUNT(*) FROM pbx_business_card_views v
                       WHERE v.card_id = c.id AND v.result = 'call' AND v.created_at >= CURDATE()) AS calls_today
              FROM pbx_business_cards c
              LEFT JOIN pbx_web_widgets w ON w.id = c.widget_id
-             ORDER BY c.id DESC"
-        )->fetchAll(PDO::FETCH_ASSOC);
-        return $rows ?: [];
+             {$where} ORDER BY c.id DESC"
+        );
+        $stmt->execute($args);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
     }
 
+    /**
+     * One card, or null when it is not this viewer's to see.
+     *
+     * Not-mine reads as not-there rather than as an error: the editor and the view log both
+     * come in by id from a query string, and answering "that exists but is not yours" would
+     * let one account enumerate another's cards by walking the ids.
+     */
     public static function getCard(int $id): ?array
     {
         $stmt = getDB()->prepare('SELECT * FROM pbx_business_cards WHERE id = ?');
         $stmt->execute([$id]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return is_array($row) ? $row : null;
+        if (!is_array($row)) {
+            return null;
+        }
+        if (class_exists('BillingRoleBridge')
+            && !BillingRoleBridge::mayTouchOwner($row['owner_extension'] ?? null)) {
+            return null;
+        }
+        return $row;
+    }
+
+    /**
+     * Refuses unless this card is the viewer's to touch.
+     *
+     * Checked against the stored row rather than anything the form sent, so posting another
+     * account's card id is refused instead of obeyed. An admin is unscoped and always passes;
+     * a plan user passes only on their own rows. Called by every operation that changes a
+     * card - a list that is filtered but mutations that are not would be no isolation at all,
+     * because the ids are sequential and guessable.
+     */
+    private static function assertMine(int $id): void
+    {
+        if (class_exists('BillingRoleBridge')) {
+            BillingRoleBridge::assertMayTouchRow('pbx_business_cards', $id);
+        }
     }
 
     /** The owner-facing field list for a card (the public page has its own, narrower read). */
     public static function cardFields(int $id): array
     {
+        if (self::getCard($id) === null) {
+            return [];
+        }
         $stmt = getDB()->prepare(
             'SELECT * FROM pbx_business_card_fields WHERE card_id = ? ORDER BY sort_order ASC, id ASC'
         );
@@ -408,6 +454,10 @@ class BusinessCardService
     /** The view log for one card, newest first. */
     public static function cardViews(int $id, int $limit = 100): array
     {
+        // Through getCard(), so a card that is not the viewer's has no readable log either.
+        if (self::getCard($id) === null) {
+            return [];
+        }
         $limit = max(1, min(500, $limit));
         // Interpolated because LIMIT cannot be bound on every driver; it is an int clamped to
         // a range one line above, so no input reaches the statement.
@@ -433,6 +483,12 @@ class BusinessCardService
         $row = self::validate($data);
         $row['token_hash'] = hash('sha256', $token);
         $row['created_by'] = isset($_SESSION['user_id']) ? (int) $_SESSION['user_id'] : null;
+        // NULL for an admin (a system-owned row everyone with the module sees), the creator's
+        // extension for a plan user - which is what keeps one account's cards out of another's
+        // list. Stamped here rather than taken from the form, so it cannot be posted.
+        if (class_exists('BillingRoleBridge')) {
+            $row['owner_extension'] = BillingRoleBridge::creatorOwnerExtension();
+        }
 
         $cols = array_keys($row);
         $stmt = getDB()->prepare(
@@ -448,6 +504,7 @@ class BusinessCardService
         if (self::getCard($id) === null) {
             throw new \Exception(t('cards.err_not_found'));
         }
+        self::assertMine($id);
         $row = self::validate($data);
         $sets = implode(' = ?, ', array_keys($row)) . ' = ?';
         $stmt = getDB()->prepare("UPDATE pbx_business_cards SET {$sets} WHERE id = ?");
@@ -457,6 +514,7 @@ class BusinessCardService
     /** Withdraws a card. The QR on the printed card stops working; the row and its log stay. */
     public static function revokeCard(int $id): void
     {
+        self::assertMine($id);
         getDB()->prepare('UPDATE pbx_business_cards SET is_active = 0, revoked_at = NOW() WHERE id = ?')
             ->execute([$id]);
     }
@@ -464,6 +522,7 @@ class BusinessCardService
     /** A new token for the same card: the old QR dies, the card's content and log survive. */
     public static function reissueCard(int $id): string
     {
+        self::assertMine($id);
         $token = bin2hex(random_bytes(16));
         getDB()->prepare(
             'UPDATE pbx_business_cards
@@ -474,6 +533,7 @@ class BusinessCardService
 
     public static function deleteCard(int $id): void
     {
+        self::assertMine($id);
         // The fields go with it through the foreign key; the views keep their rows with a null
         // card_id so a historical count is not silently rewritten.
         getDB()->prepare('UPDATE pbx_business_card_views SET card_id = NULL WHERE card_id = ?')->execute([$id]);
@@ -491,6 +551,7 @@ class BusinessCardService
      */
     public static function saveFields(int $cardId, array $fields): void
     {
+        self::assertMine($cardId);
         $db = getDB();
         $db->prepare('DELETE FROM pbx_business_card_fields WHERE card_id = ?')->execute([$cardId]);
         $ins = $db->prepare(

@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../helpers.php';
 require_once __DIR__ . '/../services/WebWidgetService.php';
+require_once __DIR__ . '/../services/BillingRoleBridge.php';
 
 use PBX\Destinations\DestinationRegistry;
 
@@ -35,7 +36,7 @@ class WebWidgetController extends BaseController
             'delete_widget' => fn() => WebWidgetService::deleteWidget((int) ($_POST['widget_id'] ?? 0), $csrf),
         ]);
 
-        $widgets = WebWidgetService::listWidgets();
+        $widgets = WebWidgetService::listWidgets(BillingRoleBridge::listOwnerExtension());
         foreach ($widgets as &$w) {
             $w['embed'] = WebWidgetService::embedCode($w);
             unset($w['sip_secret']);
