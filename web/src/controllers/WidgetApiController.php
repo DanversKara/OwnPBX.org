@@ -61,6 +61,18 @@ class WidgetApiController
             self::answer(200, ['success' => true] + WebWidgetService::publicConfig($widget));
         }
         if ($action === 'call' && $method === 'POST') {
+            // A call from a business card carries that card's token, so it counts against the
+            // card's own daily limit as well as the widget's and appears in the card's log.
+            // Absent for every ordinary website embed, which behaves exactly as before.
+            $cardToken = (string) ($_POST['c'] ?? '');
+            if ($cardToken !== '') {
+                require_once __DIR__ . '/../services/BusinessCardService.php';
+                if (!BusinessCardService::authorizeCall($cardToken, $ip, $ua)) {
+                    // Same shape the widget's own limits answer with, so the page shows the
+                    // visitor the ordinary "try again later" rather than anything about cards.
+                    self::answer(429, ['success' => false, 'error' => 'rate_limit']);
+                }
+            }
             $res = WebWidgetService::requestCall($publicId, $origin, $ip, $ua, (string) ($_POST['name'] ?? ''));
             self::answer($res['status'], $res['body']);
         }

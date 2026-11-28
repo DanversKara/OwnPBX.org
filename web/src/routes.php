@@ -112,6 +112,7 @@ return [
     '/external-dbs'    => ['controller' => ExternalDbsController::class, 'action' => 'index', 'module' => 'external_dbs.php'],
     '/ms-teams'        => ['controller' => MsTeamsController::class, 'action' => 'index', 'module' => 'ms_teams.php'],
     '/web-widgets'     => ['controller' => WebWidgetController::class, 'action' => 'index', 'module' => 'web_widgets.php'],
+    '/business-cards'  => ['controller' => BusinessCardController::class, 'action' => 'index', 'module' => 'business_cards.php'],
     '/google-integration' => ['controller' => GoogleIntegrationController::class, 'action' => 'index', 'module' => 'google_integration.php'],
     '/integrations/google' => ['controller' => GoogleIntegrationController::class, 'action' => 'index', 'module' => 'google_integration.php'],
     '/auth/google'     => ['controller' => GoogleAuthController::class, 'action' => 'auth', 'module' => 'google_auth.php'],

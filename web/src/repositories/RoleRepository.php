@@ -82,6 +82,7 @@ class RoleRepository extends BaseRepository
             'google_integration' => ['title' => 'Google Sign-in', 'group' => 'Integrations', 'actions' => self::VAE, 'admin_only' => true, 'plugin' => 'google-auth'],
             'ms_teams'           => ['title' => 'Microsoft Teams', 'group' => 'Integrations', 'actions' => $all, 'plugin' => 'ms-teams'],
             'web_widgets'        => ['title' => 'Web Widgets', 'group' => 'Integrations', 'actions' => $all, 'admin_only' => true, 'plugin' => 'web-widgets'],
+            'business_cards'     => ['title' => 'Business Cards', 'group' => 'Integrations', 'actions' => $all, 'admin_only' => true, 'plugin' => 'web-widgets'],
             'firewall'           => ['title' => 'Firewall', 'group' => 'Security', 'actions' => $all, 'admin_only' => true],
             'fail2ban'           => ['title' => 'Fail2ban', 'group' => 'Security', 'actions' => $all, 'admin_only' => true],
             'certificates'       => ['title' => 'Certificates', 'group' => 'Security', 'actions' => self::VAE, 'admin_only' => true],

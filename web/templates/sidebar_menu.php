@@ -155,6 +155,7 @@ return [
             ['href' => '/google-integration', 'icon' => 'fab fa-google', 'icon_style' => 'color: #ea4335;', 'label' => 'sidebar.item_google_integration', 'show' => $isAdmin && $pluginOn('google-auth'), 'pages' => ['google_integration.php'], 'uri' => '/google-integration'],
             ['href' => '/ms-teams', 'icon' => 'fab fa-windows', 'icon_style' => 'color: #6264a7;', 'label' => 'sidebar.item_ms_teams', 'show' => $can('ms_teams') && $pluginOn('ms-teams'), 'pages' => ['ms_teams.php']],
             ['href' => '/web-widgets', 'icon' => 'fas fa-headset', 'label' => 'sidebar.item_web_widgets', 'show' => $can('web_widgets') && $pluginOn('web-widgets'), 'pages' => ['web_widgets.php']],
+            ['href' => '/business-cards', 'icon' => 'fas fa-id-card', 'label' => 'sidebar.item_business_cards', 'show' => $can('business_cards') && $pluginOn('web-widgets'), 'pages' => ['business_cards.php']],
             ...PluginManager::dynamicSidebarItems($isAdmin, 'integrations'),
         ],
     ],

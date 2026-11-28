@@ -53,6 +53,8 @@ final class RbacTest extends TestCase
         // Added 2026-11-27: this key covers PBX Settings, Transports and the UI kit, and what it
         // writes is the call path - PJSIP and RTP settings, the TLS transport, T.38.
         'asterisk_settings',
+        // Added 2026-11-28 with the business cards feature.
+        'business_cards',
     ];
 
     protected function setUp(): void

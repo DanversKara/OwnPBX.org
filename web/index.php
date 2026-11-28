@@ -91,6 +91,14 @@ if ($path === '/widget-api' || str_starts_with($path, '/widget-api/')) {
     WidgetApiController::serve($path);
 }
 
+// 0c2. Digital business cards (/card/<token>): anonymous, the one page a stranger is meant
+//      to reach. The token in the path is the whole access control (CardPublicController),
+//      so it sits here, before requireLogin(), and loads nothing but its own service.
+if ($path === '/card' || str_starts_with($path, '/card/')) {
+    require_once __DIR__ . '/src/controllers/CardPublicController.php';
+    CardPublicController::serve($path);
+}
+
 // 0d. REST API v1 (/api/v1 and /api/v1/*): stateless Bearer-authenticated JSON API.
 if ($path === '/api/v1' || str_starts_with($path, '/api/v1/')) {
     require_once __DIR__ . '/src/controllers/ApiV1Controller.php';

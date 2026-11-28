@@ -341,6 +341,7 @@ function check_rbac(): void
         '/transports',
         '/ui-kit',
         '/web-widgets',
+        '/business-cards',
         '/plugins',
         '/api-keys',
         '/webhooks',
@@ -869,6 +870,11 @@ $n++;
         // run before there is a session to check, and guard themselves with the pending_pin_*
         // marks the earlier step left behind. (AdminPinController is the sudo-mode prompt and
         // does require a session, so it is not listed.)
+        // A business card is the one page on the PBX a stranger is meant to reach: its access
+        // control is the 128-bit token in the URL, checked in BusinessCardService, so there is
+        // no session to look for. Everything that makes that safe to expose is tested in
+        // BusinessCardTest rather than by looking for requireLogin() here.
+        'CardPublicController.php',
         'PinLoginController.php',
         'AdminPinSetupController.php',
         // Desk phones fetch their configuration without a session; the token,

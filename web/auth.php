@@ -326,6 +326,7 @@ function getModuleKeyForPage($page = null) {
         'google_integration.php'    => 'google_integration',
         'ms_teams.php'              => 'ms_teams',
         'web_widgets.php'           => 'web_widgets',
+        'business_cards.php'        => 'business_cards',
         'ai_tts.php'                => 'ai_tts',
         'ai_models.php'             => 'ai_models',
         'ai_cloud.php'              => 'ai_cloud',
@@ -481,7 +482,7 @@ function billingRoleGrants(string $module_key, string $action): bool
  */
 function adminOnlyModuleKeys(): array
 {
-    return ['advanced_config', 'roles', 'system_users', 'firewall', 'fail2ban', 'mail_settings', 'system_update', 'backup', 'scheduled_tasks', 'certificates', 'privacy', 'plugins', 'api_keys', 'webhooks', 'external_dbs', 'google_integration', 'phones', 'web_widgets', 'file_storage', 'ai_models', 'ai_cloud', 'ai_apps', 'assistant', 'health', 'call_quality', 'custom_dialplan', 'asterisk_settings'];
+    return ['advanced_config', 'roles', 'system_users', 'firewall', 'fail2ban', 'mail_settings', 'system_update', 'backup', 'scheduled_tasks', 'certificates', 'privacy', 'plugins', 'api_keys', 'webhooks', 'external_dbs', 'google_integration', 'phones', 'web_widgets', 'file_storage', 'ai_models', 'ai_cloud', 'ai_apps', 'assistant', 'health', 'call_quality', 'custom_dialplan', 'asterisk_settings', 'business_cards'];
 }
 
 /**
@@ -542,6 +543,9 @@ function hasModulePermissionForRole($module_key, $action, string $role): bool {
     // 'ai_models': installs software as root and downloads models (disk, RAM, CPU).
     // 'ai_cloud': holds the API keys of paid cloud AI services.
     // 'ai_apps': an application's lookup URL is requested by the server itself.
+    // 'business_cards': a card can place calls through a widget and decides which contact
+    // details go out to a stranger, so issuing one is an owner's decision, not a delegable
+    // one. It is also the only feature here that publishes a page to the open internet.
     // 'asterisk_settings' (2026-11-27, at the owner's request): this key covers PBX Settings,
     // Transports and the UI kit, and what it writes is the call path itself - PJSIP and RTP
     // settings, the TLS transport and the T.38 configuration. A role given 'edit' here could

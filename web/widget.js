@@ -33,6 +33,11 @@
 
     var BASE = new URL(script.src, document.baseURI).origin;
     var TARGET = script.getAttribute('data-target') || '';
+    // data-card: set only by the PBX's own business card page, so a call made from a card
+    // counts against that card's own daily limit and shows up under it in the card's log.
+    // Absent everywhere else, which leaves every existing website embed unchanged. Filtered
+    // to the token's own alphabet here so a mangled attribute cannot become a query string.
+    var CARD = (script.getAttribute('data-card') || '').replace(/[^a-f0-9]/g, '').slice(0, 32);
     var CACHE_KEY = 'ownpbx-widget-' + WIDGET_ID;
     var CACHE_MS = 5 * 60 * 1000;
 
@@ -416,7 +421,7 @@
         }
         navigator.mediaDevices.getUserMedia({ audio: true, video: false }).then(function (s) {
             stream = s;
-            return api('call', { w: WIDGET_ID, name: ui.callName ? ui.callName.value : '' });
+            return api('call', { w: WIDGET_ID, c: CARD, name: ui.callName ? ui.callName.value : '' });
         }, function (e) {
             var n = e && e.name;
             throw new Error(n === 'NotAllowedError' || n === 'SecurityError' ? 'mic_denied'

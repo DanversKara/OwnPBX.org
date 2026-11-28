@@ -1,0 +1,35 @@
+/**
+ * Integrations -> Business cards.
+ *
+ * The few things the shared utilities do not cover, kept here rather than as invented u-*
+ * classes: the smoke test checks that every u- class in a template exists in a stylesheet,
+ * and adding new ones to the shared set for one page is how a utility file turns into a
+ * second place to look for page styling. Same pattern as pages/web_widgets.css.
+ */
+
+/* The freshly issued token: QR beside the link boxes, stacking on a narrow screen. */
+.bc-fresh:not(#u):not(#u) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+/* The QR has to sit on white whatever the theme, or a dark background inverts it and no
+   phone will read it. */
+.bc-qr:not(#u):not(#u) {
+    background: #fff;
+    padding: 8px;
+    border-radius: 10px;
+    display: block;
+}
+
+/* A withdrawn or spent card stays in the list - you still want its log - but reads as past. */
+.bc-off:not(#u):not(#u) {
+    opacity: .6;
+}
+
+/* The value column of a card line wants roughly twice the label's width. */
+.bc-wide:not(#u):not(#u) {
+    flex: 2;
+}
