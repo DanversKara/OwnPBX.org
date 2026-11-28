@@ -201,6 +201,13 @@ cat > /etc/apache2/conf-available/aipbx-security.conf << 'SECHDR'
     <LocationMatch "^/assets/images/brand/">
         Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; sandbox"
     </LocationMatch>
+    # Business card pictures. These are re-encoded through GD before they are stored, so
+    # what lands here is pixels and nothing else - but they can be uploaded by a
+    # sub-account rather than only by an administrator, and they are linked from a page
+    # strangers open, so the same sandbox applies.
+    <LocationMatch "^/assets/images/cards/">
+        Header always set Content-Security-Policy "default-src 'none'; img-src 'self' data:; sandbox"
+    </LocationMatch>
 </IfModule>
 SECHDR
 a2enconf aipbx-security 2>/dev/null

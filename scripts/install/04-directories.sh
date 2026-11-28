@@ -147,6 +147,11 @@ chown www-data:www-data "$INSTALL_DIR/web/assets/images/brand"
 # could not be uploaded") because www-data cannot mkdir under web/assets.
 mkdir -p "$INSTALL_DIR/web/assets/images/fax-brand"
 chown www-data:www-data "$INSTALL_DIR/web/assets/images/fax-brand"
+# Business card photos and header images (Integrations -> Business Cards). The same
+# root-owned checkout problem: without this folder the portal cannot save an uploaded
+# picture, because www-data may not mkdir under web/assets.
+mkdir -p "$INSTALL_DIR/web/assets/images/cards"
+chown www-data:www-data "$INSTALL_DIR/web/assets/images/cards"
 # TWO processes write to the fax directories: Asterisk (user asterisk; incoming
 # faxes, send results) and the portal (www-data, member of group asterisk;
 # outgoing fax archive and the .call file). Previously /var/www/faxes belonged to

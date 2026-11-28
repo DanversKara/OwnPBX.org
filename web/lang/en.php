@@ -2002,6 +2002,7 @@ return [
     'cards.err_image_big' => 'That image is larger than %d MB.',
     'cards.err_image_bad' => 'That file is not an image.',
     'cards.err_image_type' => 'Use a JPEG, PNG or WebP. SVG is not accepted, because it can carry script.',
+    'cards.err_image_dir' => 'The folder %s is missing or the web server cannot write to it. Updating creates it; to fix it now, run: sudo mkdir -p %1$s && sudo chown www-data:www-data %1$s',
     'cards.err_image_write' => 'The image could not be saved to %s.',
     'cards.f_vcard' => 'Save to contacts (vCard)',
     'cards.f_vcard_hint' => 'What goes into the contact file the card offers to download. Separate from the lines above on purpose: a phone\'s address book wants one number it can dial and a surname to file you under, which is not always what reads best on the page. Leave it all blank and the card still offers a contact built from the name above.',

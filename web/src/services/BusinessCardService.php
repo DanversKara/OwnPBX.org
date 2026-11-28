@@ -437,8 +437,15 @@ class BusinessCardService
             $png = $info[2] === IMAGETYPE_PNG;
             $name = sprintf('card%d-%s-%s.%s', $cardId, $kind, bin2hex(random_bytes(8)), $png ? 'png' : 'jpg');
             $dir = self::imageDir();
+            // The checkout belongs to root, so web/assets is not writable by the web server
+            // and this mkdir fails on an install that predates the folder. Saying which
+            // command fixes it beats naming the path and leaving the reader to work it out -
+            // the same thing bit the branding and fax-cover uploads before this one.
             if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
-                throw new \Exception(sprintf(t('cards.err_image_write'), $dir));
+                throw new \Exception(sprintf(t('cards.err_image_dir'), $dir));
+            }
+            if (!is_writable($dir)) {
+                throw new \Exception(sprintf(t('cards.err_image_dir'), $dir));
             }
             $target = $dir . '/' . $name;
             $ok = $png ? imagepng($src, $target, 6) : imagejpeg($src, $target, 85);
